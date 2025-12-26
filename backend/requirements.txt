@@ -8,6 +8,7 @@ passlib[bcrypt]
 python-multipart
 pandas
 google-generativeai
+google-genai
 pypdf
 python-docx
 openai-whisper
