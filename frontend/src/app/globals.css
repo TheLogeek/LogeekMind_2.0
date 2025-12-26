@@ -1,0 +1,199 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+
+  /* Colors from old global.css */
+  --primary-gradient-start: #6a11cb;
+  --primary-gradient-end: #2575fc;
+  --text-dark: #333;
+  --text-medium: #666;
+  --text-light: #999;
+  --bg-light: #f8f9fa;
+  --bg-white: #fff;
+  --border-light: #eee;
+  --border-medium: #ccc;
+  --border-dark: #ddd;
+  --button-primary: #007bff;
+  --button-success: #28a745;
+  --button-danger: #dc3545;
+  --button-secondary: #6c757d;
+
+  /* Spacing */
+  --spacing-xs: 5px;
+  --spacing-sm: 10px;
+  --spacing-md: 20px;
+  --spacing-lg: 30px;
+  --spacing-xl: 40px;
+  --spacing-xxl: 50px;
+
+  /* Font Sizes */
+  --font-size-sm: 0.9em;
+  --font-size-md: 1em;
+  --font-size-lg: 1.1em;
+  --font-size-xl: 1.2em;
+  --font-size-h1: 3.5em;
+  --font-size-h2: 2.5em;
+  --font-size-h3: 2em;
+  --font-size-h4: 1.5em;
+
+  --navbar-height: 60px; /* Define Navbar height */
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', sans-serif; /* Adopt Inter font from old global.css */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--bg-light); /* Use merged CSS variable */
+  color: var(--text-dark); /* Use merged CSS variable */
+  overflow-x: hidden; /* Prevent horizontal scroll on body */
+}
+
+/* Responsive adjustments for overall layout */
+.main-layout-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.content-area-container {
+  display: flex;
+  flex-grow: 1;
+}
+
+.main-content-area {
+  flex-grow: 1;
+  padding: var(--spacing-md);
+  position: relative;
+  margin-left: 280px; /* Default margin for open sidebar on desktop */
+  transition: margin-left 0.3s ease; /* For desktop sidebar shift */
+}
+
+.main-layout-container.sidebar-closed .main-content-area {
+  margin-left: 0; /* No margin when sidebar is closed on desktop */
+}
+
+/* Mobile backdrop for when sidebar is open */
+.mobile-backdrop {
+  display: none; /* Hidden by default */
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 1000; /* Below sidebar toggle, above other content */
+}
+
+/* Sidebar Toggle Button */
+.sidebar-toggle-button {
+  position: absolute;
+  top: 15px;
+  left: 15px;
+  background-color: #6a11cb; /* Distinct purple color */
+  color: white;
+  border: none;
+  border-radius: 5px;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 24px;
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+  z-index: 1002;
+  transition: background-color 0.3s ease, left 0.3s ease;
+}
+
+.sidebar-toggle-button:hover {
+  background-color: #2575fc;
+}
+
+/* Generic Page Container for consistent layout */
+.page-container {
+  max-width: 1000px; /* Adjust as needed */
+  margin: var(--spacing-xxl) auto; /* Centered, with top/bottom margin */
+  padding: var(--spacing-md);
+  box-sizing: border-box; /* Ensure padding is included in element's total width */
+}
+
+
+/* Media Queries for Mobile (and smaller tablets) */
+@media (max-width: 768px) {
+  :root {
+    --spacing-md: 15px;
+    --spacing-lg: 20px;
+    --font-size-h1: 2.5em;
+    --font-size-h2: 2em;
+    --font-size-h3: 1.5em;
+    --font-size-h4: 1.2em;
+    --font-size-xl: 1em;
+  }
+
+  .main-content-area {
+    padding: var(--spacing-sm);
+    margin-left: 0 !important; /* Override desktop margin on mobile */
+  }
+
+  .content-area-container {
+    flex-direction: column; /* Stack content vertically on mobile */
+  }
+
+  /* When sidebar is open, show backdrop */
+  .mobile-backdrop {
+    display: block; /* Show backdrop on mobile when sidebar is active */
+  }
+
+  .sidebar-toggle-button {
+    left: 15px; /* Fixed position on mobile */
+    top: 15px;
+  }
+
+  .page-container {
+    margin: var(--spacing-xl) auto;
+    padding: var(--spacing-sm);
+  }
+}
+
+/* Utility Classes (if needed globally) */
+.text-center { text-align: center; }
+.text-red { color: var(--button-danger); }
+.margin-top-md { margin-top: var(--spacing-md); }
+.margin-bottom-md { margin-bottom: var(--spacing-md); }
+
+/* Debugging Button */
+.debug-button {
+  background-color: #ffc107; /* Amber color */
+  color: black;
+  border: 1px solid #e0a800;
+  border-radius: 5px;
+  padding: 8px 12px;
+  margin-top: var(--spacing-md);
+  cursor: pointer;
+  display: block; /* Make it a block element to center it */
+  margin-left: auto;
+  margin-right: auto;
+}
+
+@media (min-width: 769px) {
+  .debug-button {
+    display: none; /* Hide debug button on desktop */
+  }
+}

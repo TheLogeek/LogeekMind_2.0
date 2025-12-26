@@ -1,0 +1,92 @@
+.sidebar {
+  width: 280px; /* Default open width for desktop */
+  height: 100vh; /* Full height of the viewport */
+  overflow-y: auto; /* Enable scrolling for desktop */
+  padding: var(--spacing-md);
+  background-color: var(--bg-light);
+  border-right: 1px solid var(--border-light);
+  flex-shrink: 0; /* Prevent sidebar from shrinking */
+  box-sizing: border-box; /* Include padding and border in the element's total width and height */
+  transition: width 0.3s ease, padding 0.3s ease; /* Transition width and padding */
+  position: fixed; /* Fix the sidebar position */
+  top: 0; /* Align to the top */
+  left: 0; /* Align to the left */
+  z-index: 1000; /* Ensure it's above main content */
+}
+
+.sidebar.closed {
+  width: 0; /* Collapse width */
+  padding: 0; /* Remove padding */
+  overflow: hidden; /* Hide content */
+  border-right: none; /* Remove border */
+}
+
+.sidebarH2 {
+  font-size: var(--font-size-h3);
+  font-weight: 700;
+  margin-bottom: var(--spacing-lg);
+  text-align: center;
+}
+
+.sidebarH2 a {
+  text-decoration: none;
+  color: var(--text-dark);
+}
+
+.linkSeparator {
+  border: none;
+  border-top: 1px solid var(--border-light);
+}
+
+.categoryTitle {
+  margin-top: var(--spacing-md);
+  margin-bottom: var(--spacing-sm);
+  color: var(--text-medium);
+}
+
+.navLink {
+  display: block;
+  padding: 12px 20px;
+  color: var(--text-dark);
+  text-decoration: none;
+  border-radius: 5px;
+  margin: 5px 0;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.navLink:hover {
+  background-color: #e2f0ff; /* Light blue hover */
+}
+
+.activeNavLink {
+  background-color: var(--button-primary);
+  color: white;
+  font-weight: bold;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+  .sidebar {
+    position: fixed; /* Fix sidebar position */
+    left: 0;
+    top: 0; /* Align to the top of the viewport */
+    bottom: 0; /* Align to the bottom of the viewport */
+    height: auto; /* Let top and bottom properties define height */
+    width: 250px; /* Slightly smaller width on mobile */
+    transform: translateX(-100%); /* Hide sidebar off-screen by default */
+    transition: transform 0.3s ease-in-out;
+    z-index: 1001; /* Above mobile backdrop */
+    box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+    overflow-y: auto; /* Enable scrolling within the sidebar */
+  }
+
+  .sidebar.open {
+    transform: translateX(0%); /* Slide in when open */
+  }
+
+  .sidebar.closed { /* Ensure mobile closed state is also handled */
+    transform: translateX(-100%);
+    width: 250px; /* Keep mobile width fixed when closed */
+    padding: var(--spacing-md); /* Keep mobile padding */
+  }
+}

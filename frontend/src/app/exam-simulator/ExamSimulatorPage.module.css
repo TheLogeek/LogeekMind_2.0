@@ -1,0 +1,340 @@
+.examSimulatorPageContainer {
+  max-width: 1000px;
+  margin: var(--spacing-lg) auto;
+  padding: var(--spacing-md);
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+
+.examSimulatorPageContainer h2 {
+  text-align: center;
+  color: var(--text-dark);
+  margin-bottom: 15px;
+}
+
+.examSimulatorPageContainer > p {
+  text-align: center;
+  color: var(--text-medium);
+  margin-bottom: var(--spacing-md);
+}
+
+.errorText {
+  color: var(--button-danger);
+  text-align: center;
+  margin-bottom: var(--spacing-md);
+}
+
+.geminiApiKeyInputContainer {
+  margin-bottom: 15px;
+  padding: var(--spacing-sm);
+  border: 1px solid var(--border-dark);
+  border-radius: 5px;
+  background-color: var(--bg-light);
+}
+
+.geminiApiKeyInputContainer label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+}
+
+.geminiApiKeyInputContainer input {
+  width: 100%;
+  padding: 8px;
+  box-sizing: border-box;
+}
+
+.geminiApiKeyInputContainer p {
+  font-size: 0.8em;
+  color: var(--text-medium);
+  margin-top: 5px;
+  text-align: left; /* Override parent center alignment */
+}
+
+.examSetupForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.examSetupGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-md);
+}
+
+.formGroup {
+  margin-bottom: 0; /* Gap handles spacing */
+}
+
+.formGroup label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+}
+
+.formGroup input[type="text"],
+.formGroup select,
+.formGroup input[type="range"] {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--border-dark);
+  border-radius: 5px;
+  box-sizing: border-box;
+}
+
+.formGroup input[type="range"] {
+    padding: 0; /* Range inputs don't need vertical padding */
+    margin-top: 10px;
+}
+
+.formGroup span {
+  display: block;
+  text-align: center;
+  margin-top: 5px;
+}
+
+.startButton {
+  width: 100%;
+  padding: 12px 20px;
+  background-color: var(--button-primary);
+  color: white;
+  border: none;
+  border-radius: 5px;
+  font-size: var(--font-size-lg);
+  cursor: pointer;
+  opacity: 1;
+  transition: opacity 0.3s ease;
+}
+
+.startButton:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.guestMessage {
+  margin-top: var(--spacing-md);
+  text-align: center;
+  color: var(--button-primary);
+}
+
+.guestMessage a {
+  color: var(--button-primary);
+  text-decoration: none;
+}
+
+.guestMessage a:hover {
+  text-decoration: underline;
+}
+
+.activeExamContainer {
+  /* No specific styles needed for this container, but its children are styled */
+}
+
+.timerDisplay {
+  position: fixed;
+  top: 90px; /* Adjust based on Navbar height */
+  right: 20px;
+  padding: 10px 15px;
+  background-color: var(--button-success);
+  color: white;
+  border-radius: 5px;
+  z-index: 9999;
+  font-size: 1.2em;
+}
+
+.timerDisplay.warning {
+  background-color: var(--button-danger);
+}
+
+.questionProgress {
+  margin-bottom: var(--spacing-md);
+}
+
+.questionItem {
+  margin-bottom: var(--spacing-lg);
+  padding-bottom: var(--spacing-sm);
+  border-bottom: 1px solid var(--border-light);
+}
+
+.questionItem p {
+  font-weight: bold;
+  margin-bottom: 5px;
+  font-size: var(--font-size-lg);
+}
+
+.optionItem {
+  margin-bottom: 5px;
+}
+
+.optionItem label {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.optionItem input[type="radio"] {
+  margin-right: 8px;
+}
+
+.submitExamButton {
+  width: 100%;
+  padding: 12px 20px;
+  background-color: var(--button-primary);
+  color: white;
+  border: none;
+  border-radius: 5px;
+  font-size: var(--font-size-lg);
+  cursor: pointer;
+  opacity: 1;
+  transition: opacity 0.3s ease;
+  margin-top: var(--spacing-lg);
+}
+
+.submitExamButton:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.examResultsContainer {
+  text-align: center;
+}
+
+.examResultsContainer h3 {
+  font-size: 2em;
+  color: var(--primary-gradient-start);
+  margin-bottom: var(--spacing-md);
+}
+
+.gradeSummary {
+  padding: var(--spacing-md);
+  background-color: #f0f4f8;
+  border-radius: 10px;
+  border-left: 10px solid var(--button-success); /* Dynamic based on grade */
+  margin-bottom: var(--spacing-md);
+}
+
+.gradeSummary.fail {
+  border-left-color: var(--button-danger);
+}
+
+.gradeSummary h2, .gradeSummary h3 {
+  margin: 0 0 10px 0;
+  color: var(--text-dark);
+}
+
+.gradeSummary p {
+  margin: 0;
+  font-style: italic;
+  color: var(--text-medium);
+}
+
+.correctionsSection {
+  text-align: left;
+  margin-top: var(--spacing-xl);
+  margin-bottom: var(--spacing-md);
+}
+
+.correctionItem {
+  margin-bottom: var(--spacing-md);
+  padding: var(--spacing-sm);
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  text-align: left;
+}
+
+.correctionItem.correct {
+  background-color: #e6ffe6; /* Light green */
+}
+
+.correctionItem.incorrect {
+  background-color: #ffe6e6; /* Light red */
+}
+
+.correctAnswer {
+  color: var(--button-success);
+}
+
+.incorrectAnswer {
+  color: var(--button-danger);
+}
+
+.resultsActions {
+  display: flex;
+  justify-content: center;
+  gap: var(--spacing-md);
+  margin-top: var(--spacing-xl);
+}
+
+.downloadButton {
+  padding: 12px 20px; /* Increased padding */
+  background-color: var(--button-success);
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: bold; /* Made bold */
+  font-size: var(--font-size-lg); /* Larger font size */
+  transition: opacity 0.3s ease;
+}
+
+.downloadButton:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.downloadButton:disabled {
+  background-color: var(--button-success); /* Keep green */
+  color: white; /* Keep white */
+  cursor: not-allowed;
+  opacity: 0.5; /* Reduce opacity to indicate disabled state */
+}
+
+.takeAnotherExamButton {
+  padding: 10px 15px;
+  background-color: var(--button-secondary);
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+  .examSimulatorPageContainer {
+    margin: var(--spacing-md) auto;
+    padding: var(--spacing-sm);
+  }
+
+  .examSimulatorPageContainer h2 {
+    font-size: var(--font-size-h3);
+  }
+
+  .examSimulatorPageContainer > p {
+    font-size: var(--font-size-md);
+  }
+
+  .examSetupGrid {
+    grid-template-columns: 1fr; /* Stack inputs vertically */
+  }
+
+  .timerDisplay {
+    font-size: 1em;
+    top: 70px; /* Adjust for smaller screens */
+    right: 10px;
+    padding: 8px 10px;
+  }
+
+  .questionItem p {
+    font-size: var(--font-size-md);
+  }
+
+  .resultsActions {
+    flex-direction: column;
+    gap: var(--spacing-sm);
+  }
+
+  .downloadButton, .takeAnotherExamButton {
+    width: 100%;
+  }
+}

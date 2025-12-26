@@ -1,0 +1,165 @@
+.gpaCalculatorPageContainer {
+  max-width: 900px;
+  margin: var(--spacing-lg) auto;
+  padding: var(--spacing-md);
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+
+.gpaCalculatorPageContainer h2 {
+  text-align: center;
+  color: var(--text-dark);
+  margin-bottom: 15px;
+}
+
+.gpaCalculatorPageContainer > p {
+  text-align: center;
+  color: var(--text-medium);
+  margin-bottom: var(--spacing-md);
+}
+
+.courseInputGridHeader {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 0.5fr;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-sm);
+  font-weight: bold;
+}
+
+.courseInputRow {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 0.5fr;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-sm);
+  align-items: center;
+}
+
+.courseInputRow input[type="text"],
+.courseInputRow select,
+.courseInputRow input[type="number"] {
+  padding: 8px;
+  border: 1px solid var(--border-dark);
+  border-radius: 4px;
+}
+
+.removeCourseButton {
+  padding: 8px;
+  background-color: var(--button-danger);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.addCourseButton {
+  padding: 10px 15px;
+  background-color: var(--button-secondary);
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-top: var(--spacing-sm);
+  margin-bottom: var(--spacing-md);
+}
+
+.calculateButton {
+  width: 100%;
+  padding: 12px 20px;
+  background-color: var(--button-primary);
+  color: white;
+  border: none;
+  border-radius: 5px;
+  font-size: var(--font-size-lg);
+  cursor: pointer;
+  opacity: 1;
+  transition: opacity 0.3s ease;
+}
+
+.calculateButton:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.errorText {
+  color: var(--button-danger);
+  margin-top: 15px;
+  text-align: center;
+}
+
+.gpaResultOutput {
+  margin-top: var(--spacing-xl);
+  padding: var(--spacing-md);
+  border: 1px solid var(--border-dark);
+  border-radius: 8px;
+  background-color: #f9f9f9;
+  text-align: center;
+}
+
+.gpaResultOutput h3 {
+  color: var(--text-dark);
+  margin-bottom: 10px;
+}
+
+.gpaResultOutput p {
+  font-size: 2em;
+  font-weight: bold;
+  color: var(--button-primary);
+}
+
+.resetButton {
+  padding: 10px 15px;
+  background-color: var(--button-secondary);
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.guestMessage {
+  margin-top: 15px;
+  text-align: center;
+  color: var(--button-primary);
+}
+
+.guestMessage a {
+  color: var(--button-primary);
+  text-decoration: none;
+}
+
+.guestMessage a:hover {
+  text-decoration: underline;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+  .gpaCalculatorPageContainer {
+    margin: var(--spacing-md) auto;
+    padding: var(--spacing-sm);
+  }
+
+  .gpaCalculatorPageContainer h2 {
+    font-size: var(--font-size-h3);
+  }
+
+  .gpaCalculatorPageContainer > p {
+    font-size: var(--font-size-md);
+  }
+
+  .courseInputGridHeader,
+  .courseInputRow {
+    grid-template-columns: 1fr; /* Stack elements vertically */
+    gap: var(--spacing-xs);
+  }
+
+  .courseInputGridHeader > div:last-child, /* Hide empty header cell */
+  .courseInputRow > button {
+    display: block; /* Make remove button take full width */
+    width: 100%;
+    margin-top: var(--spacing-sm);
+  }
+
+  .removeCourseButton {
+    padding: 10px;
+  }
+}

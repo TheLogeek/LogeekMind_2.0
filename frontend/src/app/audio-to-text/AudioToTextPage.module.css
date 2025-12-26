@@ -1,0 +1,168 @@
+.audioToTextPageContainer {
+  max-width: 900px;
+  margin: var(--spacing-lg) auto;
+  padding: var(--spacing-md);
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+
+.audioToTextPageContainer h2 {
+  text-align: center;
+  color: var(--text-dark);
+  margin-bottom: 15px;
+}
+
+.audioToTextPageContainer > p {
+  text-align: center;
+  color: var(--text-medium);
+  margin-bottom: var(--spacing-md);
+}
+
+.inputSection {
+  margin-bottom: var(--spacing-md);
+  border: 1px dashed var(--border-medium);
+  padding: var(--spacing-md);
+  border-radius: 5px;
+  text-align: center;
+}
+
+.inputSection label {
+  display: block;
+  margin-bottom: var(--spacing-sm);
+  font-size: var(--font-size-lg);
+  font-weight: bold;
+}
+
+.inputSection input[type="file"] {
+  display: block;
+  margin: 0 auto;
+}
+
+.inputSection audio {
+  width: 100%;
+  margin-top: 15px;
+}
+
+.transcribeButton {
+  width: 100%;
+  padding: 12px 20px;
+  background-color: var(--button-primary);
+  color: white;
+  border: none;
+  border-radius: 5px;
+  font-size: var(--font-size-lg);
+  cursor: pointer;
+  opacity: 1;
+  transition: opacity 0.3s ease;
+}
+
+.transcribeButton:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.errorText {
+  color: var(--button-danger);
+  margin-top: 15px;
+  text-align: center;
+}
+
+.transcriptionOutput {
+  margin-top: var(--spacing-xl);
+  padding: var(--spacing-md);
+  border: 1px solid var(--border-dark);
+  border-radius: 8px;
+  background-color: #f9f9f9;
+}
+
+.transcriptionOutput h3 {
+  color: var(--text-dark);
+}
+
+.transcriptionOutput pre {
+  white-space: pre-wrap;
+  word-break: break-word;
+  text-align: left;
+  background-color: #e9e9e9;
+  padding: 10px;
+  border-radius: 5px;
+}
+
+.transcriptionActions {
+  display: flex;
+  justify-content: space-around;
+  margin-top: var(--spacing-md);
+}
+
+.downloadButton {
+  padding: 12px 20px; /* Increased padding */
+  background-color: var(--button-success);
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: bold; /* Made bold */
+  font-size: var(--font-size-lg); /* Larger font size */
+  transition: opacity 0.3s ease;
+}
+
+.downloadButton:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.downloadButton:disabled {
+  background-color: var(--button-success); /* Keep green */
+  color: white; /* Keep white */
+  cursor: not-allowed;
+  opacity: 0.5; /* Reduce opacity to indicate disabled state */
+}
+
+.newTranscriptionButton {
+  padding: 10px 15px;
+  background-color: var(--button-secondary);
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.guestMessage {
+  margin-top: 15px;
+  text-align: center;
+  color: var(--button-primary);
+}
+
+.guestMessage a {
+  color: var(--button-primary);
+  text-decoration: none;
+}
+
+.guestMessage a:hover {
+  text-decoration: underline;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+  .audioToTextPageContainer {
+    margin: var(--spacing-md) auto;
+    padding: var(--spacing-sm);
+  }
+
+  .audioToTextPageContainer h2 {
+    font-size: var(--font-size-h3);
+  }
+
+  .audioToTextPageContainer > p {
+    font-size: var(--font-size-md);
+  }
+
+  .transcriptionActions {
+    flex-direction: column;
+    gap: var(--spacing-sm);
+  }
+
+  .downloadButton, .newTranscriptionButton {
+    width: 100%;
+  }
+}

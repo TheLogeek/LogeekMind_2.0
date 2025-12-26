@@ -1,0 +1,14 @@
+/* Placeholder styles for SidebarToggleButton */
+.toggleButton {
+    padding: 10px 15px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+.toggleButton:hover {
+    background-color: #0056b3;
+}

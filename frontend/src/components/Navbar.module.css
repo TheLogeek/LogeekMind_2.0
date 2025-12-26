@@ -1,0 +1,163 @@
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-sm) var(--spacing-lg); /* Responsive padding */
+  background-color: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  font-family: 'Inter', sans-serif;
+  backdrop-filter: blur(5px);
+  height: var(--navbar-height); /* Ensure Navbar has a defined height */
+}
+
+.navbarLogo {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  color: var(--text-dark);
+}
+
+.navbarLogoSpan1 {
+  font-size: 28px;
+  font-weight: 800;
+  margin-right: 8px;
+  color: var(--primary-gradient-start);
+}
+
+.navbarLogoSpan2 {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-dark);
+}
+
+.navbarNav {
+  display: flex;
+  gap: var(--spacing-lg);
+}
+
+.navLink {
+  text-decoration: none;
+  color: var(--text-medium);
+  font-size: var(--font-size-md);
+  font-weight: 500;
+  transition: color 0.2s ease;
+}
+
+.navLink:hover {
+  color: var(--primary-gradient-start);
+}
+
+.navbarAuth {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.welcomeText {
+  font-size: var(--font-size-md);
+  color: var(--text-dark);
+  font-weight: 500;
+}
+
+.logoutButton {
+  padding: 10px 20px;
+  background-color: var(--button-danger);
+  color: white;
+  border: none;
+  border-radius: 25px;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 600;
+  transition: background-color 0.2s ease;
+}
+
+.logoutButton:hover {
+  background-color: #c82333;
+}
+
+.authButton {
+  padding: 10px 20px;
+  background: linear-gradient(90deg, var(--primary-gradient-start) 0%, var(--primary-gradient-end) 100%);
+  color: white;
+  border: none;
+  border-radius: 25px;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 600;
+  transition: opacity 0.2s ease;
+}
+
+.authButton:hover {
+  opacity: 0.9;
+}
+
+.hamburgerMenu {
+  display: none; /* Hidden by default on desktop */
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: var(--text-dark);
+  z-index: 1001; /* Ensure it's above other elements */
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+  .navbar {
+    padding: var(--spacing-sm) var(--spacing-md);
+  }
+
+  .navbarNav {
+    display: none; /* Hidden by default */
+    flex-direction: column;
+    position: fixed; /* Fixed position for full screen overlay */
+    top: 0; /* Cover from the top */
+    left: 0;
+    width: 100vw; /* Full viewport width */
+    height: 100vh; /* Full viewport height */
+    background-color: var(--bg-white); /* Solid white background */
+    padding: var(--spacing-xl);
+    padding-top: calc(var(--navbar-height) + var(--spacing-md)); /* Space below main navbar */
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    align-items: center;
+    justify-content: flex-start;
+    gap: var(--spacing-md);
+    overflow-y: auto; /* Enable scrolling for nav items if too many */
+    z-index: 999; /* Ensure it covers content but is below the Navbar itself */
+  }
+
+  .navbarNav.open {
+    display: flex; /* Show nav links when open */
+    align-items: stretch; /* Make items take full width */
+  }
+  
+  .navLink {
+    font-size: var(--font-size-xl);
+    padding: var(--spacing-sm);
+    text-align: center; /* Center text for mobile view */
+  }
+
+  .navbarAuth {
+    display: flex; /* Always display in the flow within the .navbarNav.open */
+    flex-direction: column;
+    width: 100%;
+    margin-top: var(--spacing-md);
+    gap: var(--spacing-sm); /* Add gap for buttons */
+    align-items: center; /* Center buttons within the column */
+  }
+
+  .hamburgerMenu {
+    display: block; /* Show hamburger on mobile */
+  }
+
+  .navbarLogoSpan1 {
+    font-size: 24px; /* Adjust font size for mobile */
+  }
+
+  .navbarLogoSpan2 {
+    font-size: 20px; /* Adjust font size for mobile */
+  }
+}

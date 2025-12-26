@@ -1,0 +1,238 @@
+.aiTeacherPageContainer {
+  margin: var(--spacing-lg) auto;
+  padding: var(--spacing-md);
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+  display: flex;
+  flex-direction: column;
+  /* Removed fixed height: height: 85vh; */
+  min-height: 80vh; /* Ensure a reasonable minimum height on desktop */
+}
+
+.aiTeacherPageContainer h2 {
+  text-align: center;
+  color: var(--text-dark);
+  margin-bottom: 15px;
+}
+
+.aiTeacherPageContainer > p {
+  text-align: center;
+  color: var(--text-medium);
+  margin-bottom: var(--spacing-md);
+}
+
+.geminiApiKeyInputContainer {
+  margin-bottom: 15px;
+  padding: var(--spacing-sm);
+  border: 1px solid var(--border-dark);
+  border-radius: 5px;
+  background-color: var(--bg-light);
+}
+
+.geminiApiKeyInputContainer label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+}
+
+.geminiApiKeyInputContainer input {
+  width: 100%;
+  padding: 8px;
+  box-sizing: border-box;
+}
+
+.geminiApiKeyInputContainer p {
+  font-size: 0.8em;
+  color: var(--text-medium);
+  margin-top: 5px;
+  text-align: left; /* Override parent center alignment */
+}
+
+.chatWindow {
+  flex-grow: 1;
+  overflow-y: auto;
+  border: 1px solid var(--border-medium);
+  border-radius: 8px;
+  padding: var(--spacing-md); /* Increased padding */
+  margin-bottom: 15px;
+  background-color: var(--bg-white);
+}
+
+.chatWindow p {
+  text-align: center;
+  color: var(--text-light);
+}
+
+.chatMessage {
+  margin-bottom: var(--spacing-sm);
+  display: flex; /* Use flex to align messages */
+}
+
+.userMessage {
+  justify-content: flex-end; /* Align user messages to the right */
+}
+
+.modelMessage {
+  justify-content: flex-start; /* Align model messages to the left */
+}
+
+.userMessage span {
+  display: inline-block;
+  padding: 8px 12px;
+  border-radius: 15px;
+  background-color: var(--button-primary);
+  color: white;
+  max-width: 70%;
+  word-wrap: break-word;
+}
+
+.modelMessage div { /* MarkdownRenderer will be inside a div */
+  display: inline-block;
+  padding: 8px 12px;
+  border-radius: 15px;
+  background-color: #e2e6ea; /* Light gray */
+  color: var(--text-dark);
+  max-width: 70%;
+  word-wrap: break-word;
+}
+
+.errorText {
+  color: var(--button-danger);
+  margin-bottom: 15px;
+  text-align: center;
+}
+
+.chatForm {
+  display: flex;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-sm);
+}
+
+.chatInput {
+  flex-grow: 1;
+  padding: var(--spacing-sm);
+  border: 1px solid var(--border-dark);
+  border-radius: 5px;
+}
+
+.sendButton {
+  padding: 10px 20px;
+  background-color: var(--button-success);
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  opacity: 1;
+  transition: opacity 0.3s ease;
+}
+
+.sendButton:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.newSessionButton {
+  width: 100%;
+  padding: 10px;
+  background-color: var(--button-secondary);
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-top: var(--spacing-sm);
+}
+
+.guestMessage {
+  margin-top: 15px;
+  text-align: center;
+  color: var(--button-primary);
+}
+
+.guestMessage a {
+  color: var(--button-primary);
+  text-decoration: none;
+}
+
+.guestMessage a:hover {
+  text-decoration: underline;
+}
+
+/* Media Queries for Mobile */
+@media (max-width: 768px) {
+  .aiTeacherPageContainer {
+    margin: var(--spacing-md) auto;
+    padding: var(--spacing-sm);
+    height: auto; /* Allow height to adjust on mobile */
+    min-height: 50vh; /* Reduced min-height for mobile if needed */
+  }
+
+  .geminiApiKeyInputContainer {
+    margin-bottom: var(--spacing-md);
+  }
+
+  .chatWindow {
+    padding: var(--spacing-sm); /* Adjusted padding for mobile */
+  }
+
+  .userMessage span,
+  .modelMessage div {
+    max-width: 90%; /* Allow messages to take more width on smaller screens */
+  }
+
+  .chatForm {
+    flex-direction: column;
+    gap: var(--spacing-xs);
+  }
+
+  .sendButton {
+    width: 100%; /* Full width button on mobile */
+    padding: 10px;
+  }
+}
+/* Styles for new download button and session actions */
+.sessionActions {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+  margin-top: var(--spacing-md);
+}
+
+.downloadNotesButton {
+  padding: 10px 15px;
+  background-color: var(--button-success); /* Use a success color for download */
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: var(--font-size-md);
+  transition: opacity 0.3s ease;
+  flex-grow: 1; /* Allow it to grow in flex container */
+}
+
+.downloadNotesButton:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.downloadNotesButton:disabled {
+  background-color: var(--button-success); /* Keep green */
+  color: white; /* Keep white */
+  cursor: not-allowed;
+  opacity: 0.5; /* Reduce opacity to indicate disabled state */
+}
+
+/* Media Query for mobile responsiveness for new buttons */
+@media (max-width: 768px) {
+  .sessionActions {
+    flex-direction: column;
+    gap: var(--spacing-sm);
+  }
+
+  .downloadNotesButton {
+    width: 100%;
+  }
+}
+
+.modelMessage div {
+  color: black !important;
+}

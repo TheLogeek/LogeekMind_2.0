@@ -1,0 +1,156 @@
+.contactPageContainer {
+  max-width: 800px;
+  margin: var(--spacing-xxl) auto;
+  padding: var(--spacing-lg);
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+  background-color: var(--bg-white);
+}
+
+.contactPageContainer h2 {
+  text-align: center;
+  color: var(--primary-gradient-start);
+  font-size: 2.5em;
+  margin-bottom: var(--spacing-lg);
+}
+
+.contactPageContainer p {
+  text-align: center;
+  color: var(--text-medium);
+  font-size: var(--font-size-lg);
+  margin-bottom: var(--spacing-xl);
+}
+
+.contactInfoGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-lg);
+  margin-bottom: var(--spacing-xl);
+}
+
+.contactInfoCard {
+  background-color: var(--bg-light);
+  padding: 25px;
+  border-radius: 10px;
+  border: 1px solid var(--border-light);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+}
+
+.contactInfoCard h3 {
+  color: var(--text-dark);
+  margin-bottom: var(--spacing-md);
+}
+
+.contactInfoCard p {
+  margin-bottom: var(--spacing-sm);
+  text-align: left; /* Override parent text-align */
+}
+
+.contactInfoCard a {
+  color: var(--button-primary);
+  text-decoration: none;
+}
+
+.contactInfoCard span {
+  font-size: var(--font-size-sm);
+  color: var(--text-light);
+  margin-top: var(--spacing-sm);
+  display: block; /* For proper spacing */
+}
+
+.messageForm h3 {
+  text-align: center;
+  color: var(--text-dark);
+  font-size: 1.8em;
+  margin-bottom: var(--spacing-lg);
+}
+
+.messageForm form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.formGroup {
+  margin-bottom: 0; /* Gap handles spacing */
+}
+
+.formGroup label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: bold;
+  color: var(--text-dark);
+}
+
+.formGroup input,
+.formGroup textarea {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--border-medium);
+  border-radius: 8px;
+  font-size: var(--font-size-md);
+  box-sizing: border-box; /* Ensure padding doesn't expand width */
+}
+
+.formGroup textarea {
+  resize: vertical; /* Allow vertical resizing */
+}
+
+.submitButton {
+  padding: 15px 30px;
+  background-color: var(--primary-gradient-start);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: var(--font-size-xl);
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.submitButton:hover {
+  background-color: var(--primary-gradient-end);
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+  .contactPageContainer {
+    margin: var(--spacing-xl) auto;
+    padding: var(--spacing-md);
+  }
+
+  .contactPageContainer h2 {
+    font-size: var(--font-size-h2);
+    margin-bottom: var(--spacing-md);
+  }
+
+  .contactPageContainer p {
+    font-size: var(--font-size-md);
+    margin-bottom: var(--spacing-lg);
+  }
+
+  .contactInfoGrid {
+    grid-template-columns: 1fr; /* Stack cards vertically on mobile */
+    gap: var(--spacing-md);
+  }
+
+  .contactInfoCard {
+    padding: var(--spacing-md);
+  }
+
+  .contactInfoCard h3 {
+    font-size: var(--font-size-h4);
+    margin-bottom: var(--spacing-sm);
+  }
+
+  .messageForm h3 {
+    font-size: var(--font-size-h3);
+    margin-bottom: var(--spacing-md);
+  }
+
+  .submitButton {
+    font-size: var(--font-size-lg);
+    padding: 12px 25px;
+  }
+}

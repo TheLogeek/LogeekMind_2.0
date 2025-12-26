@@ -1,0 +1,189 @@
+.courseOutlinePageContainer {
+  margin: var(--spacing-lg) auto;
+  padding: var(--spacing-md);
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+
+.courseOutlinePageContainer h2 {
+  text-align: center;
+  color: var(--text-dark);
+  margin-bottom: 15px;
+}
+
+.courseOutlinePageContainer > p {
+  text-align: center;
+  color: var(--text-medium);
+  margin-bottom: var(--spacing-md);
+}
+
+.geminiApiKeyInputContainer {
+  margin-bottom: 15px;
+  padding: var(--spacing-sm);
+  border: 1px solid var(--border-dark);
+  border-radius: 5px;
+  background-color: var(--bg-light);
+}
+
+.geminiApiKeyInputContainer label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+}
+
+.geminiApiKeyInputContainer input {
+  width: 100%;
+  padding: 8px;
+  box-sizing: border-box;
+}
+
+.geminiApiKeyInputContainer p {
+  font-size: 0.8em;
+  color: var(--text-medium);
+  margin-top: 5px;
+  text-align: left; /* Override parent center alignment */
+}
+
+.courseOutlineForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.formGroup {
+  margin-bottom: 0; /* Gap handles spacing */
+}
+
+.formGroup label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+}
+
+.formGroup input {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--border-dark);
+  border-radius: 5px;
+  box-sizing: border-box;
+}
+
+.generateButton {
+  width: 100%;
+  padding: 12px 20px;
+  background-color: var(--button-primary);
+  color: white;
+  border: none;
+  border-radius: 5px;
+  font-size: var(--font-size-lg);
+  cursor: pointer;
+  opacity: 1;
+  transition: opacity 0.3s ease;
+}
+
+.generateButton:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.errorText {
+  color: var(--button-danger);
+  margin-top: 15px;
+  text-align: center;
+}
+
+.generatedOutlineOutput {
+  margin-top: var(--spacing-xl);
+  padding: var(--spacing-md);
+  border: 1px solid var(--border-dark);
+  border-radius: 8px;
+  background-color: #f9f9f9;
+}
+
+.generatedOutlineOutput h3 {
+  color: var(--text-dark);
+  margin-bottom: 15px;
+}
+
+.outlineActions {
+  display: flex;
+  justify-content: space-around;
+  margin-top: var(--spacing-md);
+}
+
+.downloadButton {
+  padding: 12px 20px; /* Increased padding */
+  background-color: var(--button-success);
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: bold; /* Made bold */
+  font-size: var(--font-size-lg); /* Larger font size */
+  transition: opacity 0.3s ease;
+}
+
+.downloadButton:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.downloadButton:disabled {
+  background-color: var(--button-success); /* Keep green */
+  color: white; /* Keep white */
+  cursor: not-allowed;
+  opacity: 0.5; /* Reduce opacity to indicate disabled state */
+}
+
+.newOutlineButton {
+  padding: 10px 15px;
+  background-color: var(--button-secondary);
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.guestMessage {
+  margin-top: 15px;
+  text-align: center;
+  color: var(--button-primary);
+}
+
+.guestMessage a {
+  color: var(--button-primary);
+  text-decoration: none;
+}
+
+.guestMessage a:hover {
+  text-decoration: underline;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+  .courseOutlinePageContainer {
+    margin: var(--spacing-md) auto;
+    padding: var(--spacing-sm);
+  }
+
+  .courseOutlinePageContainer h2 {
+    font-size: var(--font-size-h3);
+  }
+
+  .courseOutlinePageContainer > p {
+    font-size: var(--font-size-md);
+  }
+
+  .courseOutlineForm > div { /* For the two-column grid in setup */
+    grid-template-columns: 1fr; /* Stack inputs vertically */
+  }
+
+  .outlineActions {
+    flex-direction: column;
+    gap: var(--spacing-sm);
+  }
+
+  .downloadButton, .newOutlineButton {
+    width: 100%;
+  }
+}

@@ -1,0 +1,55 @@
+.featureCard {
+  background: linear-gradient(135deg, var(--primary-gradient-start) 0%, var(--primary-gradient-end) 100%);
+  background-size: 200% 200%;
+  animation: gradientMove 10s ease infinite;
+  border-radius: 16px;
+  padding: var(--spacing-lg); /* Use spacing variable */
+  box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  color: white;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative; /* Add relative positioning */
+  overflow: hidden; /* Hide any overflow */
+}
+
+.featureCard:hover {
+  transform: translateY(-6px) scale(1.02);
+  box-shadow: 0 10px 25px rgba(0,0,0,0.28);
+}
+
+.transparentButton {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  z-index: 2; /* Ensure it's on top of other content */
+}
+
+.featureIcon {
+  font-size: 32px;
+  margin-bottom: var(--spacing-sm); /* Use spacing variable */
+  color: white;
+  position: relative; /* Ensure it's not behind the button */
+  z-index: 1;
+}
+
+.featureTitle {
+  color: white;
+  margin: 0 0 var(--spacing-sm) 0; /* Use spacing variable */
+  position: relative;
+  z-index: 1;
+}
+
+.featureDescription {
+  color: rgba(255,255,255,0.9);
+  margin: 0;
+  position: relative;
+  z-index: 1;
+}

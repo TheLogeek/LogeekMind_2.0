@@ -1,0 +1,188 @@
+.communityChatPageContainer {
+  display: flex;
+  height: calc(100vh - 40px); /* Specific height for chat, might need adjustment with Navbar */
+  gap: var(--spacing-md);
+  box-sizing: border-box; /* Ensure padding/border don't cause overflow */
+}
+
+.mainChatArea {
+  flex: 3;
+  display: flex;
+  flex-direction: column;
+  background-color: #061025;
+  border-radius: 10px;
+  padding: var(--spacing-md);
+}
+
+.mainChatArea h2 {
+  color: white;
+  border-bottom: 1px solid #222;
+  padding-bottom: var(--spacing-sm);
+  margin-bottom: var(--spacing-md); /* Added for consistency */
+}
+
+.messagesWindow {
+  flex-grow: 1;
+  overflow-y: auto;
+  margin-bottom: var(--spacing-md);
+}
+
+.messageItem {
+  margin-bottom: 15px;
+  display: flex;
+  flex-direction: column;
+}
+
+.messageUser {
+  align-items: flex-end; /* Align user messages to the right */
+}
+
+.messageOther {
+  align-items: flex-start; /* Align other messages to the left */
+}
+
+.messageUsername {
+  font-size: 12px;
+  color: #bfe8ff;
+  margin-bottom: 4px;
+}
+
+.messageContent {
+  padding: 10px 15px;
+  border-radius: 12px;
+  max-width: 70%;
+  word-break: break-word;
+}
+
+.messageContent.user {
+  background-color: #0056b3;
+  color: #e9f2ff;
+}
+
+.messageContent.other {
+  background-color: #343a40;
+  color: #e9f2ff;
+}
+
+.messageTimestamp {
+  font-size: 10px;
+  color: #9fbfdb;
+  margin-top: 4px;
+}
+
+.typingIndicator {
+  font-style: italic;
+  color: #cfeeff;
+  height: 20px;
+  margin-bottom: 5px;
+}
+
+.chatForm {
+  display: flex;
+  gap: var(--spacing-sm);
+}
+
+.chatInput {
+  flex: 1;
+  padding: 10px;
+  border-radius: 5px;
+  border: none;
+  background-color: #1c2533;
+  color: white;
+}
+
+.sendButton {
+  padding: 10px 20px;
+  border-radius: 5px;
+  border: none;
+  background-color: var(--button-primary);
+  color: white;
+  cursor: pointer;
+}
+
+.sendButton:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.rightSidebar {
+  flex: 1;
+  background-color: #07152b;
+  border-radius: 10px;
+  padding: var(--spacing-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.rightSidebar h3 {
+  color: white;
+}
+
+.roomButton {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 5px;
+  border: none;
+  border-radius: 5px;
+  text-align: left;
+  background-color: transparent;
+  color: white;
+  cursor: pointer;
+}
+
+.roomButton.active {
+  background-color: var(--button-primary);
+}
+
+.onlineUserTag {
+  padding: 6px 10px;
+  border-radius: 999px;
+  background-color: #05a3ff;
+  color: white;
+  font-weight: 600;
+  display: inline-block;
+  margin: 4px 2px;
+}
+
+.errorText {
+  color: var(--button-danger);
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+  .communityChatPageContainer {
+    flex-direction: column; /* Stack main chat and sidebar vertically */
+    height: auto; /* Allow height to adjust */
+    padding: var(--spacing-sm);
+  }
+
+  .mainChatArea {
+    padding: var(--spacing-sm);
+  }
+
+  .mainChatArea h2 {
+    font-size: var(--font-size-h3);
+  }
+
+  .messageContent {
+    max-width: 90%; /* Allow messages to take more width */
+  }
+
+  .rightSidebar {
+    padding: var(--spacing-sm);
+  }
+
+  .chatForm {
+    flex-direction: column;
+    gap: var(--spacing-xs);
+  }
+  .chatInput {
+    width: 100%;
+  }
+  .sendButton {
+    width: 100%;
+    margin-top: var(--spacing-xs);
+  }
+}
