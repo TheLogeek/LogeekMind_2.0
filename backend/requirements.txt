@@ -21,4 +21,4 @@ matplotlib
 seaborn
 nltk
 sumy
-huggingface-hub
+openai-whisper
