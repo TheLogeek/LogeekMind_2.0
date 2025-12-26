@@ -10,7 +10,7 @@ from app.services.usage_service import log_usage
 load_dotenv()
 
 # Hugging Face Inference API details
-API_URL = "https://api-inference.huggingface.co/models/openai/whisper-large-v3"
+API_URL = "https://api-inference.huggingface.co/models/openai/whisper-base"
 HF_TOKEN = os.getenv("HF_TOKEN")
 
 async def transcribe_audio_file(
