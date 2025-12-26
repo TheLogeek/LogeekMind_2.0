@@ -252,11 +252,7 @@ const CourseOutlinePage = () => {
                         {`You have used ${guestUsageCount} of ${GUEST_OUTLINE_LIMIT} guest outlines.`}
                         Please <a href="/login">Login</a> or <a href="/signup">Sign Up</a> for unlimited access.
                     </p>
-                    {guestUsageCount > 0 && (
-                        <button onClick={handleResetGuestUsage} className="debug-button">
-                            Reset Guest Usage (DEBUG)
-                        </button>
-                    )}
+
                 </div>
             )}
         </div>

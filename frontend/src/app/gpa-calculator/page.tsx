@@ -213,12 +213,7 @@ const GPACalculatorPage = () => {
                 </p>
             )}
 
-            {/* Debugging Button for Guests */}
-            {!currentUser && guestUsageCount > 0 && (
-                <button onClick={handleResetGuestUsage} className="debug-button">
-                    Reset Guest Usage (DEBUG)
-                </button>
-            )}
+
         </div>
     );
 };

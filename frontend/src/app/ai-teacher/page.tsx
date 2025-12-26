@@ -226,15 +226,7 @@ const AITeacherPage = () => {
                         {`You have used ${guestUsageCount} of ${GUEST_AI_TEACHER_LIMIT} guest sessions.`}
                         Please <a onClick={() => router.push('/login')}>Login</a> or <a onClick={() => router.push('/signup')}>Sign Up</a> for unlimited access.
                     </p>
-                    {guestUsageCount > 0 && (
-                        <button
-                            type="button"
-                            onClick={handleResetGuestUsage}
-                            className="debug-button"
-                        >
-                            Reset Guest Usage (DEBUG)
-                        </button>
-                    )}
+
                 </div>
             )}
         </div>

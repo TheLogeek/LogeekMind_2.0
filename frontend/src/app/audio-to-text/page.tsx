@@ -196,11 +196,7 @@ const AudioToTextPage = () => {
                         {`You have used ${guestUsageCount} of ${GUEST_TRANSCRIBE_LIMIT} guest transcriptions.`}
                         Please <a onClick={() => router.push('/login')}>Login</a> or <a onClick={() => router.push('/signup')}>Sign Up</a> for unlimited access.
                     </p>
-                    {guestUsageCount > 0 && (
-                        <button onClick={handleResetGuestUsage} className="debug-button">
-                            Reset Guest Usage (DEBUG)
-                        </button>
-                    )}
+
                 </div>
             )}
         </div>

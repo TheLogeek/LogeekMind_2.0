@@ -247,11 +247,7 @@ const HomeworkAssistantPage = () => {
                         {`You have used ${guestUsageCount} of ${GUEST_HW_LIMIT} guest solutions.`}
                         Please <a onClick={() => router.push('/login')}>Login</a> or <a onClick={() => router.push('/signup')}>Sign Up</a> for unlimited access.
                     </p>
-                    {guestUsageCount > 0 && (
-                        <button onClick={handleResetGuestUsage} className="debug-button">
-                            Reset Guest Usage (DEBUG)
-                        </button>
-                    )}
+
                 </div>
             )}
         </div>

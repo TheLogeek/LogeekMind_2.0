@@ -400,15 +400,7 @@ const SmartQuizPage = () => {
                         {`You have used ${guestUsageCount} of ${GUEST_QUIZ_LIMIT} guest quizzes.`}
                         Please <a onClick={() => router.push('/login')}>Login</a> or <a onClick={() => router.push('/signup')}>Sign Up</a> for unlimited access.
                     </p>
-                    {guestUsageCount > 0 && (
-                        <button 
-                            type="button" // Added type to prevent form submission
-                            onClick={handleResetGuestUsage} 
-                            className="debug-button"
-                        >
-                            Reset Guest Usage (DEBUG)
-                        </button>
-                    )}
+
                 </div>
             )}
         </div>
