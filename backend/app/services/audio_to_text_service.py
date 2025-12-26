@@ -12,6 +12,7 @@ load_dotenv()
 # Hugging Face Inference API details
 API_URL = "https://api-inference.huggingface.co/models/openai/whisper-base"
 HF_TOKEN = os.getenv("HF_TOKEN")
+print(f"HF_TOKEN Loaded on Startup: {bool(HF_TOKEN)}") # Added for debugging
 
 async def transcribe_audio_file(
     supabase: Client,
@@ -22,6 +23,7 @@ async def transcribe_audio_file(
 ) -> Dict[str, Any]:
     
     if not HF_TOKEN:
+        print("ERROR: HF_TOKEN is not configured.") # More detailed log
         return {"success": False, "message": "Hugging Face API token is not configured on the server."}
 
     headers = {"Authorization": f"Bearer {HF_TOKEN}"}
@@ -32,6 +34,7 @@ async def transcribe_audio_file(
         
         # Check for errors from Hugging Face
         if response.status_code != 200:
+            print(f"Hugging Face API Error: Status Code {response.status_code}, Response: {response.text}") # Detailed log
             error_data = response.json()
             error_message = error_data.get("error", "An unknown error occurred with the transcription service.")
             # Handle model loading state
@@ -47,19 +50,19 @@ async def transcribe_audio_file(
             return {"success": False, "message": "Transcription failed. The model did not return any text."}
 
         # Log usage to Supabase
-        await log_usage(
+        asyncio.create_task(log_usage(
             supabase=supabase,
             user_id=user_id,
             user_name=username,
             feature_name="Lecture Audio to Text Converter",
             action="transcribed",
-            metadata={"file_name": file_name, "transcribed_length": len(transcribed_text), "model": "whisper-large-v3"}
-        )
+            metadata={"file_name": file_name, "transcribed_length": len(transcribed_text), "model": "whisper-base"}
+        ))
 
         return {"success": True, "transcribed_text": transcribed_text}
 
     except requests.exceptions.RequestException as e:
-        print(f"Error during Hugging Face API call: {e}")
+        print(f"FATAL: Could not connect to Hugging Face API. Error: {e}") # Detailed log
         return {"success": False, "message": "Could not connect to the transcription service. Please check your network connection."}
     except Exception as e:
         print(f"An unexpected error occurred during audio transcription: {e}")
