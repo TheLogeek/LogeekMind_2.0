@@ -1,14 +1,16 @@
 import os
+import psycopg2
 from supabase import create_client, Client
 from dotenv import load_dotenv
 from typing import Optional, Tuple
 
-load_dotenv() # Load environment variables from .env file
+load_dotenv()
 
+# Use the full DATABASE_URL for a pooled connection
+DATABASE_URL = os.getenv("DATABASE_URL")
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 
-# Global variables to store the Supabase client and its availability status
 _supabase_client: Optional[Client] = None
 _supabase_error_message: Optional[str] = None
 _supabase_initialized = False
@@ -25,17 +27,23 @@ def get_supabase_client() -> Tuple[Optional[Client], Optional[str]]:
         return None, _supabase_error_message
     
     try:
+        # Check database connection using the full DATABASE_URL
+        if DATABASE_URL:
+            conn = psycopg2.connect(DATABASE_URL)
+            conn.close()
+            
         _supabase_client = create_client(SUPABASE_URL, SUPABASE_KEY)
         _supabase_error_message = None
+        print("Supabase client initialized successfully.")
+
     except Exception as e:
         _supabase_client = None
-        _supabase_error_message = f"Supabase connection failed during initialization: {e}"
-        print(f"WARNING: {_supabase_error_message}") # Log to console
+        _supabase_error_message = f"Supabase connection failed: {e}"
+        print(f"WARNING: {_supabase_error_message}")
     finally:
         _supabase_initialized = True
         return _supabase_client, _supabase_error_message
 
-# Dependency to inject Supabase client, raising error if not available
 def get_safe_supabase_client() -> Client:
     client, error = get_supabase_client()
     if client is None:
