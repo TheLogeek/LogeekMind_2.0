@@ -37,7 +37,7 @@ interface UsageLogItem {
     metadata: any; // Can be more specific if structure is known
 }
 
-const API_BASE_URL = "http://127.0.0.1:8000";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000";
 const ADMIN_REFRESH_INTERVAL = 60000; // 60 seconds
 
 const AdminDashboardPage = () => {
