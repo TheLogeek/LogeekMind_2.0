@@ -8,7 +8,7 @@ import MarkdownRenderer from '../../components/MarkdownRenderer'; // Adjust path
 import ApiKeyInput from '../../components/ApiKeyInput'; // Adjust path relative to app/smart-quiz/page.tsx
 import styles from './SmartQuizPage.module.css';
 
-const API_BASE_URL = "http://127.0.0.1:8000";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000";
 
 const DIFFICULTY_MAP_FRONTEND: { [key: number]: string } = { 1: "Easy", 2: "Beginner", 3: "Intermediate", 4: "Advanced", 5: "Hard" };
 const QUESTION_TYPES = ["Multiple Choice", "True/False"];

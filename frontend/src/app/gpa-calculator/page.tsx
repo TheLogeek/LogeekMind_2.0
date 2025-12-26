@@ -6,7 +6,7 @@ import AuthService from '../../services/AuthService'; // Adjust path
 import axios, { AxiosError } from 'axios';
 import styles from './GPACalculatorPage.module.css'; // Import the CSS Module
 
-const API_BASE_URL = "http://127.0.0.1:8000";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000";
 
 const GRADE_OPTIONS = ["A", "B", "C", "D", "E", "F"];
 

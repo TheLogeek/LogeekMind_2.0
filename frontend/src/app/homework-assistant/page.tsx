@@ -8,7 +8,7 @@ import MarkdownRenderer from '../../components/MarkdownRenderer';
 import ApiKeyInput from '../../components/ApiKeyInput';
 import styles from './HomeworkAssistantPage.module.css';
 
-const API_BASE_URL = "http://127.0.0.1:8000";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000";
 
 const HomeworkAssistantPage = () => {
     const router = useRouter();
@@ -23,8 +23,6 @@ const HomeworkAssistantPage = () => {
     const GUEST_HW_LIMIT = 1;
     const GUEST_USAGE_KEY = 'homework_assistant_guest_usage';
     const [guestUsageCount, setGuestUsageCount] = useState(0);
-
-    const [userGeminiApiKey, setUserGeminiApiKey] = useState('');
 
     const [userGeminiApiKey, setUserGeminiApiKey] = useState('');
 

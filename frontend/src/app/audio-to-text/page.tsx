@@ -6,7 +6,7 @@ import AuthService from '../../services/AuthService';
 import axios, { AxiosError } from 'axios';
 import styles from './AudioToTextPage.module.css';
 
-const API_BASE_URL = "http://127.0.0.1:8000";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000";
 
 const AudioToTextPage = () => {
     const router = useRouter();

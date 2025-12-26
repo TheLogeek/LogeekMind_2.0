@@ -8,7 +8,7 @@ import MarkdownRenderer from '../../components/MarkdownRenderer'; // Adjust path
 import ApiKeyInput from '../../components/ApiKeyInput'; // Adjust path relative to app/course-outline/page.tsx
 import styles from './CourseOutlinePage.module.css';
 
-const API_BASE_URL = "http://127.0.0.1:8000";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000";
 
 const CourseOutlinePage = () => {
     const router = useRouter();
