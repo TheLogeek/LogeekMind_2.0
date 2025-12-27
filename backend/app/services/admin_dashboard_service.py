@@ -34,7 +34,7 @@ async def get_feature_usage(conn: Connection) -> List[Dict[str, Any]]:
 async def get_top_users(conn: Connection, n: int = 5) -> List[Dict[str, Any]]:
     query = text("""
         SELECT username, COUNT(id) as usage_count
-        FROM usage_logs
+        FROM usage_log
         GROUP BY username
         ORDER BY usage_count DESC
         LIMIT :n
