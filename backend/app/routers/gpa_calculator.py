@@ -3,7 +3,7 @@ from pydantic import BaseModel, Field
 from supabase import Client
 from typing import Dict, Any, List, Optional
 
-from app.core.database import get_safe_supabase_client
+from app.core.database import get_service_client
 from app.core.security import try_get_current_user_from_supabase_jwt
 from app.services import gpa_service
 from app.services import usage_service
@@ -33,7 +33,7 @@ class GPACalculateResponse(BaseModel):
 @router.post("/calculate", response_model=GPACalculateResponse)
 async def calculate_gpa_route(
     request: GPACalculateRequest,
-    supabase: Client = Depends(get_safe_supabase_client),
+    supabase: Client = Depends(get_service_client),
     current_user: Optional[Dict[str, Any]] = Depends(try_get_current_user_from_supabase_jwt)
 ):
     if current_user:

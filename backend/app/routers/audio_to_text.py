@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, status
 from supabase import Client
 from typing import Dict, Any, Optional
 
-from app.core.database import get_safe_supabase_client
+from app.core.database import get_service_client
 from app.core.security import try_get_current_user_from_supabase_jwt
 from app.services import audio_to_text_service
 
@@ -18,7 +18,7 @@ GUEST_LIMIT = 2
 @router.post("/transcribe")
 async def transcribe_audio_route(
     file: UploadFile = File(...),
-    supabase: Client = Depends(get_safe_supabase_client),
+    supabase: Client = Depends(get_service_client),
     current_user: Optional[Dict[str, Any]] = Depends(try_get_current_user_from_supabase_jwt)
 ):
     if current_user:

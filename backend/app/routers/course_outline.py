@@ -3,7 +3,7 @@ from pydantic import BaseModel
 from supabase import Client
 from typing import Dict, Any, Optional
 
-from app.core.database import get_safe_supabase_client # Updated import
+from app.core.database import get_service_client
 from app.core.security import try_get_current_user_from_supabase_jwt
 from app.services import course_outline_service
 from starlette.responses import StreamingResponse
@@ -32,7 +32,7 @@ class CourseOutlineResponse(BaseModel):
 @router.post("/generate", response_model=CourseOutlineResponse)
 async def generate_course_outline_route(
     request: CourseOutlineRequest,
-    supabase: Client = Depends(get_safe_supabase_client),
+    supabase: Client = Depends(get_service_client),
     current_user: Optional[Dict[str, Any]] = Depends(try_get_current_user_from_supabase_jwt)
 ):
     if current_user:
@@ -67,7 +67,7 @@ async def generate_course_outline_route(
 async def download_course_outline_docx(
     request: CourseOutlineRequest,
     current_user: Optional[Dict[str, Any]] = Depends(try_get_current_user_from_supabase_jwt),
-    supabase: Client = Depends(get_safe_supabase_client)
+    supabase: Client = Depends(get_service_client)
 ):
     if not request.course_full_name or not request.outline_text:
         raise HTTPException(status_code=400, detail="Course full name and outline text are required.")
