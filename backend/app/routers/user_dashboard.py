@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from supabase import Client
-from typing import Dict, Any, List, Optional
-from app.core.database import get_safe_supabase_client
+from sqlalchemy import text
+from sqlalchemy.engine import Engine
+from typing import Dict, Any, List
+from app.core.database import get_db_engine # Import the new engine dependency
 from app.core.security import get_current_user_from_supabase_jwt
 
 router = APIRouter(
@@ -13,11 +14,11 @@ router = APIRouter(
 @router.get("/performance", response_model=List[Dict[str, Any]])
 async def get_user_performance_route(
     current_user: Dict[str, Any] = Depends(get_current_user_from_supabase_jwt),
-    supabase: Client = Depends(get_safe_supabase_client)
+    engine: Engine = Depends(get_db_engine) # Use the new SQLAlchemy engine dependency
 ):
     """
-    Fetches all performance-related usage logs for the currently authenticated user.
-    This includes logs from 'Smart Quiz' and 'Exam Simulator'.
+    Fetches all performance-related usage logs for the currently authenticated user
+    using a pooled SQLAlchemy connection.
     """
     if not current_user:
         raise HTTPException(
@@ -28,28 +29,20 @@ async def get_user_performance_route(
     user_id = current_user["id"]
     
     try:
-        # Query the usage_logs table for records related to performance
-        query = supabase.table("usage_logs").select("*").eq("user_id", user_id).in_("feature_name", ["Smart Quiz", "Exam Simulator"])
-        response = query.execute()
-
-        if not response.data:
-            return [] # Return an empty list if no performance data is found
-
-        # Extract the metadata and relevant fields
-        performance_data = []
-        for record in response.data:
-            metadata = record.get("metadata", {})
-            performance_data.append({
-                "feature_name": record.get("feature_name"),
-                "score": metadata.get("score"),
-                "total_questions": metadata.get("total_questions"),
-                "created_at": record.get("created_at"),
-            })
+        # Use the SQLAlchemy engine to execute a raw SQL query
+        with engine.connect() as connection:
+            query = text("""
+                SELECT feature_name, metadata->>'score' as score, metadata->>'total_questions' as total_questions, created_at
+                FROM usage_logs
+                WHERE user_id = :user_id AND feature_name IN ('Smart Quiz', 'Exam Simulator')
+            """)
+            result = connection.execute(query, {"user_id": user_id})
+            performance_data = [row._asdict() for row in result]
 
         return performance_data
 
     except Exception as e:
-        print(f"Error fetching user performance data: {e}")
+        print(f"Error fetching user performance data with SQLAlchemy: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An error occurred while fetching performance data.",
