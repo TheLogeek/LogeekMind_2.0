@@ -84,7 +84,7 @@ const UserDashboardPage = () => {
     };
     
     // Average Performance by Feature (Bar Chart)
-    const featureGroups = df.reduce((acc, d) => {
+    const featureGroups: { [key: string]: number[] } = df.reduce((acc: { [key: string]: number[] }, d: any) => {
         acc[d.feature_name] = acc[d.feature_name] || [];
         acc[d.feature_name].push(d.percentage);
         return acc;
@@ -95,7 +95,7 @@ const UserDashboardPage = () => {
         datasets: [
             {
                 label: 'Average Score by Feature (%)',
-                data: Object.values(featureGroups).map((scores: number[]) => scores.reduce((a, b) => a + b, 0) / scores.length),
+                data: Object.values(featureGroups).map((scores: number[]): number => scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0),
                 backgroundColor: 'rgba(54, 162, 235, 0.6)',
             },
         ],

@@ -116,15 +116,15 @@ const AdminDashboardPage = () => {
     }
     
     // --- Chart Data Preparation ---
-    const featureUsageLabels = featureUsage.map(item => item.feature_name);
-    const featureUsageData = featureUsage.map(item => item.usage_count);
+    const featureUsageLabels: string[] = featureUsage.length > 0 ? featureUsage.map((item: FeatureUsageItem) => item.feature_name) : [];
+    const featureUsageData: number[] = featureUsage.length > 0 ? featureUsage.map((item: FeatureUsageItem) => item.usage_count) : [];
 
     const featureBarChartData = {
         labels: featureUsageLabels,
         datasets: [{
             label: 'Feature Usage Count',
             data: featureUsageData,
-            backgroundColor: 'rgba(75, 192, 192, 0.6)',
+            backgroundColor: featureUsageLabels.map((_, i) => `hsl(${i * 60}, 70%, 50%)`),
             borderColor: 'rgba(75, 192, 192, 1)',
             borderWidth: 1,
         }]
@@ -139,8 +139,8 @@ const AdminDashboardPage = () => {
         }]
     };
 
-    const dailyActivityLabels = dailyActivity.map(item => item.date);
-    const dailyActivityCounts = dailyActivity.map(item => item.count);
+    const dailyActivityLabels: string[] = dailyActivity.map((item: DailyActivityItem) => item.date);
+    const dailyActivityCounts: number[] = dailyActivity.map((item: DailyActivityItem) => item.count);
 
     const dailyActivityLineChartData = {
         labels: dailyActivityLabels,

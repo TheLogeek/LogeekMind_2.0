@@ -1,21 +1,33 @@
 import os
-import requests
+import tempfile
 from typing import Dict, Any
 from supabase import Client
 import asyncio
-from dotenv import load_dotenv
+from pywhispercpp.model import Model # Import Model from pywhispercpp
 
 from app.services.usage_service import log_usage
 
-load_dotenv()
+# Global variable to store the Whisper model instance.
+_whisper_model = None
+_model_lock = asyncio.Lock()
 
-# Hugging Face Inference API details for the 'base' model
-API_URL = "https://api-inference.huggingface.co/models/openai/whisper-base"
-HF_TOKEN = os.getenv("HF_TOKEN")
-
-# Add a check on startup to log if the token is missing
-if not HF_TOKEN:
-    print("WARNING: HF_TOKEN environment variable is not set. Transcription service will not work.")
+async def get_whisper_model():
+    """
+    Asynchronously loads the Whisper 'tiny.en' model using pywhispercpp.
+    """
+    global _whisper_model
+    async with _model_lock:
+        if _whisper_model is None:
+            print("Loading Whisper model (size: tiny.en) with pywhispercpp... This will happen once on startup.")
+            try:
+                # Use 'tiny.en' for English-only and better memory footprint.
+                # n_threads=1 or 2 is good for low-RAM systems.
+                _whisper_model = Model('tiny.en', n_threads=1)
+                print("Whisper 'tiny.en' model loaded successfully.")
+            except Exception as e:
+                print(f"FATAL: Could not load pywhispercpp model. Error: {e}")
+                _whisper_model = None
+        return _whisper_model
 
 async def transcribe_audio_file(
     supabase: Client,
@@ -24,54 +36,55 @@ async def transcribe_audio_file(
     audio_content: bytes,
     file_name: str
 ) -> Dict[str, Any]:
+    """
+    Transcribes an audio file using the locally hosted 'tiny.en' Whisper model via pywhispercpp.
+    """
+    model = await get_whisper_model()
+    if model is None:
+        return {"success": False, "message": "Transcription model is not available. Please contact support."}
     
-    if not HF_TOKEN:
-        return {"success": False, "message": "Audio transcription service is currently not configured by the administrator."}
-
-    headers = {"Authorization": f"Bearer {HF_TOKEN}"}
-
+    tmp_audio_path = None
     try:
-        # Make the API call to Hugging Face. Added a timeout for safety.
-        response = requests.post(API_URL, headers=headers, data=audio_content, timeout=120) # 120-second timeout
+        # pywhispercpp prefers WAV. If audio_content is not WAV,
+        # we might need to convert it, but for now, assume compatible format
+        # or handle as a separate pre-processing step.
+        # Save the audio content to a temporary file
+        suffix = os.path.splitext(file_name)[1]
+        if not suffix: suffix = ".wav" # Default to wav if no suffix
         
-        # Check for authentication or other client-side errors first
-        if response.status_code == 401:
-            print("FATAL: Hugging Face API call failed with 401 Unauthorized. The HF_TOKEN is likely invalid or missing permissions.")
-            return {"success": False, "message": "Transcription service authentication failed. Please contact support."}
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmpfile:
+            tmpfile.write(audio_content)
+            tmp_audio_path = tmpfile.name
+
+        # Run the CPU-intensive transcription in a separate thread
+        # pywhispercpp's transcribe method is synchronous, so we run it in a thread pool.
+        segments = await asyncio.to_thread(model.transcribe, tmp_audio_path)
         
-        # Check for other non-successful status codes
-        if response.status_code != 200:
-            error_data = response.json()
-            error_message = error_data.get("error", "An unknown error occurred with the transcription service.")
-            print(f"Hugging Face API Error: Status {response.status_code}, Response: {error_message}") # Detailed log for admin
+        transcribed_text = "".join([segment.text for segment in segments]).strip()
 
-            if "is currently loading" in error_message:
-                estimated_time = error_data.get("estimated_time", 25)
-                return {"success": False, "message": f"The transcription model is warming up. Please try again in {int(estimated_time)} seconds."}
-            
-            return {"success": False, "message": f"Transcription Service Error: {error_message}"}
+        if not transcribed_text:
+            return {"success": False, "message": "Transcription failed to produce text."}
 
-        result = response.json()
-        transcribed_text = result.get("text")
-
-        if transcribed_text is None:
-            return {"success": False, "message": "Transcription failed. The model did not return any text."}
-
-        # Log usage to Supabase in the background
+        # Log usage in the background
         asyncio.create_task(log_usage(
             supabase=supabase,
             user_id=user_id,
             user_name=username,
             feature_name="Lecture Audio to Text Converter",
             action="transcribed",
-            metadata={"file_name": file_name, "transcribed_length": len(transcribed_text), "model": "whisper-base-hf"}
+            metadata={
+                "file_name": file_name,
+                "transcribed_length": len(transcribed_text),
+                "model": "pywhispercpp-tiny.en"
+            }
         ))
 
         return {"success": True, "transcribed_text": transcribed_text}
 
-    except requests.exceptions.RequestException as e:
-        print(f"FATAL: Could not connect to Hugging Face API. Error: {e}")
-        return {"success": False, "message": "Could not connect to the transcription service. Please check your network connection."}
     except Exception as e:
-        print(f"An unexpected error occurred during audio transcription: {e}")
-        return {"success": False, "message": f"An unexpected error occurred: {str(e)}"}
+        print(f"Error during audio transcription with pywhispercpp: {e}")
+        return {"success": False, "message": f"An unexpected error occurred during transcription: {str(e)}"}
+    finally:
+        # Ensure the temporary file is always cleaned up
+        if tmp_audio_path and os.path.exists(tmp_audio_path):
+            os.remove(tmp_audio_path)
