@@ -5,9 +5,6 @@ from supabase import Client
 from google import genai
 from google.genai import types
 from google.genai.errors import APIError
-import logging # Import logging
-
-logger = logging.getLogger(__name__) # Initialize logger
 
 AI_TEACHER_INSTRUCTIONS = (
     """
@@ -88,11 +85,6 @@ async def generate_ai_teacher_response(
     chat_history: List[Dict[str, str]],
     api_key: Optional[str] = None
 ) -> Dict[str, Any]:
-    logger.info(f"DEBUG: generate_ai_teacher_response called. Supabase client present: {supabase is not None}")
-    if supabase is not None:
-        logger.info(f"DEBUG: Supabase client base_url: {supabase.base_url}")
-    else:
-        logger.error("DEBUG: Supabase client is None in generate_ai_teacher_response before Gemini call.")
     
     client, api_key_to_use, error_message = await get_gemini_client_and_key(user_id=user_id, user_api_key=api_key)
     if error_message:
@@ -114,7 +106,6 @@ async def generate_ai_teacher_response(
         
         ai_text = response.text
 
-        logger.info(f"DEBUG: About to call log_usage. Supabase client present: {supabase is not None}")
         await log_usage(
             supabase=supabase,
             user_id=user_id,
@@ -123,7 +114,6 @@ async def generate_ai_teacher_response(
             action="generated",
             metadata={"topic": current_prompt}
         )
-        logger.info("DEBUG: log_usage called successfully.")
 
         return {"success": True, "ai_text": ai_text}
 
