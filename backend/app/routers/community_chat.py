@@ -3,7 +3,7 @@ from pydantic import BaseModel
 from supabase import Client
 from typing import Dict, Any, List, Optional
 
-from app.core.database import get_safe_supabase_client
+from app.core.database import get_service_client
 from app.core.security import get_current_user_from_supabase_jwt, try_get_current_user_from_supabase_jwt
 from app.services import community_chat_service
 
@@ -31,7 +31,7 @@ class TypingStatusRequest(BaseModel):
 @router.get("/messages/{group_name}", response_model=List[ChatMessage])
 async def get_messages_route(
     group_name: str,
-    supabase: Client = Depends(get_safe_supabase_client),
+    supabase: Client = Depends(get_service_client),
     current_user: Optional[Dict[str, Any]] = Depends(try_get_current_user_from_supabase_jwt) # Optional auth for viewing
 ):
     try:
@@ -44,7 +44,7 @@ async def get_messages_route(
 async def post_message_route(
     request: SendMessageRequest,
     current_user: Dict[str, Any] = Depends(get_current_user_from_supabase_jwt), # Strict auth to send
-    supabase: Client = Depends(get_safe_supabase_client)
+    supabase: Client = Depends(get_service_client)
 ):
     try:
         username = current_user["username"]
@@ -58,7 +58,7 @@ async def post_message_route(
 async def delete_message_route(
     message_id: int,
     current_user: Dict[str, Any] = Depends(get_current_user_from_supabase_jwt), # Strict auth to delete
-    supabase: Client = Depends(get_safe_supabase_client)
+    supabase: Client = Depends(get_service_client)
 ):
     try:
         user_id = current_user["id"] # Required for ownership check in service
@@ -72,7 +72,7 @@ async def delete_message_route(
 @router.post("/presence")
 async def upsert_presence_route(
     current_user: Dict[str, Any] = Depends(get_current_user_from_supabase_jwt), # Strict auth for presence
-    supabase: Client = Depends(get_safe_supabase_client)
+    supabase: Client = Depends(get_service_client)
 ):
     try:
         await community_chat_service.upsert_presence(supabase, current_user["username"])
@@ -82,7 +82,7 @@ async def upsert_presence_route(
 
 @router.get("/online-users", response_model=List[str])
 async def get_online_users_route(
-    supabase: Client = Depends(get_safe_supabase_client),
+    supabase: Client = Depends(get_service_client),
     current_user: Optional[Dict[str, Any]] = Depends(try_get_current_user_from_supabase_jwt) # Optional auth for viewing
 ):
     # Only show online users if logged in, or a limited view for guests perhaps
@@ -97,7 +97,7 @@ async def get_online_users_route(
 async def set_typing_status_route(
     request: TypingStatusRequest,
     current_user: Dict[str, Any] = Depends(get_current_user_from_supabase_jwt), # Strict auth for typing status
-    supabase: Client = Depends(get_safe_supabase_client)
+    supabase: Client = Depends(get_service_client)
 ):
     try:
         await community_chat_service.set_typing_status(supabase, current_user["username"], request.group_name, request.is_typing)
@@ -109,7 +109,7 @@ async def set_typing_status_route(
 async def get_typing_users_route(
     group_name: str,
     current_user: Optional[Dict[str, Any]] = Depends(try_get_current_user_from_supabase_jwt), # Optional auth for viewing
-    supabase: Client = Depends(get_safe_supabase_client)
+    supabase: Client = Depends(get_service_client)
 ):
     # For guests, typing users might not be relevant or should be restricted
     # Assuming for now, if the user is authenticated, we exclude their own typing status

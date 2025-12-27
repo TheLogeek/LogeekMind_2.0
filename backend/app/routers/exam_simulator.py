@@ -6,7 +6,7 @@ from starlette.responses import StreamingResponse
 import json
 import time # For unique filename
 
-from app.core.database import get_safe_supabase_client
+from app.core.database import get_service_client
 from app.core.security import try_get_current_user_from_supabase_jwt, get_current_user_from_supabase_jwt
 from app.services import exam_simulator_service
 
@@ -55,7 +55,7 @@ class ExamResultsResponse(BaseModel):
 @router.post("/generate", response_model=ExamGenerateResponse)
 async def generate_exam_route(
     request: ExamSetupRequest,
-    supabase: Client = Depends(get_safe_supabase_client),
+    supabase: Client = Depends(get_service_client),
     current_user: Optional[Dict[str, Any]] = Depends(try_get_current_user_from_supabase_jwt)
 ):
     if current_user:
@@ -90,7 +90,7 @@ async def generate_exam_route(
 async def submit_exam_results_route(
     request: ExamSubmitRequest,
     current_user: Dict[str, Any] = Depends(get_current_user_from_supabase_jwt), # Requires login to submit/log results
-    supabase: Client = Depends(get_safe_supabase_client)
+    supabase: Client = Depends(get_service_client)
 ):
     try:
         response = await exam_simulator_service.grade_exam_and_log_performance(
@@ -118,7 +118,7 @@ async def download_exam_results_docx(
     course_name: str = Form(...),
     topic: Optional[str] = Form(None),
     current_user: Dict[str, Any] = Depends(get_current_user_from_supabase_jwt), # Requires login to download
-    supabase: Client = Depends(get_safe_supabase_client)
+    supabase: Client = Depends(get_service_client)
 ):
     if not exam_data_json:
         raise HTTPException(status_code=400, detail="Exam data is required to generate DOCX.")
