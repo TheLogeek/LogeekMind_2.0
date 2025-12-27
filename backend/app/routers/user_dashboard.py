@@ -1,6 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import text
-from sqlalchemy.engine import Engine
+from supabase import Client # Add this import
 from typing import Dict, Any, List
 from app.core.database import get_service_client
 from app.core.security import get_current_user_from_supabase_jwt
