@@ -1,1 +1,26 @@
-sqlalchemy
+# Core backend packages
+fastapi
+uvicorn[standard]
+python-dotenv
+pydantic[email]
+python-jose[cryptography]
+passlib[bcrypt]
+python-multipart
+pandas
+google-generativeai
+google-genai
+pypdf
+python-docx
+gTTS
+Pillow
+fpdf
+requests
+supabase
+plotly
+matplotlib
+seaborn
+nltk
+sumy
+psycopg2-binary
+pywhispercpp
+SQLAlchemy
