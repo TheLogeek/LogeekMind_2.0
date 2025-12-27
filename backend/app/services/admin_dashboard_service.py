@@ -58,4 +58,3 @@ async def get_all_usage_logs(supabase: Client) -> List[Dict[str, Any]]:
         df['created_at'] = pd.to_datetime(df['created_at']).dt.tz_convert(None).dt.isoformat() # Convert to ISO format string
         return df.to_dict(orient="records")
     return []
-
