@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException, s
 from supabase import Client
 from typing import Dict, Any, Optional
 
-from app.core.database import get_safe_supabase_client
+from app.core.database import get_service_client
 from app.core.security import try_get_current_user_from_supabase_jwt
 from app.services import summarizer_service
 from app.services import usage_service
@@ -20,7 +20,7 @@ GUEST_LIMIT = 2
 async def summarize_upload(
     file: UploadFile = File(...),
     gemini_api_key: Optional[str] = Form(None), # New parameter for user's Gemini API key
-    supabase: Client = Depends(get_safe_supabase_client),
+    supabase: Client = Depends(get_service_client),
     current_user: Optional[Dict[str, Any]] = Depends(try_get_current_user_from_supabase_jwt)
 ):
     if current_user:
@@ -66,7 +66,7 @@ async def summarize_upload(
 async def summarize_text_route( # Renamed to avoid conflict with `summarize_text_content` in service
     text: str = Form(...),
     gemini_api_key: Optional[str] = Form(None), # New parameter for user's Gemini API key
-    supabase: Client = Depends(get_safe_supabase_client),
+    supabase: Client = Depends(get_service_client),
     current_user: Optional[Dict[str, Any]] = Depends(try_get_current_user_from_supabase_jwt)
 ):
     if current_user:
