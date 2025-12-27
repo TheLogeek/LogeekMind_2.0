@@ -6,7 +6,7 @@ from fastapi.security import OAuth2PasswordBearer
 from pydantic import BaseModel
 from supabase import Client
 
-from app.core.database import get_supabase_client
+from app.core.database import get_service_client
 import os
 from dotenv import load_dotenv
 
@@ -26,7 +26,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/signin", auto_error=False)
 
 # ... (existing code) ...
 
-async def try_get_current_user_from_supabase_jwt(token: str = Depends(oauth2_scheme), supabase: Client = Depends(get_supabase_client)):
+async def try_get_current_user_from_supabase_jwt(token: str = Depends(oauth2_scheme), supabase: Client = Depends(get_service_client)):
     if token is None:
         return None # No token provided, user is a guest
 
@@ -67,7 +67,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
-async def get_current_user_from_supabase_jwt(token: str = Depends(oauth2_scheme), supabase: Client = Depends(get_supabase_client)):
+async def get_current_user_from_supabase_jwt(token: str = Depends(oauth2_scheme), supabase: Client = Depends(get_service_client)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
