@@ -1,77 +1,62 @@
 import os
 from supabase import create_client, Client
-from sqlalchemy import create_engine
-from sqlalchemy.pool import NullPool
 from dotenv import load_dotenv
-from typing import Optional, Tuple
+from typing import Optional
 from fastapi import HTTPException
 
 load_dotenv()
 
-# --- Supabase API Client (for Auth, etc.) ---
+# --- Environment Variables ---
 SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY") # This should be the ANON key
+SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY") # This should be the SERVICE_ROLE key
 
-# --- SQLAlchemy Database Engine (for Direct Queries) ---
-DATABASE_URL = os.getenv("DATABASE_URL")
-
-_supabase_client: Optional[Client] = None
-_db_engine = None
-_supabase_initialized = False
+_auth_client: Optional[Client] = None
+_service_client: Optional[Client] = None
 
 def initialize_clients():
-    """Initializes both Supabase and SQLAlchemy clients."""
-    global _supabase_client, _db_engine, _supabase_initialized
-    if _supabase_initialized:
-        return
-
-    # Initialize Supabase Client
+    """Initializes both the auth and service role Supabase clients."""
+    global _auth_client, _service_client
+    
     if SUPABASE_URL and SUPABASE_KEY:
         try:
-            _supabase_client = create_client(SUPABASE_URL, SUPABASE_KEY)
-            print("Supabase API client initialized successfully.")
+            _auth_client = create_client(SUPABASE_URL, SUPABASE_KEY)
+            print("Supabase AUTH client initialized successfully.")
         except Exception as e:
-            print(f"WARNING: Supabase client initialization failed: {e}")
-            _supabase_client = None
+            print(f"WARNING: Supabase AUTH client initialization failed: {e}")
+            _auth_client = None
     else:
-        print("WARNING: SUPABASE_URL and SUPABASE_KEY not set. Auth features will fail.")
+        print("WARNING: SUPABASE_URL and SUPABASE_KEY (anon) not set. Auth sign-in/up may fail.")
 
-    # Initialize SQLAlchemy Engine
-    if DATABASE_URL:
+    if SUPABASE_URL and SUPABASE_SERVICE_KEY:
         try:
-            _db_engine = create_engine(DATABASE_URL, poolclass=NullPool)
-            print("SQLAlchemy database engine created successfully.")
+            _service_client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+            print("Supabase SERVICE client initialized successfully.")
         except Exception as e:
-            print(f"FATAL: Could not create SQLAlchemy engine. Error: {e}")
-            _db_engine = None
+            print(f"FATAL: Supabase SERVICE client initialization failed: {e}")
+            _service_client = None
     else:
-        print("WARNING: DATABASE_URL not set. Direct database queries will fail.")
-    
-    _supabase_initialized = True
+        print("FATAL: SUPABASE_SERVICE_KEY not set. Backend database operations will fail.")
 
-def get_supabase_client() -> Optional[Client]:
-    """Returns the initialized Supabase client instance."""
-    return _supabase_client
+# --- FastAPI Dependencies ---
 
-def get_db_engine():
-    """
-    Returns the SQLAlchemy engine.
-    Raises an exception if the engine is not available.
-    """
-    if _db_engine is None:
-        raise HTTPException(
-            status_code=503, 
-            detail="Database connection is not configured correctly on the server."
-        )
-    return _db_engine
-
-# --- Dependency for FastAPI ---
-def get_safe_supabase_client() -> Client:
-    """Dependency to get the Supabase client, raising an error if unavailable."""
-    client = get_supabase_client()
-    if client is None:
+def get_auth_client() -> Client:
+    """Dependency to get the Supabase client for authentication tasks."""
+    if _auth_client is None:
         raise HTTPException(
             status_code=503,
-            detail="Supabase client is not available due to a server configuration error."
+            detail="Authentication service is not configured correctly."
         )
-    return client
+    return _auth_client
+
+def get_service_client() -> Client:
+    """
+    Dependency to get the Supabase client with service_role privileges
+    for all backend database operations.
+    """
+    if _service_client is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Database service is not configured correctly."
+        )
+    return _service_client

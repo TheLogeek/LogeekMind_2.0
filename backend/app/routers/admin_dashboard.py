@@ -4,7 +4,7 @@ from typing import Dict, Any, List, Optional
 from pydantic import BaseModel
 import time
 
-from app.core.database import get_safe_supabase_client
+from app.core.database import get_service_client
 from app.core.security import get_current_admin_user # Use the admin specific dependency
 from app.services import admin_dashboard_service
 
@@ -43,7 +43,7 @@ class UsageLogItem(BaseModel):
 @router.get("/metrics", response_model=MetricResponse)
 async def get_admin_metrics(
     admin_user: Dict[str, Any] = Depends(get_current_admin_user),
-    supabase: Client = Depends(get_safe_supabase_client)
+    supabase: Client = Depends(get_service_client)
 ):
     try:
         total_users = await admin_dashboard_service.get_total_users(supabase)
@@ -62,7 +62,7 @@ async def get_admin_metrics(
 @router.get("/feature-usage", response_model=List[FeatureUsageItem])
 async def get_admin_feature_usage(
     admin_user: Dict[str, Any] = Depends(get_current_admin_user),
-    supabase: Client = Depends(get_safe_supabase_client)
+    supabase: Client = Depends(get_service_client)
 ):
     try:
         return await admin_dashboard_service.get_feature_usage(supabase)
@@ -72,7 +72,7 @@ async def get_admin_feature_usage(
 @router.get("/daily-activity", response_model=List[DailyActivityItem])
 async def get_admin_daily_activity(
     admin_user: Dict[str, Any] = Depends(get_current_admin_user),
-    supabase: Client = Depends(get_safe_supabase_client)
+    supabase: Client = Depends(get_service_client)
 ):
     try:
         return await admin_dashboard_service.get_daily_activity(supabase)
@@ -82,7 +82,7 @@ async def get_admin_daily_activity(
 @router.get("/top-users", response_model=List[TopUserItem])
 async def get_admin_top_users(
     admin_user: Dict[str, Any] = Depends(get_current_admin_user),
-    supabase: Client = Depends(get_safe_supabase_client)
+    supabase: Client = Depends(get_service_client)
 ):
     try:
         return await admin_dashboard_service.get_top_users(supabase, n=10) # Fetch top 10 users
@@ -92,7 +92,7 @@ async def get_admin_top_users(
 @router.get("/all-usage-logs", response_model=List[UsageLogItem])
 async def get_admin_all_usage_logs(
     admin_user: Dict[str, Any] = Depends(get_current_admin_user),
-    supabase: Client = Depends(get_safe_supabase_client)
+    supabase: Client = Depends(get_service_client)
 ):
     try:
         return await admin_dashboard_service.get_all_usage_logs(supabase)
