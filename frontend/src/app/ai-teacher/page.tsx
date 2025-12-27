@@ -138,11 +138,11 @@ const AITeacherPage = () => {
             formattedNotes += `## ${msg.role === 'user' ? 'User' : 'AI Teacher'}:\n${msg.text}\n\n`;
         });
 
-        const blob = new Blob([formattedNotes], { type: 'application/pdf' });
+        const blob = new Blob([formattedNotes], { type: 'text/plain;charset=utf-8' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `ai_teacher_session_${new Date().toISOString().slice(0, 10)}.pdf`;
+        a.download = `ai_teacher_session_${new Date().toISOString().slice(0, 10)}.txt`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);

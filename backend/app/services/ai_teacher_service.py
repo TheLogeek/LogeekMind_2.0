@@ -8,64 +8,6 @@ from google.genai.errors import APIError
 
 AI_TEACHER_INSTRUCTIONS = (
     """
-    You are LogeekMind's AI Teacher...
-    """
-)
-
-async def generate_ai_teacher_response(
-    supabase: Client,
-    user_id: str,
-    username: str,
-    current_prompt: str,
-    chat_history: List[Dict[str, str]],
-    api_key: Optional[str] = None
-) -> Dict[str, Any]:
-    
-    client, api_key_to_use, error_message = await get_gemini_client_and_key(user_id=user_id, user_api_key=api_key)
-    if error_message:
-        return {"success": False, "message": error_message}
-
-    contents = []
-    for msg in chat_history:
-        role = "user" if msg["role"] == "user" else "model"
-        contents.append({"role": role, "parts": [{"text": msg["text"]}]})
-    
-    contents.append({"role": "user", "parts": [{"text": current_prompt}]})
-
-    try:
-        response = client.models.generate_content(
-            model="gemini-2.5-flash",
-            config=types.GenerateContentConfig(system_instruction=AI_TEACHER_INSTRUCTIONS),
-            contents=contents,
-        )
-        
-        ai_text = response.text
-
-        await log_usage(
-            supabase=supabase,
-            user_id=user_id,
-            user_name=username,
-            feature_name="AI Teacher",
-            action="generated",
-            metadata={"topic": current_prompt}
-        )
-
-        return {"success": True, "ai_text": ai_text}
-
-    except APIError as e:
-        error_text = str(e)
-        if "rate limit" in error_text.lower() or "429" in error_text or "RESOURCE_EXHAUSTED" in error_text.upper():
-            return {"success": False, "message": "Quota Exceeded! The Gemini API key has hit its limit."}
-        elif "503" in error_text:
-            return {"success": False, "message": "The Gemini AI model is currently experiencing high traffic. Please try again later."}
-        else:
-            return {"success": False, "message": f"Gemini API Error: {error_text}"}
-    except Exception as e:
-        print(f"Error during AI Teacher response generation: {e}")
-        return {"success": False, "message": str(e)}
-
-AI_TEACHER_INSTRUCTIONS = (
-    """
 You are LogeekMind's AI Teacher(LogeekMind is an AI powered academic assistant and educational technology platform conceptualised,developed and created by Solomon Adenuga a.k.a Logeek, a Lagos State University student studying educational technology to simplify, accelerate and improve smarter learning. This application has 10 core academic features: AI Teacher, Course Outline generator, study scheduler, GPA Calculator, Smart Quiz Generator, exam simulator, lecture notes to audio converter, lecture audio to text converter, Notes Summarizer and homework assistant, there's also a Live community chat section for registered users.), an intelligent, patient, and highly skilled academic instructor designed to teach any 
 topic at any educational level—from primary school to university.
 
@@ -134,3 +76,55 @@ DEFAULT RESPONSE FORMAT:
 Follow this unless the user requests a different style.
 """
 )
+
+async def generate_ai_teacher_response(
+    supabase: Client,
+    user_id: str,
+    username: str,
+    current_prompt: str,
+    chat_history: List[Dict[str, str]],
+    api_key: Optional[str] = None
+) -> Dict[str, Any]:
+    
+    client, api_key_to_use, error_message = await get_gemini_client_and_key(user_id=user_id, user_api_key=api_key)
+    if error_message:
+        return {"success": False, "message": error_message}
+
+    contents = []
+    for msg in chat_history:
+        role = "user" if msg["role"] == "user" else "model"
+        contents.append({"role": role, "parts": [{"text": msg["text"]}]})
+    
+    contents.append({"role": "user", "parts": [{"text": current_prompt}]})
+
+    try:
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            config=types.GenerateContentConfig(system_instruction=AI_TEACHER_INSTRUCTIONS),
+            contents=contents,
+        )
+        
+        ai_text = response.text
+
+        await log_usage(
+            supabase=supabase,
+            user_id=user_id,
+            user_name=username,
+            feature_name="AI Teacher",
+            action="generated",
+            metadata={"topic": current_prompt}
+        )
+
+        return {"success": True, "ai_text": ai_text}
+
+    except APIError as e:
+        error_text = str(e)
+        if "rate limit" in error_text.lower() or "429" in error_text or "RESOURCE_EXHAUSTED" in error_text.upper():
+            return {"success": False, "message": "Quota Exceeded! The Gemini API key has hit its limit."}
+        elif "503" in error_text:
+            return {"success": False, "message": "The Gemini AI model is currently experiencing high traffic. Please try again later."}
+        else:
+            return {"success": False, "message": f"Gemini API Error: {error_text}"}
+    except Exception as e:
+        print(f"Error during AI Teacher response generation: {e}")
+        return {"success": False, "message": str(e)}
