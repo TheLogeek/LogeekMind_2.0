@@ -3,7 +3,7 @@ from pydantic import BaseModel
 from supabase import Client
 from typing import Dict, Any, List, Optional
 
-from app.core.database import get_safe_supabase_client # Updated import
+from app.core.database import get_service_client
 from app.core.security import try_get_current_user_from_supabase_jwt # Correct import
 from app.services import ai_teacher_service
 
@@ -34,7 +34,7 @@ class AIChatResponse(BaseModel):
 @router.post("/chat", response_model=AIChatResponse)
 async def ai_teacher_chat_route(
     request: AIChatRequest,
-    supabase: Client = Depends(get_safe_supabase_client),
+    supabase: Client = Depends(get_service_client),
     current_user: Optional[Dict[str, Any]] = Depends(try_get_current_user_from_supabase_jwt)
 ):
     if current_user:
