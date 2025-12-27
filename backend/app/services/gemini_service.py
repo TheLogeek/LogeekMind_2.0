@@ -51,10 +51,6 @@ def check_rate_limit(user_identifier: str) -> Tuple[bool, str]:
     # --- END COMMENTED OUT RATE LIMITING LOGIC ---
 
     history.append(current_time)
-    _rate_limit_history[user_identifier] = history
-
-    # Clear history after each response to avoid accumulating for testing purposes
-    # For production, this logic would need to be re-evaluated or moved.
     _rate_limit_history[user_identifier] = [] 
     
     return True, "OK"

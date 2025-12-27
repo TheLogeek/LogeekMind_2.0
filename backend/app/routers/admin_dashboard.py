@@ -4,7 +4,7 @@ from typing import Dict, Any, List, Optional
 from pydantic import BaseModel
 import time
 
-from app.core.database import get_service_client
+from app.core.database import get_service_client, get_db_engine
 from app.core.security import get_current_admin_user # Use the admin specific dependency
 from app.services import admin_dashboard_service
 
@@ -43,12 +43,13 @@ class UsageLogItem(BaseModel):
 @router.get("/metrics", response_model=MetricResponse)
 async def get_admin_metrics(
     admin_user: Dict[str, Any] = Depends(get_current_admin_user),
-    supabase: Client = Depends(get_service_client)
+    engine: Engine = Depends(get_db_engine)
 ):
     try:
-        total_users = await admin_dashboard_service.get_total_users(supabase)
-        active_users = await admin_dashboard_service.get_active_users(supabase)
-        top_users_list = await admin_dashboard_service.get_top_users(supabase, n=1)
+        with engine.connect() as conn:
+            total_users = await admin_dashboard_service.get_total_users(conn)
+            active_users = await admin_dashboard_service.get_active_users(conn)
+            top_users_list = await admin_dashboard_service.get_top_users(conn, n=1)
         top_user_username = top_users_list[0]["username"] if top_users_list else "N/A"
         
         return MetricResponse(
@@ -62,39 +63,43 @@ async def get_admin_metrics(
 @router.get("/feature-usage", response_model=List[FeatureUsageItem])
 async def get_admin_feature_usage(
     admin_user: Dict[str, Any] = Depends(get_current_admin_user),
-    supabase: Client = Depends(get_service_client)
+    engine: Engine = Depends(get_db_engine)
 ):
     try:
-        return await admin_dashboard_service.get_feature_usage(supabase)
+        with engine.connect() as conn:
+            return await admin_dashboard_service.get_feature_usage(conn)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching feature usage: {e}")
 
 @router.get("/daily-activity", response_model=List[DailyActivityItem])
 async def get_admin_daily_activity(
     admin_user: Dict[str, Any] = Depends(get_current_admin_user),
-    supabase: Client = Depends(get_service_client)
+    engine: Engine = Depends(get_db_engine)
 ):
     try:
-        return await admin_dashboard_service.get_daily_activity(supabase)
+        with engine.connect() as conn:
+            return await admin_dashboard_service.get_daily_activity(conn)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching daily activity: {e}")
 
 @router.get("/top-users", response_model=List[TopUserItem])
 async def get_admin_top_users(
     admin_user: Dict[str, Any] = Depends(get_current_admin_user),
-    supabase: Client = Depends(get_service_client)
+    engine: Engine = Depends(get_db_engine)
 ):
     try:
-        return await admin_dashboard_service.get_top_users(supabase, n=10) # Fetch top 10 users
+        with engine.connect() as conn:
+            return await admin_dashboard_service.get_top_users(conn, n=10)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching top users: {e}")
 
 @router.get("/all-usage-logs", response_model=List[UsageLogItem])
 async def get_admin_all_usage_logs(
     admin_user: Dict[str, Any] = Depends(get_current_admin_user),
-    supabase: Client = Depends(get_service_client)
+    engine: Engine = Depends(get_db_engine)
 ):
     try:
-        return await admin_dashboard_service.get_all_usage_logs(supabase)
+        with engine.connect() as conn:
+            return await admin_dashboard_service.get_all_usage_logs(conn)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"An error occurred while fetching all usage logs: {e}")

@@ -1,8 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from supabase import Client # Add this import
 from typing import Dict, Any, List
-from app.core.database import get_service_client
+from sqlalchemy.engine import Engine
+from app.core.database import get_db_engine # Import the new engine dependency
 from app.core.security import get_current_user_from_supabase_jwt
+from app.services import user_dashboard_service # Import the new service
 
 router = APIRouter(
     prefix="/user-dashboard",
@@ -13,7 +14,7 @@ router = APIRouter(
 @router.get("/performance", response_model=List[Dict[str, Any]])
 async def get_user_performance_route(
     current_user: Dict[str, Any] = Depends(get_current_user_from_supabase_jwt),
-    supabase: Client = Depends(get_service_client) # Use the service client
+    engine: Engine = Depends(get_db_engine) # Use the new SQLAlchemy engine dependency
 ):
     """
     Fetches all performance-related usage logs for the currently authenticated user
@@ -28,13 +29,9 @@ async def get_user_performance_route(
     user_id = current_user["id"]
     
     try:
-        # Use the Supabase service client to execute the query
-        query = supabase.table("usage_logs").select("feature_name, metadata->>score as score, metadata->>total_questions as total_questions, created_at").eq("user_id", user_id).in_("feature_name", ["Smart Quiz", "Exam Simulator"])
-        response = query.execute()
+        with engine.connect() as conn: # Get a connection from the engine
+            performance_data = await user_dashboard_service.get_user_performance(conn, user_id)
         
-        performance_data = response.data if response.data else []
-
-
         return performance_data
 
     except Exception as e:
