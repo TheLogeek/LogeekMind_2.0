@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from typing import Dict, Any, List
-from sqlalchemy.engine import Engine
+from sqlalchemy.engine import Engine # Add this import
 from app.core.database import get_db_engine # Import the new engine dependency
 from app.core.security import get_current_user_from_supabase_jwt
 from app.services import user_dashboard_service # Import the new service
