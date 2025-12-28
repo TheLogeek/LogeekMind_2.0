@@ -340,7 +340,7 @@ const ExamSimulatorPage = () => {
 
     return (
         <div className={`page-container ${styles.examSimulatorPageContainer}`}>
-            <h2>🔥 Exam Simulator</h2>
+            <h2>💻 Exam Simulator</h2>
             <p>Prepare for your exams with customizable mock tests.</p>
 
             {error && <p className={styles.errorText}>{error}</p>}
