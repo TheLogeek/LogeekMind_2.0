@@ -58,32 +58,32 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     return (
         <div className={`${styles.sidebar} ${isOpen ? styles.open : styles.closed}`}>
             <h2 className={styles.sidebarH2}>
-                <Link href="/" onClick={onClose}>🧠 LogeekMind</Link>
+                <Link href="/" onClick={onClose}>LogeekMind</Link>
             </h2>
             <nav>
                 <Link href="/dashboard" className={getNavLinkClass('/dashboard')} onClick={onClose}>📊 Dashboard</Link> {/* Updated link for User Dashboard */}
                 <hr className={styles.linkSeparator}/>
                 <h4 className={styles.categoryTitle}>AI Tools</h4>
-                <Link href="/ai-teacher" className={getNavLinkClass('/ai-teacher')} onClick={onClose}>🧠 AI Teacher</Link>
-                <Link href="/summarizer" className={getNavLinkClass('/summarizer')} onClick={onClose}>📝 Summarizer</Link>
-                <Link href="/smart-quiz" className={getNavLinkClass('/smart-quiz')} onClick={onClose}>❓ Smart Quiz</Link>
-                <Link href="/exam-simulator" className={getNavLinkClass('/exam-simulator')} onClick={onClose}>🔥 Exam Simulator</Link>
-                <Link href="/course-outline" className={getNavLinkClass('/course-outline')} onClick={onClose}>📚 Course Outline</Link>
-                <Link href="/homework-assistant" className={getNavLinkClass('/homework-assistant')} onClick={onClose}>📸 Homework Assistant</Link>
+                <Link href="/ai-teacher" className={getNavLinkClass('/ai-teacher')} onClick={onClose}>AI Teacher</Link>
+                <Link href="/summarizer" className={getNavLinkClass('/summarizer')} onClick={onClose}>Summarizer</Link>
+                <Link href="/smart-quiz" className={getNavLinkClass('/smart-quiz')} onClick={onClose}>Smart Quiz</Link>
+                <Link href="/exam-simulator" className={getNavLinkClass('/exam-simulator')} onClick={onClose}>Exam Simulator</Link>
+                <Link href="/course-outline" className={getNavLinkClass('/course-outline')} onClick={onClose}>Course Outline</Link>
+                <Link href="/homework-assistant" className={getNavLinkClass('/homework-assistant')} onClick={onClose}>Homework Assistant</Link>
                 <hr className={styles.linkSeparator}/>
                 <h4 className={styles.categoryTitle}>Utilities</h4>
-                <Link href="/gpa-calculator" className={getNavLinkClass('/gpa-calculator')} onClick={onClose}>🧮 GPA Calculator</Link>
-                <Link href="/study-scheduler" className={getNavLinkClass('/study-scheduler')} onClick={onClose}>📅 Study Scheduler</Link>
-                <Link href="/audio-to-text" className={getNavLinkClass('/audio-to-text')} onClick={onClose}>🎧 Audio to Text</Link>
-                <Link href="/notes-to-audio" className={getNavLinkClass('/notes-to-audio')} onClick={onClose}>📢 Notes to Audio</Link>
+                <Link href="/gpa-calculator" className={getNavLinkClass('/gpa-calculator')} onClick={onClose}>GPA Calculator</Link>
+                <Link href="/study-scheduler" className={getNavLinkClass('/study-scheduler')} onClick={onClose}>Study Scheduler</Link>
+                <Link href="/audio-to-text" className={getNavLinkClass('/audio-to-text')} onClick={onClose}>Audio to Text</Link>
+                <Link href="/notes-to-audio" className={getNavLinkClass('/notes-to-audio')} onClick={onClose}>Notes to Audio</Link>
                 <hr className={styles.linkSeparator}/>
                 <h4 className={styles.categoryTitle}>Community</h4>
-                <Link href="/community-chat" className={getNavLinkClass('/community-chat')} onClick={onClose}>💬 Community Chat</Link>
+                <Link href="/community-chat" className={getNavLinkClass('/community-chat')} onClick={onClose}>Community Chat</Link>
                 {isAdmin && ( /* Conditionally render Admin link */
                     <>
                         <hr className={styles.linkSeparator}/>
                         <h4 className={styles.categoryTitle}>Admin</h4>
-                        <Link href="/admin-dashboard" className={getNavLinkClass('/admin-dashboard')} onClick={onClose}>🛡️ Admin</Link>
+                        <Link href="/admin-dashboard" className={getNavLinkClass('/admin-dashboard')} onClick={onClose}>Admin</Link>
                     </>
                 )}
             </nav>
