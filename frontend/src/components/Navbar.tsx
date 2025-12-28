@@ -67,7 +67,7 @@ const Navbar = () => { // Removed onSidebarToggle and isSidebarOpen props
                             onClick={() => router.push('/login')}
                             className={styles.authButton}
                         >
-                            🔐 Login / Sign Up
+                            Login / Sign Up
                         </button>
                     </>
                 )}
