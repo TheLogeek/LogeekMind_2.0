@@ -15,7 +15,7 @@ async def get_active_users(conn: Connection) -> int:
     one_day_ago = datetime.now() - timedelta(days=1)
     query = text("""
         SELECT COUNT(DISTINCT username) 
-        FROM usage_logs 
+        FROM usage_log 
         WHERE created_at >= :one_day_ago
     """)
     result = conn.execute(query, {"one_day_ago": one_day_ago.isoformat()}).scalar()
