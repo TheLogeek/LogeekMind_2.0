@@ -30,7 +30,7 @@ async def get_user_performance_route(
     
     try:
         with engine.connect() as conn: # Get a connection from the engine
-            performance_data = await dashboard_service.get_user_performance(conn, user_id)
+            performance_data = await dashboard_service.get_user_performance_data(conn, user_id)
         
         return performance_data
 
