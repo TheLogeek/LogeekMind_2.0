@@ -9,6 +9,9 @@ from supabase import Client
 from app.core.database import get_supabase_client
 import os
 from dotenv import load_dotenv
+import logging # Add logging import
+
+logger = logging.getLogger(__name__) # Initialize logger
 
 load_dotenv()
 
@@ -98,7 +101,13 @@ async def get_current_user_from_supabase_jwt(token: str = Depends(oauth2_scheme)
 
 async def get_current_admin_user(current_user: Dict[str, Any] = Depends(get_current_user_from_supabase_jwt)):
     if not ADMIN_ID:
+        logger.error("ADMIN_ID environment variable is not set.")
         raise HTTPException(status_code=500, detail="Admin ID not configured on server.")
+    
+    logger.info(f"DEBUG: get_current_admin_user called.")
+    logger.info(f"DEBUG: Current User ID from JWT: {current_user.get('id')}")
+    logger.info(f"DEBUG: Configured ADMIN_ID: {ADMIN_ID}")
+
     if current_user["id"] != ADMIN_ID:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
