@@ -38,7 +38,7 @@ const Header = () => {
             fontFamily: "'Inter', sans-serif"
         }}>
             <div>
-                <h1 style={{ fontSize: '40px', fontWeight: '800', marginBottom: '10px', margin: 0 }}>🧠 LogeekMind</h1>
+                <h1 style={{ fontSize: '40px', fontWeight: '800', marginBottom: '10px', margin: 0 }}>LogeekMind</h1>
                 <p style={{ fontSize: '18px', opacity: '0.95', margin: 0 }}>Your all-in-one AI-powered learning assistant. Understand faster, study smarter, achieve better.</p>
             </div>
             <div style={{ textAlign: 'right' }}>
@@ -83,7 +83,7 @@ const Header = () => {
                             onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => e.currentTarget.style.backgroundColor = '#0056b3'}
                             onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => e.currentTarget.style.backgroundColor = '#007bff'}
                         >
-                            🔐 Login / Sign Up
+                            Login / Sign Up
                         </button>
                     </>
                 )}
