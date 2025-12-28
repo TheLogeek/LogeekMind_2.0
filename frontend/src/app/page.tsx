@@ -66,7 +66,7 @@ const HomePage = () => {
                 <h2 className={styles.featureSectionTitle}> Powering Your Learning Journey</h2>
 
                 <div className={styles.featureCategory}>
-                    <h3> AI Learning</h3>
+                    <h3>💡 AI Learning</h3>
                     <div className={styles.featureCardGrid}>
                         {AI_LEARNING_FEATURES.map((feature: Feature, index: number) => ( // Added types
                             <div key={index} className={styles.featureCardWrapper}>
@@ -125,7 +125,7 @@ const HomePage = () => {
                     <Link href="/privacy-policy" className={styles.footerLink}>Privacy Policy</Link>
                     <Link href="/terms-of-service" className={styles.footerLink}>Terms of Service</Link>
                 </div>
-                <p className={styles.footerInfo}>Developed by <strong><a href="https://www.linkedin.com/in/solomon-adenuga-6251a5316" target="_blank" rel="noopener noreferrer"> Solomon Adenuga (Logeek)</a></strong>.</p>
+                <p className={styles.footerInfo}>Developed by <strong><a href="https://www.linkedin.com/in/solomon-adenuga-6251a5316" target="_blank" rel="noopener noreferrer"> Solomon Adenuga </a></strong>.</p>
                 <p className={styles.footerContact}>Contact: solomonadenuga8@gmail.com | WhatsApp: +2348023710562</p>
                 <div className={styles.footerSocial}>
                     <span></span>
