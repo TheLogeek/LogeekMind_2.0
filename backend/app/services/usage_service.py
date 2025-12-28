@@ -2,6 +2,10 @@ from supabase import Client
 from typing import Dict, Any, Optional
 
 async def log_usage(supabase: Client, user_id: str, user_name: str, feature_name: str, action: str, metadata: Optional[Dict[str, Any]] = None):
+    if user_id.startswith("guest_"):
+        print(f"INFO: Not logging guest usage for {user_id} to Supabase.")
+        return {"success": True, "message": "Guest usage not logged to DB."}
+
     if metadata is None:
         metadata = {}
 
@@ -19,6 +23,10 @@ async def log_usage(supabase: Client, user_id: str, user_name: str, feature_name
         return {"success": False, "message": str(e)}
 
 async def log_performance(supabase: Client, user_id: str, feature: str, score: float, total_questions: int, correct_answers: int, extra: Optional[Dict[str, Any]] = None):
+    if user_id.startswith("guest_"):
+        print(f"INFO: Not logging guest performance for {user_id} to Supabase.")
+        return {"success": True, "message": "Guest performance not logged to DB."}
+
     if extra is None:
         extra = {}
 
