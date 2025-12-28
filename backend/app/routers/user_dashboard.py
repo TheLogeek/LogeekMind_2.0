@@ -3,7 +3,7 @@ from typing import Dict, Any, List
 from sqlalchemy.engine import Engine # Add this import
 from app.core.database import get_db_engine # Import the new engine dependency
 from app.core.security import get_current_user_from_supabase_jwt
-from app.services import user_dashboard_service # Import the new service
+from app.services import dashboard_service # Import the new service
 
 router = APIRouter(
     prefix="/user-dashboard",
@@ -30,7 +30,7 @@ async def get_user_performance_route(
     
     try:
         with engine.connect() as conn: # Get a connection from the engine
-            performance_data = await user_dashboard_service.get_user_performance(conn, user_id)
+            performance_data = await dashboard_service.get_user_performance(conn, user_id)
         
         return performance_data
 
