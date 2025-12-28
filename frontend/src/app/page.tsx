@@ -19,7 +19,7 @@ const HomePage = () => {
     const AI_LEARNING_FEATURES: Feature[] = [
         { icon: "🧠", title: "AI Teacher", description: "Get interactive explanations and practice on any topic.", linkTo: "/ai-teacher" },
         { icon: "❓", title: "Smart Quiz Generator", description: "Create customized quizzes with instant feedback.", linkTo: "/smart-quiz" },
-        { icon: "💯", title: "Exam Simulator", description: "Prepare with simulated exams.", linkTo: "/exam-simulator" },
+        { icon: "💻", title: "Exam Simulator", description: "Prepare with simulated exams.", linkTo: "/exam-simulator" },
     ];
 
     const CONTENT_MASTERY_FEATURES: Feature[] = [
@@ -63,10 +63,10 @@ const HomePage = () => {
 
             {/* Feature Sections */}
             <section className={styles.featureSections}>
-                <h2 className={styles.featureSectionTitle}>✨ Powering Your Learning Journey</h2>
+                <h2 className={styles.featureSectionTitle}> Powering Your Learning Journey</h2>
 
                 <div className={styles.featureCategory}>
-                    <h3>💡 AI Learning</h3>
+                    <h3> AI Learning</h3>
                     <div className={styles.featureCardGrid}>
                         {AI_LEARNING_FEATURES.map((feature: Feature, index: number) => ( // Added types
                             <div key={index} className={styles.featureCardWrapper}>
