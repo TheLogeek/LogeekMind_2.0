@@ -22,7 +22,7 @@ async def get_active_users(conn: Connection) -> int:
     return result if result is not None else 0
 
 async def get_feature_usage(conn: Connection) -> List[Dict[str, Any]]:
-    query = text("SELECT feature_name FROM usage_logs")
+    query = text("SELECT feature_name FROM usage_log")
     result = conn.execute(query).fetchall()
     
     if result:
@@ -48,7 +48,7 @@ async def get_daily_activity(conn: Connection, days: int = 7) -> List[Dict[str, 
     
     query = text("""
         SELECT DATE(created_at) as date, COUNT(id) as count
-        FROM usage_logs
+        FROM usage_log
         WHERE DATE(created_at) BETWEEN :start_date AND :end_date
         GROUP BY DATE(created_at)
         ORDER BY date
@@ -65,7 +65,7 @@ async def get_daily_activity(conn: Connection, days: int = 7) -> List[Dict[str, 
     return full_activity_list
 
 async def get_all_usage_logs(conn: Connection) -> List[Dict[str, Any]]:
-    query = text("SELECT id, user_id, username, feature_name, action, metadata, created_at FROM usage_logs ORDER BY created_at DESC")
+    query = text("SELECT id, user_id, username, feature_name, action, metadata, created_at FROM usage_log ORDER BY created_at DESC")
     result = conn.execute(query).fetchall()
     
     if result:
