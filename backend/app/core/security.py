@@ -1,23 +1,23 @@
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any
-from jose import JWTError, jwt
+# REMOVED: from jose import JWTError, jwt # No longer decoding JWTs manually
 from fastapi import HTTPException, status, Depends
 from fastapi.security import OAuth2PasswordBearer
 from pydantic import BaseModel
 from supabase import Client
 
-from app.core.database import get_supabase_client
+from app.core.database import get_supabase_client # Using the single supabase client
 import os
 from dotenv import load_dotenv
-import logging # Add logging import
+import logging
 
-logger = logging.getLogger(__name__) # Initialize logger
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 
 # --- Configuration ---
-SECRET_KEY = os.getenv("SUPABASE_JWT_SECRET")
-ALGORITHM = "HS256"
+# REMOVED: SECRET_KEY = os.getenv("SUPABASE_JWT_SECRET") # No longer needed for manual JWT decode
+ALGORITHM = "HS256" # Kept for consistency, though less relevant
 ACCESS_TOKEN_EXPIRE_MINUTES = 30 
 ADMIN_ID = os.getenv("ADMIN_ID") # Load Admin ID from environment variables
 
@@ -27,86 +27,82 @@ def get_admin_id() -> Optional[str]:
 # --- OAuth2PasswordBearer for dependency injection ---
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/signin", auto_error=False)
 
-# ... (existing code) ...
-
-async def try_get_current_user_from_supabase_jwt(token: str = Depends(oauth2_scheme), supabase: Client = Depends(get_supabase_client)):
-    logger.info(f"DEBUG: try_get_current_user_from_supabase_jwt called. Token received: {token is not None}")
-    if token is None:
-        logger.info("DEBUG: Token is None in try_get_current_user_from_supabase_jwt.")
-        return None # No token provided, user is a guest
-
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        user_id: str = payload.get("sub")
-        if user_id is None:
-            return None # Invalid token payload
-
-        profile_response = supabase.table("profiles").select("*").eq("id", user_id).single().execute()
-        if not profile_response.data:
-            return None # User not found in database
-
-        return {
-            "id": user_id,
-            "email": payload.get("email"),
-            "username": profile_response.data.get("username"),
-            "profile": profile_response.data
-        }
-    except JWTError:
-        return None # Token is invalid
-
-
-# --- Pydantic model for token data ---
-class TokenData(BaseModel):
-    user_id: Optional[str] = None
-    email: Optional[str] = None
-    username: Optional[str] = None
-
-# --- JWT Functions ---
-def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
-    to_encode = data.copy()
-    if expires_delta:
-        expire = datetime.utcnow() + expires_delta
-    else:
-        expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-    return encoded_jwt
+# --- Updated: Use Supabase Client's Session Management ---
 
 async def get_current_user_from_supabase_jwt(token: str = Depends(oauth2_scheme), supabase: Client = Depends(get_supabase_client)):
-    logger.info(f"DEBUG: get_current_user_from_supabase_jwt called. Token received: {token is not None}")
-    if token is None:
-        logger.error("DEBUG: Token is None in get_current_user_from_supabase_jwt, raising credentials_exception.")
-        raise credentials_exception # Token is required for strict auth
-    logger.info(f"DEBUG: Token starts with: {token[:10]}... (length: {len(token)})") # Log first few chars, not full token
-
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        user_id: str = payload.get("sub")
-        email: str = payload.get("email")
-        username: str = payload.get("user_metadata", {}).get("username")
+    if token is None:
+        raise credentials_exception # Token is required for strict auth
 
-        if user_id is None or email is None:
+    logger.info(f"DEBUG: get_current_user_from_supabase_jwt called. Token received: {token is not None}")
+    logger.info(f"DEBUG: Token starts with: {token[:10]}... (length: {len(token)})") # Log first few chars, not full token
+
+    try:
+        # Use Supabase client's auth.get_user to validate the token
+        # This sends the token to Supabase for validation
+        user_response = supabase.auth.get_user(token)
+        user = user_response.user
+
+        if not user:
+            logger.warning(f"DEBUG: get_user() failed for token. Response: {user_response.json()}")
             raise credentials_exception
-        token_data = TokenData(user_id=user_id, email=email, username=username)
-    except JWTError as e:
-        logger.error(f"DEBUG: JWTError during token decoding: {e}")
+        
+        # Load profile
+        profile_response = supabase.table("profiles").select("*").eq("id", user.id).single().execute()
+        if not profile_response.data:
+            logger.warning(f"DEBUG: Profile not found for user ID: {user.id}")
+            raise credentials_exception
+
+        return {
+            "id": user.id,
+            "email": user.email,
+            "username": profile_response.data.get("username"),
+            "profile": profile_response.data
+        }
+    except Exception as e: # Catch any exception from Supabase API call
+        logger.error(f"DEBUG: Error validating token with Supabase auth.get_user: {e}")
         raise credentials_exception
-    
-    profile_response = supabase.table("profiles").select("*").eq("id", user_id).single().execute()
-    if not profile_response.data:
-        raise credentials_exception
-    
-    return {
-        "id": user_id,
-        "email": email,
-        "username": username,
-        "profile": profile_response.data
-    }
+
+
+async def try_get_current_user_from_supabase_jwt(token: str = Depends(oauth2_scheme), supabase: Client = Depends(get_supabase_client)):
+    # This dependency is for optional authentication (e.g., guest mode with optional login)
+    if token is None:
+        return None # No token provided, user is a guest
+
+    logger.info(f"DEBUG: try_get_current_user_from_supabase_jwt called. Token received: {token is not None}")
+    logger.info(f"DEBUG: Token starts with: {token[:10]}... (length: {len(token)})")
+
+    try:
+        user_response = supabase.auth.get_user(token)
+        user = user_response.user
+
+        if not user:
+            logger.info(f"DEBUG: get_user() failed (optional auth). Response: {user_response.json()}")
+            return None # Invalid token payload for optional auth
+        
+        # Load profile
+        profile_response = supabase.table("profiles").select("*").eq("id", user.id).single().execute()
+        if not profile_response.data:
+            logger.warning(f"DEBUG: Profile not found for user ID: {user.id} (optional auth)")
+            return None
+
+        return {
+            "id": user.id,
+            "email": user.email,
+            "username": profile_response.data.get("username"),
+            "profile": profile_response.data
+        }
+    except Exception as e: # Catch any exception from Supabase API call
+        logger.warning(f"DEBUG: Error validating token with Supabase auth.get_user (optional auth): {e}")
+        return None # Token is invalid for optional auth
+
+
+# REMOVED: Pydantic model for token data (TokenData) no longer needed
+# REMOVED: JWT Functions (create_access_token) no longer needed
 
 async def get_current_admin_user(current_user: Dict[str, Any] = Depends(get_current_user_from_supabase_jwt)):
     if not ADMIN_ID:
@@ -118,6 +114,7 @@ async def get_current_admin_user(current_user: Dict[str, Any] = Depends(get_curr
     logger.info(f"DEBUG: Configured ADMIN_ID: {ADMIN_ID}")
 
     if current_user["id"] != ADMIN_ID:
+        logger.warning(f"DEBUG: Unauthorized attempt to access admin page by user_id: {current_user.get('id')}")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You do not have permission to access this resource.",
