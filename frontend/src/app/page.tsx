@@ -103,7 +103,7 @@ const HomePage = () => {
             <section className={styles.ctaSection}>
                 <h2>Ready to Supercharge Your Studies?</h2>
                 <p>
-                    Join thousands of students who are learning smarter, not harder, with LogeekMind.
+                    Join other students who are learning smarter, not harder, with LogeekMind.
                 </p>
                 <div className={styles.docLinkContainer}>
                     <a href="https://thelogeek.github.io/LogeekMind" target="_blank" rel="noopener noreferrer"
@@ -128,9 +128,9 @@ const HomePage = () => {
                 <p className={styles.footerInfo}>Developed by <strong>Solomon Adenuga (Logeek)</strong>.</p>
                 <p className={styles.footerContact}>Contact: solomonadenuga8@gmail.com | WhatsApp: +2348023710562</p>
                 <div className={styles.footerSocial}>
-                    <span>📘</span>
-                    <span>🐦</span>
-                    <span>📸</span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
                 </div>
                 <p className={styles.footerVersion}>LogeekMind Version: v2.0</p>
             </footer>
