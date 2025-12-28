@@ -5,7 +5,7 @@ from typing import Dict, Any, List, Optional
 from starlette.responses import StreamingResponse
 import json
 
-from app.core.database import get_service_client
+from app.core.database import get_supabase_client
 from app.core.security import try_get_current_user_from_supabase_jwt
 from app.services import smart_quiz_service
 
@@ -40,7 +40,7 @@ class QuizPerformanceLogRequest(BaseModel):
 @router.post("/generate", response_model=QuizGenerateResponse)
 async def generate_quiz_route(
     request: QuizGenerateRequest,
-    supabase: Client = Depends(get_service_client),
+    supabase: Client = Depends(get_supabase_client),
     current_user: Optional[Dict[str, Any]] = Depends(try_get_current_user_from_supabase_jwt)
 ):
     if current_user:
@@ -76,7 +76,7 @@ async def generate_quiz_route(
 @router.post("/log-performance")
 async def log_quiz_performance_route(
     request: QuizPerformanceLogRequest,
-    supabase: Client = Depends(get_service_client),
+    supabase: Client = Depends(get_supabase_client),
     current_user: Optional[Dict[str, Any]] = Depends(try_get_current_user_from_supabase_jwt)
 ):
     if not current_user:
@@ -104,7 +104,7 @@ async def download_quiz_results_docx(
     user_score: int = Form(...),
     total_questions: int = Form(...),
     current_user: Optional[Dict[str, Any]] = Depends(try_get_current_user_from_supabase_jwt),
-    supabase: Client = Depends(get_service_client)
+    supabase: Client = Depends(get_supabase_client)
 ):
     if not quiz_data_json:
         raise HTTPException(status_code=400, detail="Quiz data is required to generate DOCX.")

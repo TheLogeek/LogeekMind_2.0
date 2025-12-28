@@ -4,7 +4,7 @@ from typing import Dict, Any, List, Optional
 from pydantic import BaseModel
 import time
 
-from app.core.database import get_service_client, get_db_engine
+from app.core.database import get_supabase_client, get_db_engine
 from sqlalchemy.engine import Engine
 from app.core.security import get_current_admin_user # Use the admin specific dependency
 from app.services import admin_dashboard_service

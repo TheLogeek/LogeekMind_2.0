@@ -5,7 +5,7 @@ from starlette.responses import StreamingResponse
 import time
 import io
 
-from app.core.database import get_service_client
+from app.core.database import get_supabase_client
 from app.core.security import try_get_current_user_from_supabase_jwt
 from app.services import notes_to_audio_service
 
@@ -21,7 +21,7 @@ GUEST_LIMIT = 1
 @router.post("/convert-text")
 async def convert_text_to_audio_route(
     text: str = Form(...),
-    supabase: Client = Depends(get_service_client),
+    supabase: Client = Depends(get_supabase_client),
     current_user: Optional[Dict[str, Any]] = Depends(try_get_current_user_from_supabase_jwt)
 ):
     if current_user:
@@ -59,7 +59,7 @@ async def convert_text_to_audio_route(
 @router.post("/convert-file")
 async def convert_file_to_audio_route(
     file: UploadFile = File(...),
-    supabase: Client = Depends(get_service_client),
+    supabase: Client = Depends(get_supabase_client),
     current_user: Optional[Dict[str, Any]] = Depends(try_get_current_user_from_supabase_jwt)
 ):
     if current_user:

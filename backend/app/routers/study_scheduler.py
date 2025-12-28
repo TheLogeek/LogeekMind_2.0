@@ -3,7 +3,7 @@ from pydantic import BaseModel, Field
 from supabase import Client
 from typing import Dict, Any, List, Optional
 
-from app.core.database import get_service_client
+from app.core.database import get_supabase_client
 from app.core.security import try_get_current_user_from_supabase_jwt
 from app.services import study_scheduler_service
 
@@ -37,7 +37,7 @@ class ScheduleGenerateResponse(BaseModel):
 @router.post("/generate", response_model=ScheduleGenerateResponse)
 async def generate_schedule_route(
     request: ScheduleGenerateRequest,
-    supabase: Client = Depends(get_service_client),
+    supabase: Client = Depends(get_supabase_client),
     current_user: Optional[Dict[str, Any]] = Depends(try_get_current_user_from_supabase_jwt)
 ):
     if current_user:

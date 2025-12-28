@@ -4,7 +4,7 @@ from typing import Dict, Any, Optional
 from starlette.responses import StreamingResponse
 import time
 
-from app.core.database import get_service_client
+from app.core.database import get_supabase_client
 from app.core.security import try_get_current_user_from_supabase_jwt
 from app.services import homework_assistant_service
 from app.services import usage_service
@@ -23,7 +23,7 @@ async def solve_homework_route(
     file: UploadFile = File(...),
     context: Optional[str] = Form(None),
     gemini_api_key: Optional[str] = Form(None),
-    supabase: Client = Depends(get_service_client),
+    supabase: Client = Depends(get_supabase_client),
     current_user: Optional[Dict[str, Any]] = Depends(try_get_current_user_from_supabase_jwt)
 ):
     if current_user:
@@ -62,7 +62,7 @@ async def download_homework_solution_docx(
     solution_text: str = Form(...),
     context: Optional[str] = Form(None),
     current_user: Optional[Dict[str, Any]] = Depends(try_get_current_user_from_supabase_jwt),
-    supabase: Client = Depends(get_service_client)
+    supabase: Client = Depends(get_supabase_client)
 ):
     if not solution_text:
         raise HTTPException(status_code=400, detail="Solution text is required to generate DOCX.")
