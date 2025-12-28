@@ -30,7 +30,9 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/signin", auto_error=False)
 # ... (existing code) ...
 
 async def try_get_current_user_from_supabase_jwt(token: str = Depends(oauth2_scheme), supabase: Client = Depends(get_supabase_client)):
+    logger.info(f"DEBUG: try_get_current_user_from_supabase_jwt called. Token received: {token is not None}")
     if token is None:
+        logger.info("DEBUG: Token is None in try_get_current_user_from_supabase_jwt.")
         return None # No token provided, user is a guest
 
     try:
@@ -71,6 +73,12 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     return encoded_jwt
 
 async def get_current_user_from_supabase_jwt(token: str = Depends(oauth2_scheme), supabase: Client = Depends(get_supabase_client)):
+    logger.info(f"DEBUG: get_current_user_from_supabase_jwt called. Token received: {token is not None}")
+    if token is None:
+        logger.error("DEBUG: Token is None in get_current_user_from_supabase_jwt, raising credentials_exception.")
+        raise credentials_exception # Token is required for strict auth
+    logger.info(f"DEBUG: Token starts with: {token[:10]}... (length: {len(token)})") # Log first few chars, not full token
+
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -85,7 +93,8 @@ async def get_current_user_from_supabase_jwt(token: str = Depends(oauth2_scheme)
         if user_id is None or email is None:
             raise credentials_exception
         token_data = TokenData(user_id=user_id, email=email, username=username)
-    except JWTError:
+    except JWTError as e:
+        logger.error(f"DEBUG: JWTError during token decoding: {e}")
         raise credentials_exception
     
     profile_response = supabase.table("profiles").select("*").eq("id", user_id).single().execute()
