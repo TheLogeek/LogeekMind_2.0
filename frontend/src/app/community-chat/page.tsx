@@ -192,7 +192,7 @@ const CommunityChatPage = () => {
                         # {room}
                     </button>
                 ))}
-                <h3>👥 Online Users ({onlineUsers.length})</h3>
+                <h3>Online Users ({onlineUsers.length})</h3>
                 {onlineUsers.map((user: string) => ( // Added type
                     <div key={user} className={styles.onlineUserTag}>
                         {user}
