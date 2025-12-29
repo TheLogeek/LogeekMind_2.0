@@ -1,23 +1,35 @@
 'use client';
 
-import React, { useState } from 'react';
-import Link from 'next/link'; // Use Link from next/link
-import { useRouter } from 'next/navigation'; // Use useRouter from next/navigation
-import AuthService from '../services/AuthService'; // Adjust path
-import styles from './Navbar.module.css'; // Import the CSS Module
+import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import AuthService from '../services/AuthService';
+import styles from './Navbar.module.css';
+import { useUser } from '../app/layout'; // Import the useUser hook
 
-const Navbar = () => { // Removed onSidebarToggle and isSidebarOpen props
+const Navbar = () => {
     const router = useRouter();
-    const [isNavOpen, setIsNavOpen] = useState(false); // Internal state for mobile nav toggle
-    
-    // Guard localStorage access for client-side only
-    const currentUser = typeof window !== 'undefined' ? AuthService.getCurrentUser() : null;
-    const userProfile = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem("profile") || 'null') : null; // Explicitly type as null if not found
-    const username = userProfile?.username || "Scholar";
+    const [isNavOpen, setIsNavOpen] = useState(false);
+    const { currentUser, setCurrentUser } = useUser(); // Use the global user context
+
+    // Get profile from localStorage to display username
+    const [userProfile, setUserProfile] = useState<any>(null);
+
+    useEffect(() => {
+        if (currentUser && typeof window !== 'undefined') {
+            const profile = JSON.parse(localStorage.getItem("profile") || 'null');
+            setUserProfile(profile);
+        } else {
+            setUserProfile(null);
+        }
+    }, [currentUser]); // Re-run when currentUser changes
+
+    const username = currentUser ? (userProfile?.username || "Scholar") : "Guest";
 
     const handleLogout = () => {
         AuthService.logout();
-        router.push('/login');
+        setCurrentUser(null); // Update the global state to log out the user
+        router.push('/login'); // Redirect to login page
     };
 
     const toggleNav = () => {
@@ -26,7 +38,6 @@ const Navbar = () => { // Removed onSidebarToggle and isSidebarOpen props
 
     return (
         <nav className={styles.navbar}>
-            {/* Logo and App Name */}
             <div className={styles.navbarLogo}>
                 <Link href="/" className={styles.navbarLogo}>
                     <span className={styles.navbarLogoSpan1}>🧠</span>
@@ -34,19 +45,17 @@ const Navbar = () => { // Removed onSidebarToggle and isSidebarOpen props
                 </Link>
             </div>
 
-            {/* Hamburger Menu Icon (Mobile Only) - controls Navbar's own links */}
             <button type="button" className={styles.hamburgerMenu} onClick={toggleNav}>
                 {isNavOpen ? '✕' : '☰'}
             </button>
 
-            {/* Navigation Links (Desktop, collapsed on mobile, toggled by internal state) */}
             <div className={`${styles.navbarNav} ${isNavOpen ? styles.open : ''}`}>
                 <Link href="/" className={styles.navLink} onClick={toggleNav}>Home</Link>
-                <Link href="/ai-teacher" className={styles.navLink} onClick={toggleNav}>Features</Link>
+                {/* Adjust features link if needed */}
+                <Link href="/dashboard" className={styles.navLink} onClick={toggleNav}>Dashboard</Link>
                 <Link href="/contact" className={styles.navLink} onClick={toggleNav}>Contact</Link>
             </div>
 
-            {/* Auth Buttons / User Info (Desktop, collapsed on mobile, toggled by internal state) */}
             <div className={`${styles.navbarAuth} ${isNavOpen ? styles.open : ''}`}>
                 {currentUser ? (
                     <>

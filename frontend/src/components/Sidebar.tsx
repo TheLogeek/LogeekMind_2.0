@@ -1,11 +1,12 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import Link from 'next/link'; // Use Link from next/link
-import { usePathname } from 'next/navigation'; // Use usePathname for active link logic
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import AuthService from '../services/AuthService';
 import axios, { AxiosError } from 'axios';
-import styles from './Sidebar.module.css'; // Import the CSS Module
+import styles from './Sidebar.module.css';
+import { useUser } from '../app/layout'; // Import the useUser hook
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000";
 
@@ -16,9 +17,8 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     const [isAdmin, setIsAdmin] = useState(false);
-    // Guard localStorage access for client-side only
-    const currentUser = typeof window !== 'undefined' ? AuthService.getCurrentUser() : null;
-    const pathname = usePathname(); // Get current path for active link
+    const { currentUser } = useUser(); // Use the global user context
+    const pathname = usePathname();
 
     useEffect(() => {
         const checkAdminStatus = async () => {
@@ -33,23 +33,19 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                         });
                         setIsAdmin(response.data.is_admin);
                     } else {
-                        setIsAdmin(false); // No access token, so not admin
+                        setIsAdmin(false);
                     }
-                } catch (error: unknown) {
-                    if (axios.isAxiosError(error)) {
-                        console.error('Error checking admin status:', error.response?.data || error);
-                    } else {
-                        console.error('Error checking admin status:', error);
-                    }
-                    setIsAdmin(false); // Assume not admin on any error during API call
+                } catch (error) {
+                    console.error('Error checking admin status:', error);
+                    setIsAdmin(false);
                 }
             } else {
-                setIsAdmin(false); // Not logged in, so not admin
+                setIsAdmin(false);
             }
         };
 
         checkAdminStatus();
-    }, [currentUser]); // Re-run when currentUser changes
+    }, [currentUser]); // Re-run when currentUser from context changes
 
     const getNavLinkClass = (path: string) => {
         return pathname === path ? `${styles.navLink} ${styles.activeNavLink}` : styles.navLink;
@@ -61,7 +57,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                 <Link href="/" onClick={onClose}>LogeekMind</Link>
             </h2>
             <nav>
-                <Link href="/dashboard" className={getNavLinkClass('/dashboard')} onClick={onClose}>📊 Dashboard</Link> {/* Updated link for User Dashboard */}
+                <Link href="/dashboard" className={getNavLinkClass('/dashboard')} onClick={onClose}>📊 Dashboard</Link>
                 <hr className={styles.linkSeparator}/>
                 <h4 className={styles.categoryTitle}>AI Tools</h4>
                 <Link href="/ai-teacher" className={getNavLinkClass('/ai-teacher')} onClick={onClose}>AI Teacher</Link>
@@ -79,7 +75,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                 <hr className={styles.linkSeparator}/>
                 <h4 className={styles.categoryTitle}>Community</h4>
                 <Link href="/community-chat" className={getNavLinkClass('/community-chat')} onClick={onClose}>Community Chat</Link>
-                {isAdmin && ( /* Conditionally render Admin link */
+                {isAdmin && currentUser && ( // Ensure user is logged in to show admin link
                     <>
                         <hr className={styles.linkSeparator}/>
                         <h4 className={styles.categoryTitle}>Admin</h4>
