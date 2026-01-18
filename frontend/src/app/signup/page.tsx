@@ -11,31 +11,38 @@ const SignupPage = () => {
     const [password, setPassword] = useState('');
     const [username, setUsername] = useState('');
     const [termsAccepted, setTermsAccepted] = useState(false);
-    const [message, setMessage] = useState('');
+    interface MessageState {
+        text: string;
+        type: 'success' | 'error' | '';
+    }
+    const [message, setMessage] = useState<MessageState>({ text: '', type: '' });
     const router = useRouter();
 
-    const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => { // Added type
+    const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        setMessage('');
+        setMessage({ text: '', type: '' }); // Clear previous message
         if (!termsAccepted) {
-            setMessage('You must accept the terms and conditions to sign up.');
+            setMessage({ text: 'You must accept the terms and conditions to sign up.', type: 'error' });
             return;
         }
         try {
             const response = await AuthService.register(email, password, username, termsAccepted);
             if (response.success) {
-                setMessage('Signup successful! Please login.');
-                router.push('/login'); // Redirect to login page on successful signup
+                setMessage({ text: 'Signup successful! Please login.', type: 'success' });
+                // Do not redirect immediately. Let the user see the success message for a moment.
+                setTimeout(() => {
+                    router.push('/login'); // Redirect to login page on successful signup
+                }, 1500); // Redirect after 1.5 seconds
             } else {
-                setMessage(response.message || 'Signup failed.');
+                setMessage({ text: response.message || 'Signup failed.', type: 'error' });
             }
-        } catch (error: unknown) { // Explicitly type error as unknown
+        } catch (error: unknown) {
             if (axios.isAxiosError(error)) {
                 console.error('Signup error:', error);
-                setMessage(error.response?.data?.detail || 'An unexpected error occurred.');
+                setMessage({ text: error.response?.data?.detail || 'An unexpected error occurred.', type: 'error' });
             } else {
                 console.error('Signup error:', error);
-                setMessage('An unexpected error occurred.');
+                setMessage({ text: 'An unexpected error occurred.', type: 'error' });
             }
         }
     };
@@ -84,11 +91,15 @@ const SignupPage = () => {
                         checked={termsAccepted}
                         onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTermsAccepted(e.target.checked)}
                     />
-                    <label htmlFor="termsAccepted">I accept the <a onClick={() => router.push('/terms')}>terms and conditions</a></label> {/* Use router.push */}
+                    <label htmlFor="termsAccepted">I accept the <a onClick={() => router.push('/terms')}>terms and conditions</a></label>
                 </div>
                 <button type="submit" className={styles.submitButton}>Sign Up</button>
             </form>
-            {message && <p className={styles.message}>{message}</p>}
+            {message.text && (
+                <p className={`${styles.message} ${message.type === 'success' ? styles.successMessage : styles.errorMessage}`}>
+                    {message.text}
+                </p>
+            )}
             <p className={styles.loginLink}>
                 Already have an account? <a onClick={() => router.push('/login')}>Login</a> {/* Use router.push */}
             </p>

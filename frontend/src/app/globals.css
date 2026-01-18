@@ -180,16 +180,7 @@ body {
 
 /* Debugging Button */
 .debug-button {
-  background-color: #ffc107; /* Amber color */
-  color: black;
-  border: 1px solid #e0a800;
-  border-radius: 5px;
-  padding: 8px 12px;
-  margin-top: var(--spacing-md);
-  cursor: pointer;
-  display: block; /* Make it a block element to center it */
-  margin-left: auto;
-  margin-right: auto;
+  display: none;
 }
 
 @media (min-width: 769px) {

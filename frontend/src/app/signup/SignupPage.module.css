@@ -67,7 +67,13 @@
   background-color: #218838;
 }
 
-.message {
+.successMessage {
+  color: var(--button-success);
+  margin-top: var(--spacing-md);
+  text-align: center;
+}
+
+.errorMessage {
   color: var(--button-danger);
   margin-top: var(--spacing-md);
   text-align: center;
