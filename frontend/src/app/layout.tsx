@@ -53,8 +53,8 @@ export default function RootLayout({
   // --- Auto-login Effect ---
   // On initial app load, check if a user session is stored in localStorage/sessionStorage.
   useEffect(() => {
-    const initializeUserSession = () => {
-      const user = AuthService.getCurrentUser();
+    const initializeUserSession = async () => { // Made async
+      const user = await AuthService.getCurrentUser(); // Await the async function
       if (user) {
         setCurrentUser(user);
         console.log("Session restored from storage for user:", user);
