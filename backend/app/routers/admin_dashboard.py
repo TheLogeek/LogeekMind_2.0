@@ -1,8 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from supabase import Client
 from typing import Dict, Any, List, Optional
 from pydantic import BaseModel
 import time
+from uuid import UUID # Import UUID
+from datetime import datetime # Import datetime
 
 from app.core.database import get_supabase_client, get_db_engine
 from sqlalchemy.engine import Engine
@@ -33,13 +34,23 @@ class TopUserItem(BaseModel):
     usage_count: int
 
 class UsageLogItem(BaseModel):
-    id: str
-    user_id: str
+    id: int # Changed from str to int
+    user_id: UUID # Changed from str to UUID
     username: str
     feature_name: str
     action: str
     metadata: Dict[str, Any]
-    created_at: str
+    created_at: datetime # Changed from str to datetime
+
+    class Config:
+        json_encoders = {
+            UUID: str, # Encode UUID to str when converting to JSON
+            datetime: lambda dt: dt.isoformat() # Encode datetime to ISO format
+        }
+        # Allow assignment of datetime objects to fields with type datetime
+        # before Pydantic does its own validation/conversion.
+        arbitrary_types_allowed = True
+
 
 @router.get("/metrics", response_model=MetricResponse)
 async def get_admin_metrics(
