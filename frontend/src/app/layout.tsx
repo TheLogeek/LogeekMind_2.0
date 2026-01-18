@@ -10,9 +10,16 @@ import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import SidebarToggleButton from '../components/SidebarToggleButton';
 
+interface User {
+    id: string;
+    email: string;
+    username?: string; // profile contains username, so it might be on the user object too
+    // Add other user properties if available
+}
+
 // --- User Context for Global State ---
 // This context will provide the currentUser and a way to set it to all components.
-const UserContext = createContext<{ currentUser: any, setCurrentUser: React.Dispatch<React.SetStateAction<any>> } | null>(null);
+const UserContext = createContext<{ currentUser: User | null, setCurrentUser: React.Dispatch<React.SetStateAction<User | null>> } | null>(null);
 
 // Custom hook to easily access the User Context
 export const useUser = () => {
@@ -41,7 +48,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [currentUser, setCurrentUser] = useState(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   // --- Auto-login Effect ---
   // On initial app load, check if a user session is stored in localStorage.
