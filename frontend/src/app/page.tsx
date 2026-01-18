@@ -17,7 +17,7 @@ const HomePage = () => {
     const router = useRouter();
 
     const AI_LEARNING_FEATURES: Feature[] = [
-        { icon: "🧠", title: "AI Teacher", description: "Get interactive explanations and practice on any topic.", linkTo: "/ai-teacher" },
+        { icon: " ", title: "AI Teacher", description: "Get interactive explanations and practice on any topic.", linkTo: "/ai-teacher" },
         { icon: "❓", title: "Smart Quiz Generator", description: "Create customized quizzes with instant feedback.", linkTo: "/smart-quiz" },
         { icon: "💻", title: "Exam Simulator", description: "Prepare with simulated exams.", linkTo: "/exam-simulator" },
     ];
