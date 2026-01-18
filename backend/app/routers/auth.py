@@ -37,24 +37,6 @@ class AuthResponse(BaseModel):
     profile: Dict[str, Any] | None = None
     session: Dict[str, Any] | None = None
 
-@router.get("/verify-session", response_model=AuthResponse)
-async def verify_session_route(
-    current_user: Dict[str, Any] = Depends(get_current_user_from_supabase_jwt)
-):
-    # If get_current_user_from_supabase_jwt successfully returns a user,
-    # it means the token is valid and the session is active.
-    # We return the user and profile details.
-    return AuthResponse(
-        success=True,
-        message="Session is valid.",
-        user={
-            "id": current_user["id"],
-            "email": current_user["email"]
-        },
-        profile=current_user["profile"],
-        session={"access_token": "valid"} # Indicate that a valid token was found, actual token not returned for security
-    )
-
 @router.post("/signup", response_model=AuthResponse)
 async def signup_route(request: SignUpRequest, supabase: Client = Depends(get_supabase_client)):
     result = await auth_service.sign_up_user(

@@ -51,31 +51,17 @@ export default function RootLayout({
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   // --- Auto-login Effect ---
-  // On initial app load, check if a user session is stored in localStorage.
+  // On initial app load, check if a user session is stored in localStorage/sessionStorage.
   useEffect(() => {
-    const initializeUserSession = async () => {
-      const storedAccessToken = AuthService.getAccessToken();
-      const isRemembered = AuthService.getRememberMe();
-
-      if (isRemembered && storedAccessToken) {
-        // If "Remember Me" is true and a token exists, try to verify the session with the backend
-        const verificationResponse = await AuthService.verifySession(storedAccessToken);
-        if (verificationResponse.success && verificationResponse.user) {
-          setCurrentUser(verificationResponse.user);
-          console.log("Session verified and auto-login successful for user:", verificationResponse.user);
-        } else {
-          // Token is invalid or expired, log out the user
-          AuthService.logout();
-          setCurrentUser(null);
-          console.log("Session verification failed or token expired. User logged out.");
-        }
+    const initializeUserSession = () => {
+      const user = AuthService.getCurrentUser();
+      if (user) {
+        setCurrentUser(user);
+        console.log("Session restored from storage for user:", user);
       } else {
-        // For non-"Remember Me" sessions (or if localStorage is empty), just try to get current user from sessionStorage
-        const user = AuthService.getCurrentUser();
-        if (user) {
-          setCurrentUser(user);
-          console.log("Session restored from storage for user:", user);
-        }
+        // If no user is found in storage, ensure currentUser is null
+        setCurrentUser(null);
+        console.log("No active session found in storage.");
       }
     };
 

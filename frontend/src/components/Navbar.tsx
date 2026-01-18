@@ -12,19 +12,8 @@ const Navbar = () => {
     const [isNavOpen, setIsNavOpen] = useState(false);
     const { currentUser, setCurrentUser } = useUser(); // Use the global user context
 
-    // Get profile from localStorage to display username
-    const [userProfile, setUserProfile] = useState<any>(null);
-
-    useEffect(() => {
-        if (currentUser && typeof window !== 'undefined') {
-            const profile = JSON.parse(localStorage.getItem("profile") || 'null');
-            setUserProfile(profile);
-        } else {
-            setUserProfile(null);
-        }
-    }, [currentUser]); // Re-run when currentUser changes
-
-    const username = currentUser ? (userProfile?.username || "Scholar") : "Guest";
+    // Access username directly from currentUser
+    const username = currentUser?.username || "Guest";
 
     const handleLogout = () => {
         AuthService.logout();

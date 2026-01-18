@@ -50,13 +50,14 @@ const login = async (email: string, password: string, rememberMe: boolean = fals
         password,
     });
     if (response.data.success && response.data.session && response.data.session.access_token) {
-        const storage = getStorage(rememberMe);
-        if (storage) {
-            storage.setItem("user", JSON.stringify(response.data.user));
-            storage.setItem("profile", JSON.stringify(response.data.profile));
-            storage.setItem("accessToken", response.data.session.access_token);
-            storage.setItem("rememberMe", String(rememberMe)); // Store rememberMe preference
-        }
+        const storage = rememberMe ? localStorage : sessionStorage; // Directly use storage based on rememberMe
+
+        // Store entire user and profile objects
+        storage.setItem("user", JSON.stringify(response.data.user));
+        storage.setItem("profile", JSON.stringify(response.data.profile)); 
+        storage.setItem("accessToken", response.data.session.access_token);
+        // Also store rememberMe preference in localStorage regardless, for logic in getCurrentUser
+        localStorage.setItem("rememberMe", String(rememberMe)); 
     }
     return response.data;
 };
@@ -66,73 +67,52 @@ const logout = () => {
         localStorage.removeItem("user");
         localStorage.removeItem("profile");
         localStorage.removeItem("accessToken");
-        localStorage.removeItem("rememberMe");
+        localStorage.removeItem("rememberMe"); // Clear rememberMe flag
         sessionStorage.removeItem("user");
         sessionStorage.removeItem("profile");
         sessionStorage.removeItem("accessToken");
     }
 };
 
-const getRememberMe = (): boolean => {
-    if (typeof window === 'undefined') return false;
-    return localStorage.getItem("rememberMe") === "true";
-}
-
-const getCurrentUser = (): User | null => {
+const getStoredSession = (): { user: User | null; profile: UserProfile | null; accessToken: string | null } => {
     if (typeof window === 'undefined') {
-        return null;
+        return { user: null, profile: null, accessToken: null };
     }
-    let user: User | null = null;
-    const isRemembered = getRememberMe();
-    const storage = getStorage(isRemembered);
 
-    const storedUser = storage?.getItem("user");
+    const isRemembered = localStorage.getItem("rememberMe") === "true";
+    const storage = isRemembered ? localStorage : sessionStorage;
+
+    let user: User | null = null;
+    let profile: UserProfile | null = null;
+    let accessToken: string | null = null;
+
+    const storedUser = storage.getItem("user");
     if (storedUser) {
         user = JSON.parse(storedUser);
     }
-    return user;
+
+    const storedProfile = storage.getItem("profile");
+    if (storedProfile) {
+        profile = JSON.parse(storedProfile);
+    }
+    
+    accessToken = storage.getItem("accessToken");
+
+    return { user, profile, accessToken };
+};
+
+// getCurrentUser should return a combined object with user details and username
+const getCurrentUser = (): (User & { username?: string, profile?: UserProfile }) | null => {
+    const { user, profile } = getStoredSession();
+    if (user && profile) {
+        return { ...user, username: profile.username, profile: profile };
+    }
+    return null;
 };
 
 const getAccessToken = (): string | null => {
-    if (typeof window === 'undefined') {
-        return null;
-    }
-    const isRemembered = getRememberMe();
-    const storage = getStorage(isRemembered);
-
-    return storage?.getItem("accessToken") || null;
-}
-
-const verifySession = async (accessToken: string): Promise<AuthResponse> => {
-    try {
-        const response = await axios.get<AuthResponse>(`${API_BASE_URL}/auth/verify-session`, {
-            headers: {
-                Authorization: `Bearer ${accessToken}`
-            }
-        });
-
-        if (response.data.success) {
-            const isRemembered = getRememberMe();
-            const storage = getStorage(isRemembered);
-            if (storage) {
-                // Update local storage with potentially refreshed user/profile data
-                storage.setItem("user", JSON.stringify(response.data.user));
-                storage.setItem("profile", JSON.stringify(response.data.profile));
-                // Do not update accessToken here unless the backend explicitly issues a new one
-                // For now, assume if verify-session is successful, the existing token is still valid.
-            }
-            return { success: true, user: response.data.user, profile: response.data.profile };
-        } else {
-            return { success: false, message: response.data.message || "Session verification failed." };
-        }
-    } catch (error: unknown) {
-        if (axios.isAxiosError(error)) {
-            console.error("Session verification API error:", error.response?.data || error);
-            return { success: false, message: error.response?.data?.detail || "Session verification failed due to an API error." };
-        }
-        console.error("Session verification unexpected error:", error);
-        return { success: false, message: "An unexpected error occurred during session verification." };
-    }
+    const { accessToken } = getStoredSession();
+    return accessToken;
 };
 
 const AuthService = {
@@ -140,9 +120,7 @@ const AuthService = {
     login,
     logout,
     getCurrentUser,
-    getAccessToken,
-    getRememberMe,
-    verifySession
+    getAccessToken
 };
 
 export default AuthService;

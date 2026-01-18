@@ -17,7 +17,7 @@ const LoginPage = () => {
         e.preventDefault();
         setMessage('');
         try {
-            // Pass rememberMe state to AuthService.login
+            // Pass rememberMe state to AuthService.login serv
             const response = await AuthService.login(email, password, rememberMe);
             if (response.success) {
                 router.push('/'); // Redirect to home page on successful login
