@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation'; // Use useRouter from next/navigation
 import AuthService from '../../services/AuthService'; // Adjust path
 import axios, { AxiosError } from 'axios';
-import styles from './LoginPage.module.css'; // Import the CSS Module
+import styles from './LoginPage.module.css'; // Import the CSS Module(s)
 
 const LoginPage = () => {
     const [email, setEmail] = useState('');

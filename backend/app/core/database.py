@@ -40,9 +40,9 @@ def initialize_clients():
     if DATABASE_URL:
         try:
             _db_engine = create_engine(DATABASE_URL, poolclass=NullPool)
-            print("SQLAlchemy database engine created successfully with connection pooling.")
+            print(f"SQLAlchemy database engine created successfully. Connected to: {DATABASE_URL.split('@')[-1]}")
         except Exception as e:
-            print(f"FATAL: Could not create SQLAlchemy engine. Error: {e}")
+            print(f"FATAL: Could not create SQLAlchemy engine with URL '{DATABASE_URL}'. Error: {e}")
             _db_engine = None
     else:
         print("WARNING: DATABASE_URL not set. Direct database queries via SQLAlchemy will fail.")

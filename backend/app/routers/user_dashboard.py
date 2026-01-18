@@ -34,9 +34,11 @@ async def get_user_performance_route(
         
         return performance_data
 
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         print(f"Error fetching user performance data with SQLAlchemy: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An error occurred while fetching performance data.",
+            detail="An unexpected error occurred while fetching performance data.",
         )

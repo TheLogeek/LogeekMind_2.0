@@ -58,8 +58,10 @@ async def get_admin_metrics(
             active_users_24h=active_users,
             top_user_username=top_user_username
         )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error fetching admin metrics: {e}")
+        raise HTTPException(status_code=500, detail=f"An unexpected error occurred while fetching admin metrics: {e}")
 
 @router.get("/feature-usage", response_model=List[FeatureUsageItem])
 async def get_admin_feature_usage(
@@ -69,8 +71,10 @@ async def get_admin_feature_usage(
     try:
         with engine.connect() as conn:
             return await admin_dashboard_service.get_feature_usage(conn)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error fetching feature usage: {e}")
+        raise HTTPException(status_code=500, detail=f"An unexpected error occurred while fetching feature usage: {e}")
 
 @router.get("/daily-activity", response_model=List[DailyActivityItem])
 async def get_admin_daily_activity(
@@ -80,8 +84,10 @@ async def get_admin_daily_activity(
     try:
         with engine.connect() as conn:
             return await admin_dashboard_service.get_daily_activity(conn)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error fetching daily activity: {e}")
+        raise HTTPException(status_code=500, detail=f"An unexpected error occurred while fetching daily activity: {e}")
 
 @router.get("/top-users", response_model=List[TopUserItem])
 async def get_admin_top_users(
@@ -91,8 +97,10 @@ async def get_admin_top_users(
     try:
         with engine.connect() as conn:
             return await admin_dashboard_service.get_top_users(conn, n=10)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error fetching top users: {e}")
+        raise HTTPException(status_code=500, detail=f"An unexpected error occurred while fetching top users: {e}")
 
 @router.get("/all-usage-logs", response_model=List[UsageLogItem])
 async def get_admin_all_usage_logs(
@@ -102,5 +110,7 @@ async def get_admin_all_usage_logs(
     try:
         with engine.connect() as conn:
             return await admin_dashboard_service.get_all_usage_logs(conn)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"An error occurred while fetching all usage logs: {e}")
+        raise HTTPException(status_code=500, detail=f"An unexpected error occurred while fetching all usage logs: {e}")
