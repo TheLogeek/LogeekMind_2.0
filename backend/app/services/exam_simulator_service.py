@@ -1,5 +1,5 @@
 from typing import Dict, Any, List, Optional, Tuple
-from app.services.gemini_service import get_gemini_client_and_key, APIError
+from app.services.gemini_service import get_gemini_client
 from app.services.usage_service import log_usage, log_performance
 from supabase import Client
 import json
@@ -35,14 +35,13 @@ async def generate_exam_questions(
     username: str,
     course_name: str,
     topic: str,
-    num_questions: int,
-    gemini_api_key: Optional[str] = None
+    num_questions: int
 ) -> Dict[str, Any]:
     
     if not course_name:
         return {"success": False, "message": "Course Name is required."}
 
-    client, api_key_to_use, error_message = await get_gemini_client_and_key(user_id=user_id, user_api_key=gemini_api_key)
+    client, error_message = await get_gemini_client(user_id=user_id)
     if error_message:
         return {"success": False, "message": error_message}
     
@@ -84,18 +83,10 @@ Each dictionary must have these keys:
         return {"success": True, "exam_data": exam_data}
 
     except json.JSONDecodeError:
-        return {"success": False, "message": "AI generated invalid JSON. Please try again."}
-    except APIError as e:
-        error_text = str(e)
-        if "429" in error_text or "RESOURCE_EXHAUSTED" in error_text.upper():
-            return {"success": False, "message": "Quota Exceeded! The Gemini API key has hit its limit."}
-        elif "503" in error_text:
-            return {"success": False, "message": "The Gemini AI model is currently experiencing high traffic. Please try again later."}
-        else:
-            return {"success": False, "message": f"Gemini API Error: {error_text}"}
+        return {"success": False, "message": "The AI generated an invalid format. Please try again."}
     except Exception as e:
         print(f"Error during exam generation: {e}")
-        return {"success": False, "message": str(e)}
+        return {"success": False, "message": "An unexpected error occurred while generating the exam."}
 
 async def grade_exam_and_log_performance(
     supabase: Client,

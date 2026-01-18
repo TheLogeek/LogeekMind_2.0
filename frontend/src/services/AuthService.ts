@@ -23,6 +23,7 @@ interface AuthResponse {
     };
     user?: User;
     profile?: UserProfile;
+    rememberMe?: boolean; // Add rememberMe to AuthResponse
 }
 
 // Helper function to get storage based on rememberMe flag
@@ -52,8 +53,9 @@ const login = async (email: string, password: string, rememberMe: boolean = fals
         const storage = getStorage(rememberMe);
         if (storage) {
             storage.setItem("user", JSON.stringify(response.data.user));
-            storage.setItem("profile", JSON.stringify(response.data.profile)); // Assuming profile is also part of session
+            storage.setItem("profile", JSON.stringify(response.data.profile));
             storage.setItem("accessToken", response.data.session.access_token);
+            storage.setItem("rememberMe", String(rememberMe)); // Store rememberMe preference
         }
     }
     return response.data;
@@ -64,28 +66,29 @@ const logout = () => {
         localStorage.removeItem("user");
         localStorage.removeItem("profile");
         localStorage.removeItem("accessToken");
+        localStorage.removeItem("rememberMe");
         sessionStorage.removeItem("user");
         sessionStorage.removeItem("profile");
         sessionStorage.removeItem("accessToken");
     }
-    // For JWTs, client-side removal is usually sufficient.
-    // If backend signout is required, ensure it's called here:
-    // axios.post(`${API_BASE_URL}/auth/signout`); 
 };
+
+const getRememberMe = (): boolean => {
+    if (typeof window === 'undefined') return false;
+    return localStorage.getItem("rememberMe") === "true";
+}
 
 const getCurrentUser = (): User | null => {
     if (typeof window === 'undefined') {
         return null;
     }
     let user: User | null = null;
-    const localStorageUser = localStorage.getItem("user");
-    if (localStorageUser) {
-        user = JSON.parse(localStorageUser);
-    } else {
-        const sessionStorageUser = sessionStorage.getItem("user");
-        if (sessionStorageUser) {
-            user = JSON.parse(sessionStorageUser);
-        }
+    const isRemembered = getRememberMe();
+    const storage = getStorage(isRemembered);
+
+    const storedUser = storage?.getItem("user");
+    if (storedUser) {
+        user = JSON.parse(storedUser);
     }
     return user;
 };
@@ -94,12 +97,43 @@ const getAccessToken = (): string | null => {
     if (typeof window === 'undefined') {
         return null;
     }
-    let token = localStorage.getItem("accessToken");
-    if (!token) {
-        token = sessionStorage.getItem("accessToken");
-    }
-    return token;
+    const isRemembered = getRememberMe();
+    const storage = getStorage(isRemembered);
+
+    return storage?.getItem("accessToken") || null;
 }
+
+const verifySession = async (accessToken: string): Promise<AuthResponse> => {
+    try {
+        const response = await axios.get<AuthResponse>(`${API_BASE_URL}/auth/verify-session`, {
+            headers: {
+                Authorization: `Bearer ${accessToken}`
+            }
+        });
+
+        if (response.data.success) {
+            const isRemembered = getRememberMe();
+            const storage = getStorage(isRemembered);
+            if (storage) {
+                // Update local storage with potentially refreshed user/profile data
+                storage.setItem("user", JSON.stringify(response.data.user));
+                storage.setItem("profile", JSON.stringify(response.data.profile));
+                // Do not update accessToken here unless the backend explicitly issues a new one
+                // For now, assume if verify-session is successful, the existing token is still valid.
+            }
+            return { success: true, user: response.data.user, profile: response.data.profile };
+        } else {
+            return { success: false, message: response.data.message || "Session verification failed." };
+        }
+    } catch (error: unknown) {
+        if (axios.isAxiosError(error)) {
+            console.error("Session verification API error:", error.response?.data || error);
+            return { success: false, message: error.response?.data?.detail || "Session verification failed due to an API error." };
+        }
+        console.error("Session verification unexpected error:", error);
+        return { success: false, message: "An unexpected error occurred during session verification." };
+    }
+};
 
 const AuthService = {
     register,
@@ -107,6 +141,8 @@ const AuthService = {
     logout,
     getCurrentUser,
     getAccessToken,
+    getRememberMe,
+    verifySession
 };
 
 export default AuthService;

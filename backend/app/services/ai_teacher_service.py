@@ -1,10 +1,9 @@
 from typing import List, Dict, Any, Optional
-from app.services.gemini_service import get_gemini_client_and_key
+from app.services.gemini_service import get_gemini_client
 from app.services.usage_service import log_usage
 from supabase import Client
 from google import genai
 from google.genai import types
-from google.genai.errors import APIError
 
 AI_TEACHER_INSTRUCTIONS = (
     """
@@ -82,11 +81,10 @@ async def generate_ai_teacher_response(
     user_id: str,
     username: str,
     current_prompt: str,
-    chat_history: List[Dict[str, str]],
-    api_key: Optional[str] = None
+    chat_history: List[Dict[str, str]]
 ) -> Dict[str, Any]:
     
-    client, api_key_to_use, error_message = await get_gemini_client_and_key(user_id=user_id, user_api_key=api_key)
+    client, error_message = await get_gemini_client(user_id=user_id)
     if error_message:
         return {"success": False, "message": error_message}
 
@@ -117,14 +115,7 @@ async def generate_ai_teacher_response(
 
         return {"success": True, "ai_text": ai_text}
 
-    except APIError as e:
-        error_text = str(e)
-        if "rate limit" in error_text.lower() or "429" in error_text or "RESOURCE_EXHAUSTED" in error_text.upper():
-            return {"success": False, "message": "Quota Exceeded! The Gemini API key has hit its limit."}
-        elif "503" in error_text:
-            return {"success": False, "message": "The Gemini AI model is currently experiencing high traffic. Please try again later."}
-        else:
-            return {"success": False, "message": f"Gemini API Error: {error_text}"}
     except Exception as e:
+        # This catches errors during the generate_content call itself.
         print(f"Error during AI Teacher response generation: {e}")
-        return {"success": False, "message": str(e)}
+        return {"success": False, "message": "An unexpected error occurred while generating the AI response."}

@@ -19,7 +19,6 @@ GUEST_LIMIT = 2
 @router.post("/upload")
 async def summarize_upload(
     file: UploadFile = File(...),
-    gemini_api_key: Optional[str] = Form(None), # New parameter for user's Gemini API key
     supabase: Client = Depends(get_supabase_client),
     current_user: Optional[Dict[str, Any]] = Depends(try_get_current_user_from_supabase_jwt)
 ):
@@ -42,10 +41,13 @@ async def summarize_upload(
         if not extracted_text:
             raise HTTPException(status_code=400, detail="Could not extract text from the provided file or unsupported file type.")
 
-        # Pass user_id and gemini_api_key to the service function
-        summary, gemini_error = await summarizer_service.summarize_text_content(extracted_text, user_id, gemini_api_key)
+        summary, gemini_error = await summarizer_service.summarize_text_content(extracted_text, user_id)
 
         if gemini_error:
+            if "Rate Limit Hit" in gemini_error:
+                raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail=gemini_error)
+            if "feature is currently unavailable" in gemini_error:
+                raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=gemini_error)
             raise HTTPException(status_code=500, detail=gemini_error)
 
         await usage_service.log_usage(
@@ -63,9 +65,8 @@ async def summarize_upload(
         raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {e}")
 
 @router.post("/text")
-async def summarize_text_route( # Renamed to avoid conflict with `summarize_text_content` in service
+async def summarize_text_route(
     text: str = Form(...),
-    gemini_api_key: Optional[str] = Form(None), # New parameter for user's Gemini API key
     supabase: Client = Depends(get_supabase_client),
     current_user: Optional[Dict[str, Any]] = Depends(try_get_current_user_from_supabase_jwt)
 ):
@@ -85,10 +86,13 @@ async def summarize_text_route( # Renamed to avoid conflict with `summarize_text
         if not text.strip():
             raise HTTPException(status_code=400, detail="Text to summarize cannot be empty.")
 
-        # Pass user_id and gemini_api_key to the service function
-        summary, gemini_error = await summarizer_service.summarize_text_content(text, user_id, gemini_api_key)
+        summary, gemini_error = await summarizer_service.summarize_text_content(text, user_id)
 
         if gemini_error:
+            if "Rate Limit Hit" in gemini_error:
+                raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail=gemini_error)
+            if "feature is currently unavailable" in gemini_error:
+                raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=gemini_error)
             raise HTTPException(status_code=500, detail=gemini_error)
 
         await usage_service.log_usage(

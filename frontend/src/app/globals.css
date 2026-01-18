@@ -5,8 +5,8 @@
   --foreground: #171717;
 
   /* Colors from old global.css */
-  --primary-gradient-start: #6a11cb;
-  --primary-gradient-end: #2575fc;
+  --primary-gradient-start: hsl(217, 71%, 25%); /* Dark Blue */
+  --primary-gradient-end: hsl(217, 91%, 60%);   /* Lighter Blue */
   --text-dark: #333;
   --text-medium: #666;
   --text-light: #999;
@@ -106,7 +106,7 @@ body {
   position: absolute;
   top: 15px;
   left: 15px;
-  background-color: #6a11cb; /* Distinct purple color */
+  background-color: var(--primary-gradient-start);
   color: white;
   border: none;
   border-radius: 5px;
@@ -123,7 +123,7 @@ body {
 }
 
 .sidebar-toggle-button:hover {
-  background-color: #2575fc;
+  background-color: var(--primary-gradient-end);
 }
 
 /* Generic Page Container for consistent layout */
@@ -140,8 +140,8 @@ body {
   :root {
     --spacing-md: 15px;
     --spacing-lg: 20px;
-    --font-size-h1: 2.5em;
-    --font-size-h2: 2em;
+    --font-size-h1: 2em; /* Reduced for mobile */
+    --font-size-h2: 1.5em; /* Reduced for mobile */
     --font-size-h3: 1.5em;
     --font-size-h4: 1.2em;
     --font-size-xl: 1em;

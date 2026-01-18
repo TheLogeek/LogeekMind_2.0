@@ -1,11 +1,10 @@
 from typing import Dict, Any, Optional
-from app.services.gemini_service import get_gemini_client_and_key
+from app.services.gemini_service import get_gemini_client
 from app.services.usage_service import log_usage
 from supabase import Client
 from docx import Document
 import io
 from google import genai
-from google.genai.errors import APIError
 
 async def generate_course_outline(
     supabase: Client,
@@ -13,14 +12,13 @@ async def generate_course_outline(
     username: str,
     course_full_name: str,
     course_code: Optional[str] = None,
-    university_name: Optional[str] = None,
-    api_key: Optional[str] = None
+    university_name: Optional[str] = None
 ) -> Dict[str, Any]:
     
     if not course_full_name:
         return {"success": False, "message": "Course Full Name is required."}
 
-    client, api_key_to_use, error_message = await get_gemini_client_and_key(user_id=user_id, user_api_key=api_key)
+    client, error_message = await get_gemini_client(user_id=user_id)
     if error_message:
         return {"success": False, "message": error_message}
     
@@ -58,17 +56,9 @@ async def generate_course_outline(
 
         return {"success": True, "outline_text": outline_text}
 
-    except APIError as e:
-        error_text = str(e)
-        if "429" in error_text or "RESOURCE_EXHAUSTED" in error_text.upper():
-            return {"success": False, "message": "Quota Exceeded! The Gemini API key has hit its limit."}
-        elif "503" in error_text:
-            return {"success": False, "message": "The Gemini AI model is currently experiencing high traffic. Please try again later."}
-        else:
-            return {"success": False, "message": f"Gemini API Error: {error_text}"}
     except Exception as e:
         print(f"Error during course outline generation: {e}")
-        return {"success": False, "message": str(e)}
+        return {"success": False, "message": "An unexpected error occurred while generating the AI response."}
 
 async def create_docx_from_outline(outline_text: str, course_full_name: str) -> io.BytesIO:
     doc = Document()

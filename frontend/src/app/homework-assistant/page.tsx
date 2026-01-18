@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import AuthService from '../../services/AuthService';
 import axios, { AxiosError } from 'axios';
 import MarkdownRenderer from '../../components/MarkdownRenderer';
-import ApiKeyInput from '../../components/ApiKeyInput';
 import styles from './HomeworkAssistantPage.module.css';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000";
@@ -20,35 +19,26 @@ const HomeworkAssistantPage = () => {
     const [error, setError] = useState('');
     const [currentUser, setCurrentUser] = useState<any>(null);
 
-    const GUEST_HW_LIMIT = 1;
+    const GUEST_HW_LIMIT = 2; // Adjusted limit
     const GUEST_USAGE_KEY = 'homework_assistant_guest_usage';
     const [guestUsageCount, setGuestUsageCount] = useState(0);
-
-    const [userGeminiApiKey, setUserGeminiApiKey] = useState('');
 
     useEffect(() => {
         setCurrentUser(AuthService.getCurrentUser());
         setGuestUsageCount(typeof window !== 'undefined' ? parseInt(localStorage.getItem(GUEST_USAGE_KEY) || '0', 10) : 0);
 
-        // Restore state from sessionStorage
         const savedContext = sessionStorage.getItem('homework_context');
         const savedSolution = sessionStorage.getItem('homework_solution');
-        if (savedContext) {
-            setContext(savedContext);
-        }
-        if (savedSolution) {
-            setSolution(savedSolution);
-        }
+        if (savedContext) setContext(savedContext);
+        if (savedSolution) setSolution(savedSolution);
     }, []);
 
     useEffect(() => {
-        if (typeof window !== 'undefined') {
-            localStorage.setItem(GUEST_USAGE_KEY, guestUsageCount.toString());
-            if (!currentUser && guestUsageCount >= GUEST_HW_LIMIT) {
-                setError(`You have reached the guest limit of ${GUEST_HW_LIMIT} homework solutions. Please login or sign up for unlimited access.`);
-            } else {
-                setError('');
-            }
+        localStorage.setItem(GUEST_USAGE_KEY, guestUsageCount.toString());
+        if (!currentUser && guestUsageCount >= GUEST_HW_LIMIT) {
+            setError(`You have reached the guest limit of ${GUEST_HW_LIMIT} homework solutions. Please login or sign up for unlimited access.`);
+        } else {
+            setError('');
         }
     }, [guestUsageCount, currentUser]);
 
@@ -96,36 +86,36 @@ const HomeworkAssistantPage = () => {
             const formData = new FormData();
             formData.append('file', imageFile);
             formData.append('context', context);
-            if (userGeminiApiKey) {
-                formData.append('gemini_api_key', userGeminiApiKey);
-            }
 
-            const response = await axios.post(`${API_BASE_URL}/homework-assistant/solve`, formData, { headers: { ...headers, 'Content-Type': 'multipart/form-data' } });
+            const response = await axios.post(`${API_BASE_URL}/homework-assistant/solve`, formData, { headers });
 
             if (response.data && response.data.solution_text) {
                 setSolution(response.data.solution_text);
                 incrementGuestUsage();
-                // Save state to sessionStorage
-                if (typeof window !== 'undefined') {
-                    sessionStorage.setItem('homework_solution', response.data.solution_text);
-                    sessionStorage.setItem('homework_context', context);
-                }
+                sessionStorage.setItem('homework_solution', response.data.solution_text);
+                sessionStorage.setItem('homework_context', context);
             } else {
                 setError('Failed to get solution from AI.');
             }
         } catch (err: unknown) {
-            if (axios.isAxiosError(err)) {
-                setError(err.response?.data?.detail || 'An error occurred during solution generation.');
+            const axiosError = err as AxiosError<any>;
+            if (axiosError.response?.status === 429) {
+                setError(axiosError.response.data.detail || "You are making too many requests. Please try again shortly.");
+            } else if (axiosError.response?.status === 503) {
+                setError(axiosError.response.data.detail || "The AI service is currently unavailable. Please try again later.");
             } else {
-                setError('An unexpected error occurred.');
+                setError(axiosError.response?.data?.detail || 'An error occurred during solution generation.');
             }
         } finally {
             setLoading(false);
         }
     };
-
+    
     const handleDownloadDocx = async () => {
-        if (!solution || !currentUser) return;
+        if (!solution || !currentUser) {
+            setError("Please log in to download the solution as a DOCX file.");
+            return;
+        }
 
         try {
             const accessToken = AuthService.getAccessToken();
@@ -134,7 +124,10 @@ const HomeworkAssistantPage = () => {
             formData.append('solution_text', solution);
             formData.append('context', context);
 
-            const response = await axios.post(`${API_BASE_URL}/homework-assistant/download-docx`, formData, { headers, responseType: 'blob' });
+            const response = await axios.post(`${API_BASE_URL}/homework-assistant/download-docx`, formData, { 
+                headers, 
+                responseType: 'blob' 
+            });
 
             const blob = new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
             const url = window.URL.createObjectURL(blob);
@@ -146,35 +139,21 @@ const HomeworkAssistantPage = () => {
             document.body.removeChild(a);
             window.URL.revokeObjectURL(url);
         } catch (err: unknown) {
-            if (axios.isAxiosError(err)) {
-                setError(err.response?.data?.detail || 'Failed to download DOCX.');
-            } else {
-                setError('An unexpected error occurred while downloading DOCX.');
-            }
+            const axiosError = err as AxiosError<any>;
+            console.error('Error downloading DOCX:', axiosError.response?.data || axiosError);
+            setError(axiosError.response?.data?.detail || 'Failed to download DOCX.');
         }
     };
 
     const handleNewProblem = () => {
-        if (imagePreview) {
-            URL.revokeObjectURL(imagePreview);
-        }
+        if (imagePreview) URL.revokeObjectURL(imagePreview);
         setImageFile(null);
         setImagePreview(null);
         setContext('');
         setSolution('');
         setError('');
-        // Clear sessionStorage
-        if (typeof window !== 'undefined') {
-            sessionStorage.removeItem('homework_solution');
-            sessionStorage.removeItem('homework_context');
-        }
-    };
-
-    const handleResetGuestUsage = () => {
-        if (typeof window !== 'undefined') {
-            localStorage.setItem(GUEST_USAGE_KEY, '0');
-            setGuestUsageCount(0);
-        }
+        sessionStorage.removeItem('homework_solution');
+        sessionStorage.removeItem('homework_context');
     };
 
     return (
@@ -182,20 +161,10 @@ const HomeworkAssistantPage = () => {
             <h2>📸 Homework Assistant</h2>
             <p>Upload a picture of your homework problem and get a step-by-step, downloadable solution.</p>
 
-            <ApiKeyInput
-                userApiKey={userGeminiApiKey}
-                setUserApiKey={setUserGeminiApiKey}
-            />
-
             <form onSubmit={handleGenerateSolution} className={styles.homeworkForm}>
                 <div className={styles.formGroup}>
                     <label htmlFor="image-upload">Upload Image of Homework Problem:</label>
-                    <input
-                        id="image-upload"
-                        type="file"
-                        accept="image/jpeg,image/png,image/jpg"
-                        onChange={handleImageChange}
-                    />
+                    <input id="image-upload" type="file" accept="image/jpeg,image/png,image/jpg" onChange={handleImageChange} />
                     {imagePreview && (
                         <div className={styles.imagePreviewContainer}>
                             <img src={imagePreview} alt="Homework Preview" className={styles.imagePreview} />
@@ -204,19 +173,9 @@ const HomeworkAssistantPage = () => {
                 </div>
                 <div className={styles.formGroup}>
                     <label htmlFor="context">Add Context (Optional):</label>
-                    <textarea
-                        id="context"
-                        value={context}
-                        onChange={(e) => setContext(e.target.value)}
-                        placeholder="e.g., This is a kinematics problem or I'm stuck on Step 3."
-                        rows={4}
-                    ></textarea>
+                    <textarea id="context" value={context} onChange={(e) => setContext(e.target.value)} placeholder="e.g., This is a kinematics problem or I'm stuck on Step 3." rows={4}></textarea>
                 </div>
-                <button
-                    type="submit"
-                    disabled={loading || !imageFile || (!currentUser && guestUsageCount >= GUEST_HW_LIMIT)}
-                    className={styles.generateButton}
-                >
+                <button type="submit" disabled={loading || !imageFile || (!currentUser && guestUsageCount >= GUEST_HW_LIMIT)} className={styles.generateButton}>
                     {loading ? 'Generating Solution...' : 'Generate Solution'}
                 </button>
             </form>
@@ -228,12 +187,7 @@ const HomeworkAssistantPage = () => {
                     <h3>Generated Solution</h3>
                     <MarkdownRenderer content={solution} />
                     <div className={styles.solutionActions}>
-                        <button 
-                            onClick={handleDownloadDocx} 
-                            className={styles.downloadButton}
-                            disabled={!currentUser}
-                            title={!currentUser ? "Login to download" : "Download as DOCX"}
-                        >
+                        <button onClick={handleDownloadDocx} className={styles.downloadButton} disabled={!currentUser} title={!currentUser ? "Login to download" : "Download as DOCX"}>
                             Download as DOCX
                         </button>
                         <button onClick={handleNewProblem} className={styles.newProblemButton}>New Problem</button>
@@ -247,7 +201,6 @@ const HomeworkAssistantPage = () => {
                         {`You have used ${guestUsageCount} of ${GUEST_HW_LIMIT} guest solutions.`}
                         Please <a onClick={() => router.push('/login')}>Login</a> or <a onClick={() => router.push('/signup')}>Sign Up</a> for unlimited access.
                     </p>
-
                 </div>
             )}
         </div>

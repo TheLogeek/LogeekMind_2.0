@@ -31,13 +31,14 @@ const CommunityChatPage = () => {
     const userProfile = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem("profile") || 'null') : null;
     const username = userProfile?.username;
 
-    const messagesEndRef = useRef<HTMLDivElement>(null); // Added type
+    const messagesEndRef = useRef<HTMLDivElement>(null);
+    const justSentMessage = useRef(false);
 
-    const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const scrollToBottom = (behavior: 'smooth' | 'auto' = 'smooth') => {
+        messagesEndRef.current?.scrollIntoView({ behavior });
     };
 
-    const fetchData = useCallback(async () => {
+    const fetchData = useCallback(async (isUserAction = false) => {
         if (!username) return;
         
         try {
@@ -49,41 +50,42 @@ const CommunityChatPage = () => {
                 axios.get(`${API_BASE_URL}/community-chat/messages/${selectedRoom}`, { headers }),
                 axios.get(`${API_BASE_URL}/community-chat/online-users`, { headers }),
                 axios.get(`${API_BASE_URL}/community-chat/typing-users/${selectedRoom}`, { headers }),
-                axios.post(`${API_BASE_URL}/community-chat/presence`, {}, { headers }), // Also send presence ping
+                // Only send presence ping on background fetch
+                !isUserAction ? axios.post(`${API_BASE_URL}/community-chat/presence`, {}, { headers }) : Promise.resolve(),
             ]);
 
-            setMessages(msgRes.data.sort((a: Message, b: Message) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())); // Added types
+            setMessages(msgRes.data.sort((a: Message, b: Message) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()));
             setOnlineUsers(onlineRes.data);
             setTypingUsers(typingRes.data);
 
-        } catch (err: unknown) { // Explicitly type err as unknown
-            if (axios.isAxiosError(err)) {
-                console.error('Chat data fetch error:', err.response?.data || err);
-                setError('Could not refresh chat data.');
-            } else {
-                console.error('Chat data fetch error:', err);
-                setError('Could not refresh chat data.');
-            }
+        } catch (err: unknown) {
+            const axiosError = err as AxiosError<any>;
+            console.error('Chat data fetch error:', axiosError.response?.data || axiosError);
+            setError('Could not refresh chat data.');
         }
     }, [selectedRoom, username]);
 
     useEffect(() => {
         if (!username) {
-            router.push('/login'); // Use router.push
+            router.push('/login');
             return;
         }
         
         fetchData(); // Initial fetch
-        const interval = setInterval(fetchData, 5000); // Poll every 5 seconds
+        const interval = setInterval(() => fetchData(), 5000); // Poll every 5 seconds
 
-        return () => clearInterval(interval); // Cleanup interval on unmount
-    }, [router, username, fetchData]); // Added router and fetchData to dependency array
+        return () => clearInterval(interval);
+    }, [router, username, fetchData]);
 
     useEffect(() => {
-        scrollToBottom();
+        // Only scroll to bottom if the user just sent a message
+        if (justSentMessage.current) {
+            scrollToBottom('auto');
+            justSentMessage.current = false;
+        }
     }, [messages]);
 
-    const handleSendMessage = async (e: React.FormEvent<HTMLFormElement>) => { // Added type
+    const handleSendMessage = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         if (!newMessage.trim()) return;
 
@@ -96,15 +98,12 @@ const CommunityChatPage = () => {
                 { headers: { Authorization: `Bearer ${accessToken}` } }
             );
             setNewMessage('');
-            await fetchData(); // Immediately fetch new messages after sending
-        } catch (err: unknown) { // Explicitly type err as unknown
-            if (axios.isAxiosError(err)) {
-                console.error('Send message error:', err.response?.data || err);
-                setError('Failed to send message.');
-            } else {
-                console.error('Send message error:', err);
-                setError('Failed to send message.');
-            }
+            justSentMessage.current = true; // Flag that the user sent a message
+            await fetchData(true); // Immediately fetch new messages
+        } catch (err: unknown) {
+            const axiosError = err as AxiosError<any>;
+            console.error('Send message error:', axiosError.response?.data || axiosError);
+            setError('Failed to send message.');
         } finally {
             setLoading(false);
         }

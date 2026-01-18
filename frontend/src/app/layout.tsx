@@ -46,11 +46,33 @@ export default function RootLayout({
   // --- Auto-login Effect ---
   // On initial app load, check if a user session is stored in localStorage.
   useEffect(() => {
-    const user = AuthService.getCurrentUser();
-    if (user) {
-      setCurrentUser(user);
-      console.log("Auto-login successful from storage for user:", user);
-    }
+    const initializeUserSession = async () => {
+      const storedAccessToken = AuthService.getAccessToken();
+      const isRemembered = AuthService.getRememberMe();
+
+      if (isRemembered && storedAccessToken) {
+        // If "Remember Me" is true and a token exists, try to verify the session with the backend
+        const verificationResponse = await AuthService.verifySession(storedAccessToken);
+        if (verificationResponse.success && verificationResponse.user) {
+          setCurrentUser(verificationResponse.user);
+          console.log("Session verified and auto-login successful for user:", verificationResponse.user);
+        } else {
+          // Token is invalid or expired, log out the user
+          AuthService.logout();
+          setCurrentUser(null);
+          console.log("Session verification failed or token expired. User logged out.");
+        }
+      } else {
+        // For non-"Remember Me" sessions (or if localStorage is empty), just try to get current user from sessionStorage
+        const user = AuthService.getCurrentUser();
+        if (user) {
+          setCurrentUser(user);
+          console.log("Session restored from storage for user:", user);
+        }
+      }
+    };
+
+    initializeUserSession();
   }, []); // Empty dependency array ensures this runs only once on mount
 
   // --- Sidebar Responsive Logic ---
@@ -77,9 +99,9 @@ export default function RootLayout({
         <title>LogeekMind</title>
         <meta name="description" content="Your all-in-one AI-powered learning assistant." />
         <link rel="manifest" href="/manifest.json" />
-        <meta name="theme-color" content="#6a11cb" />
+        <meta name="theme-color" content="#1A3A6E" />
         <link rel="apple-touch-icon" href="/icon-192.png"></link>
-        <meta name="apple-mobile-web-app-status-bar" content="#6a11cb" />
+        <meta name="apple-mobile-web-app-status-bar" content="#1A3A6E" />
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         {/* Provide the user context to the entire application */}

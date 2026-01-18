@@ -3,8 +3,7 @@ from typing import Optional, Tuple, Any
 from pypdf import PdfReader
 from docx import Document
 from google import genai
-from google.genai.errors import APIError
-from app.services.gemini_service import get_gemini_client_and_key, DEFAULT_MODEL
+from app.services.gemini_service import get_gemini_client, DEFAULT_MODEL
 import os
 
 async def extract_text_from_file_content(file_content: bytes, file_name: str) -> Optional[str]:
@@ -31,21 +30,19 @@ async def extract_text_from_file_content(file_content: bytes, file_name: str) ->
     else:
         return None
 
-async def summarize_text_content(text_content: str, user_id: str, user_api_key: Optional[str] = None) -> Tuple[str, Optional[str]]:
+async def summarize_text_content(text_content: str, user_id: str) -> Tuple[str, Optional[str]]:
     """
     Summarizes text using the Gemini API.
-    Adapts the logic from the user-provided Streamlit summarizer.
+    Returns a tuple of (summary_text, error_message).
     """
     
-    # get_gemini_client_and_key is an async function, so it must be awaited.
-    # It returns a synchronous genai.Client object.
-    gemini_client, api_key_used, gemini_error = await get_gemini_client_and_key(user_id, user_api_key)
+    gemini_client, gemini_error = await get_gemini_client(user_id)
 
     if gemini_error:
         return "", gemini_error
 
-    if not gemini_client: # Should not happen if gemini_error is checked, but for safety
-        return "", "Failed to initialize Gemini client."
+    if not gemini_client:
+        return "", "Failed to initialize Gemini client due to a server error."
 
     prompt = (
         "Summarize the following lecture notes thoroughly. "
@@ -55,21 +52,11 @@ async def summarize_text_content(text_content: str, user_id: str, user_api_key: 
     )
 
     try:
-        # Corrected: Use gemini_client.models.generate_content directly,
-        # and DO NOT AWAIT IT, as it returns a synchronous response object,
-        # matching the working pattern from course_outline_service.py.
         response = gemini_client.models.generate_content(
-            model=DEFAULT_MODEL, # DEFAULT_MODEL is imported from gemini_service
+            model=DEFAULT_MODEL,
             contents=[prompt]
         )
         return response.text, None
-    except APIError as e:
-        error_text = str(e)
-        if "429" in error_text or "RESOURCE_EXHAUSTED" in error_text.upper():
-            return "", "Quota Exceeded! The Gemini API key has hit its limit."
-        elif "503" in error_text:
-            return "", "The Gemini AI model is currently experiencing high traffic. Please try again later."
-        else:
-            return "", f"Gemini API Error: {error_text}"
     except Exception as e:
-        return "", f"An unexpected error occurred during Gemini summarization: {e}"
+        print(f"An unexpected error occurred during Gemini summarization: {e}")
+        return "", "An unexpected error occurred while generating the summary."

@@ -11,93 +11,57 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# In-memory store for rate limiting, replacing st.session_state for backend context
+# In-memory store for rate limiting.
 _rate_limit_history: Dict[str, list] = {}
-MAX_REQUESTS = 5
-TIME_WINDOW_SECONDS = 30
-DEFAULT_MODEL = "gemini-2.5-flash" # As per user's original implementation
-
-def is_gemini_key_valid_original(api_key: str) -> bool:
-    """
-    STRICTLY replicates the is_gemini_key_valid logic from original LogeekMind/utils.py.
-    """
-    if not api_key:
-        return False
-    try:
-        client = genai.Client(api_key=api_key)
-        _ = client.models.get(model=DEFAULT_MODEL) # Using DEFAULT_MODEL for validation
-        return True
-    except (APIError, Exception) as e:
-        print(f"Gemini API key validation failed: {e}") # Internal logging
-        return False
+MAX_REQUESTS = 6
+TIME_WINDOW_SECONDS = 60
+DEFAULT_MODEL = "gemini-2.5-flash"
 
 def check_rate_limit(user_identifier: str) -> Tuple[bool, str]:
     """
-    Adapted rate-limiting logic from original utils.py.
-    Uses a dictionary for history instead of st.session_state.
+    Checks if a user has exceeded the rate limit.
+    Returns a tuple of (is_ok, message).
     """
     history = _rate_limit_history.get(user_identifier, [])
-    
     current_time = time.time()
+    
     # Filter out timestamps older than the time window
     history = [t for t in history if t > current_time - TIME_WINDOW_SECONDS]
     
-    # --- START COMMENTED OUT RATE LIMITING LOGIC ---
-    # if len(history) >= MAX_REQUESTS:
-    #     time_to_wait = int(TIME_WINDOW_SECONDS - (current_time - history[0]))
-    #     message = f"Rate Limit Hit! Please wait {time_to_wait} seconds before making use of any AI feature, or enter your own API key for unlimited access."
-    #     _rate_limit_history[user_identifier] = history
-    #     return False, message
-    # --- END COMMENTED OUT RATE LIMITING LOGIC ---
+    if len(history) >= MAX_REQUESTS:
+        time_to_wait = int(TIME_WINDOW_SECONDS - (current_time - history[0]))
+        message = f"Rate Limit Hit! Please wait {time_to_wait} seconds before making another request."
+        _rate_limit_history[user_identifier] = history
+        return False, message
 
     history.append(current_time)
-    _rate_limit_history[user_identifier] = [] 
+    _rate_limit_history[user_identifier] = history 
     
     return True, "OK"
 
-async def get_gemini_client_and_key(
-    user_id: str, 
-    user_api_key: Optional[str] = None
-) -> Tuple[Optional[genai.Client], Optional[str], Optional[str]]:
+async def get_gemini_client(user_id: str) -> Tuple[Optional[genai.Client], Optional[str]]:
     """
-    STRICTLY replicates the get_gemini_client logic from original LogeekMind/utils.py,
-    adapted for backend use. It handles API key selection, validation, and rate-limiting.
-    Returns a configured genai.Client instance, the API key used, and an error message.
+    Handles API key selection, validation, and rate-limiting.
+    Returns a configured genai.Client instance and an error message if any.
     """
     system_api_key = os.getenv("GEMINI_API_KEY")
-    api_key_to_use = None
-    using_system_key = False
-    rate_limit_identifier = user_id # Default to user_id for logging/tracking
-
-    if user_api_key:
-        if is_gemini_key_valid_original(user_api_key):
-            api_key_to_use = user_api_key
-        else:
-            return None, None, "Invalid user-provided Gemini API Key. Please check your key."
-    elif system_api_key:
-        api_key_to_use = system_api_key
-        using_system_key = True
-        rate_limit_identifier = "system_key_global"
     
-    if not api_key_to_use:
-        return None, None, "No valid Gemini API Key found. Provide your own or configure the server's key."
+    if not system_api_key:
+        # This is a server configuration error, should not be shown to most users.
+        return None, "Server is not configured with a Gemini API Key."
 
-    if using_system_key:
-        is_ok, message = check_rate_limit(rate_limit_identifier)
-        if not is_ok:
-            return None, None, message
+    # Apply rate limiting to all users.
+    is_ok, message = check_rate_limit(user_id)
+    if not is_ok:
+        return None, message
             
     try:
-        # Initialize the genai.Client instance exactly as in original utils.py
-        client = genai.Client(api_key=api_key_to_use)
-        return client, api_key_to_use, None # Success: client, api_key_used, error
-    except APIError as e:
-        error_text = str(e)
-        if "429" in error_text or "RESOURCE_EXHAUSTED" in error_text.upper():
-            return None, None, "Quota Exceeded! The Gemini API key has hit its limit."
-        elif "503" in error_text:
-            return None, None, "The Gemini AI model is currently experiencing high traffic. Please try again later."
-        else:
-            return None, None, f"Gemini API Error: {error_text}"
-    except Exception as e:
-        return None, None, f"An unexpected error occurred during Gemini client initialization: {e}"
+        # Initialize the genai.Client instance.
+        client = genai.Client(api_key=system_api_key)
+        return client, None # Success: client, error
+    except APIError:
+        # If there's any API error (e.g. quota, wrong key), return a standardized message.
+        return None, "The feature is currently unavailable. In the meantime, you can try other non-ai features."
+    except Exception:
+        # Catch any other unexpected errors during client initialization.
+        return None, "An unexpected server error occurred while contacting the AI service."

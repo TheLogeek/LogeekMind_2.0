@@ -1,11 +1,10 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation'; // Use useRouter from next/navigation
-import AuthService from '../../services/AuthService'; // Adjust path
+import { useRouter } from 'next/navigation';
+import AuthService from '../../services/AuthService';
 import axios, { AxiosError } from 'axios';
-import MarkdownRenderer from '../../components/MarkdownRenderer'; // Adjust path relative to app/course-outline/page.tsx
-import ApiKeyInput from '../../components/ApiKeyInput'; // Adjust path relative to app/course-outline/page.tsx
+import MarkdownRenderer from '../../components/MarkdownRenderer';
 import styles from './CourseOutlinePage.module.css';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000";
@@ -19,43 +18,35 @@ const CourseOutlinePage = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     
-    // Guard localStorage access for client-side only
-    const [currentUser, setCurrentUser] = useState(
-        typeof window !== 'undefined' ? AuthService.getCurrentUser() : null
-    );
+    const [currentUser, setCurrentUser] = useState<any>(null);
 
-    const GUEST_OUTLINE_LIMIT = 1;
+    const GUEST_OUTLINE_LIMIT = 2; // Adjusted limit
     const GUEST_USAGE_KEY = 'course_outline_guest_usage';
     const [guestUsageCount, setGuestUsageCount] = useState(() => {
         return typeof window !== 'undefined' ? parseInt(localStorage.getItem(GUEST_USAGE_KEY) || '0', 10) : 0;
     });
 
-    const [userGeminiApiKey, setUserGeminiApiKey] = useState('');
-
     useEffect(() => {
-        if (typeof window !== 'undefined') {
-            const savedOutline = sessionStorage.getItem('course_outline_outline');
-            const savedInputs = sessionStorage.getItem('course_outline_inputs');
-            if (savedOutline) {
-                setGeneratedOutline(savedOutline);
-            }
-            if (savedInputs) {
-                const { courseFullName, courseCode, universityName } = JSON.parse(savedInputs);
-                setCourseFullName(courseFullName || '');
-                setCourseCode(courseCode || '');
-                setUniversityName(universityName || '');
-            }
+        setCurrentUser(AuthService.getCurrentUser());
+        const savedOutline = sessionStorage.getItem('course_outline_outline');
+        const savedInputs = sessionStorage.getItem('course_outline_inputs');
+        if (savedOutline) {
+            setGeneratedOutline(savedOutline);
+        }
+        if (savedInputs) {
+            const { courseFullName, courseCode, universityName } = JSON.parse(savedInputs);
+            setCourseFullName(courseFullName || '');
+            setCourseCode(courseCode || '');
+            setUniversityName(universityName || '');
         }
     }, []);
 
     useEffect(() => {
-        if (typeof window !== 'undefined') {
-            localStorage.setItem(GUEST_USAGE_KEY, guestUsageCount.toString());
-            if (!currentUser && guestUsageCount >= GUEST_OUTLINE_LIMIT) {
-                setError(`You have reached the guest limit of ${GUEST_OUTLINE_LIMIT} course outlines. Please login or sign up for unlimited access.`);
-            } else {
-                setError('');
-            }
+        localStorage.setItem(GUEST_USAGE_KEY, guestUsageCount.toString());
+        if (!currentUser && guestUsageCount >= GUEST_OUTLINE_LIMIT) {
+            setError(`You have reached the guest limit of ${GUEST_OUTLINE_LIMIT} course outlines. Please login or sign up for unlimited access.`);
+        } else {
+            setError('');
         }
     }, [guestUsageCount, currentUser]);
 
@@ -69,7 +60,7 @@ const CourseOutlinePage = () => {
     };
 
     const incrementGuestUsage = () => {
-        if (!currentUser && typeof window !== 'undefined') {
+        if (!currentUser) {
             setGuestUsageCount(prev => prev + 1);
         }
     };
@@ -94,28 +85,26 @@ const CourseOutlinePage = () => {
                 course_full_name: courseFullName,
                 course_code: courseCode || null,
                 university_name: universityName || null,
-                gemini_api_key: userGeminiApiKey || null,
             }, { headers });
 
             if (response.data.success && response.data.outline_text) {
                 setGeneratedOutline(response.data.outline_text);
                 incrementGuestUsage();
-                // Save state to sessionStorage
-                if (typeof window !== 'undefined') {
-                    sessionStorage.setItem('course_outline_outline', response.data.outline_text);
-                    const inputs = { courseFullName, courseCode, universityName };
-                    sessionStorage.setItem('course_outline_inputs', JSON.stringify(inputs));
-                }
+                sessionStorage.setItem('course_outline_outline', response.data.outline_text);
+                const inputs = { courseFullName, courseCode, universityName };
+                sessionStorage.setItem('course_outline_inputs', JSON.stringify(inputs));
             } else {
                 setError(response.data.message || 'Failed to generate course outline.');
             }
-        } catch (err: unknown) { // Explicitly type err as unknown
-            if (axios.isAxiosError(err)) {
-                console.error('Course outline generation error:', err.response?.data || err);
-                setError(err.response?.data?.detail || 'An error occurred during generation.');
+        } catch (err: unknown) {
+            const axiosError = err as AxiosError<any>;
+            console.error('Course outline generation error:', axiosError.response?.data || axiosError);
+            if (axiosError.response?.status === 429) {
+                setError(axiosError.response.data.detail || "You are making too many requests. Please try again shortly.");
+            } else if (axiosError.response?.status === 503) {
+                setError(axiosError.response.data.detail || "The AI service is currently unavailable. Please try again later.");
             } else {
-                console.error('Course outline generation error:', err);
-                setError('An unexpected error occurred during generation.');
+                setError(axiosError.response?.data?.detail || 'An error occurred during generation.');
             }
         } finally {
             setLoading(false);
@@ -137,20 +126,16 @@ const CourseOutlinePage = () => {
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            const fileName = courseFullName.replace(/\s/g, '_') + '_Outline.docx'; // More robust filename
+            const fileName = courseFullName.replace(/\s/g, '_') + '_Outline.docx';
             a.download = fileName;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
             window.URL.revokeObjectURL(url);
-        } catch (err: unknown) { // Explicitly type err as unknown
-            if (axios.isAxiosError(err)) {
-                console.error('Error downloading DOCX:', err.response?.data || err);
-                setError(err.response?.data?.detail || 'Failed to download DOCX.');
-            } else {
-                console.error('Error downloading DOCX:', err);
-                setError('An unexpected error occurred while downloading DOCX.');
-            }
+        } catch (err: unknown) {
+            const axiosError = err as AxiosError<any>;
+            console.error('Error downloading DOCX:', axiosError.response?.data || axiosError);
+            setError(axiosError.response?.data?.detail || 'Failed to download DOCX.');
         }
     };
 
@@ -160,30 +145,14 @@ const CourseOutlinePage = () => {
         setUniversityName('');
         setGeneratedOutline('');
         setError('');
-        // Clear sessionStorage
-        if (typeof window !== 'undefined') {
-            sessionStorage.removeItem('course_outline_outline');
-            sessionStorage.removeItem('course_outline_inputs');
-        }
-    };
-
-    const handleResetGuestUsage = () => {
-        if (typeof window !== 'undefined') {
-            localStorage.setItem(GUEST_USAGE_KEY, '0');
-            setGuestUsageCount(0);
-            setError('');
-        }
+        sessionStorage.removeItem('course_outline_outline');
+        sessionStorage.removeItem('course_outline_inputs');
     };
 
     return (
         <div className={`page-container ${styles.courseOutlinePageContainer}`}>
             <h2>📝 Course Outline Generator</h2>
             <p>Instantly generate a detailed, university-level course syllabus and outline.</p>
-
-            <ApiKeyInput
-                userApiKey={userGeminiApiKey}
-                setUserApiKey={setUserGeminiApiKey}
-            />
 
             <form onSubmit={handleGenerateOutline} className={styles.courseOutlineForm}>
                 <div className={styles.formGroup}>
@@ -252,7 +221,6 @@ const CourseOutlinePage = () => {
                         {`You have used ${guestUsageCount} of ${GUEST_OUTLINE_LIMIT} guest outlines.`}
                         Please <a href="/login">Login</a> or <a href="/signup">Sign Up</a> for unlimited access.
                     </p>
-
                 </div>
             )}
         </div>

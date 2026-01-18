@@ -24,7 +24,6 @@ class ChatMessage(BaseModel):
 class AIChatRequest(BaseModel):
     current_prompt: str
     chat_history: List[ChatMessage]
-    gemini_api_key: Optional[str] = None
 
 class AIChatResponse(BaseModel):
     success: bool
@@ -42,7 +41,7 @@ async def ai_teacher_chat_route(
         username = current_user["username"]
     else:
         # Handle Guest User
-        guest_id = "guest_ai_teacher" # A generic ID for this feature
+        guest_id = f"guest_ai_teacher_{request.current_prompt[:20]}" # More specific guest ID
         usage = guest_usage_tracker.get(guest_id, 0)
         if usage >= GUEST_LIMIT:
             raise HTTPException(
@@ -59,15 +58,28 @@ async def ai_teacher_chat_route(
             user_id=user_id,
             username=username,
             current_prompt=request.current_prompt,
-            chat_history=[msg.dict() for msg in request.chat_history],
-            api_key=request.gemini_api_key
+            chat_history=[msg.dict() for msg in request.chat_history]
         )
         if not response["success"]:
+            # Check for rate limit message from service
+            if "Rate Limit Hit" in response.get("message", ""):
+                raise HTTPException(
+                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                    detail=response["message"]
+                )
+            # Check for generic API unavailability message
+            if "feature is currently unavailable" in response.get("message", ""):
+                 raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail=response["message"]
+                )
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=response["message"]
             )
         return AIChatResponse(success=True, ai_text=response["ai_text"])
+    except HTTPException as e:
+        raise e # Re-raise HTTPException to preserve status code and detail
     except Exception as e:
         # Catch-all for other potential errors
         raise HTTPException(status_code=500, detail=str(e))

@@ -22,7 +22,6 @@ GUEST_LIMIT = 1
 async def solve_homework_route(
     file: UploadFile = File(...),
     context: Optional[str] = Form(None),
-    gemini_api_key: Optional[str] = Form(None),
     supabase: Client = Depends(get_supabase_client),
     current_user: Optional[Dict[str, Any]] = Depends(try_get_current_user_from_supabase_jwt)
 ):
@@ -47,13 +46,18 @@ async def solve_homework_route(
             username=username,
             image_content=image_content,
             image_mime_type=file.content_type,
-            context=context,
-            api_key=gemini_api_key
+            context=context
         )
 
         if not response["success"]:
+            if "Rate Limit Hit" in response.get("message", ""):
+                raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail=response["message"])
+            if "feature is currently unavailable" in response.get("message", ""):
+                raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=response["message"])
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=response["message"])
         return {"solution_text": response["solution_text"]}
+    except HTTPException as e:
+        raise e
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"An error occurred: {e}")
 

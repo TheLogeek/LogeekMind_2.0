@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import AuthService from '../../services/AuthService';
 import axios, { AxiosError } from 'axios';
 import MarkdownRenderer from '../../components/MarkdownRenderer';
-import ApiKeyInput from '../../components/ApiKeyInput';
 import styles from './AITeacherPage.module.css';
 
 interface Message {
@@ -24,42 +23,35 @@ const AITeacherPage = () => {
     const [currentUser, setCurrentUser] = useState<any>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
-    const GUEST_AI_TEACHER_LIMIT = 1;
+    const GUEST_AI_TEACHER_LIMIT = 2; // Adjusted limit
     const GUEST_USAGE_KEY = 'ai_teacher_guest_usage';
     const [guestUsageCount, setGuestUsageCount] = useState(() => {
         return typeof window !== 'undefined' ? parseInt(localStorage.getItem(GUEST_USAGE_KEY) || '0', 10) : 0;
     });
 
-    const [userGeminiApiKey, setUserGeminiApiKey] = useState('');
-
-    // Persistence: Restore messages on mount
     useEffect(() => {
-        setCurrentUser(AuthService.getCurrentUser()); // Ensure currentUser is set early
+        setCurrentUser(AuthService.getCurrentUser());
         const savedMessages = sessionStorage.getItem('ai_teacher_messages');
         if (savedMessages) {
             setMessages(JSON.parse(savedMessages));
         }
     }, []);
 
-    // Persistence: Save messages whenever they change
     useEffect(() => {
-        if (messages.length > 0 && typeof window !== 'undefined') {
+        if (messages.length > 0) {
             sessionStorage.setItem('ai_teacher_messages', JSON.stringify(messages));
-        } else if (messages.length === 0 && typeof window !== 'undefined') {
-            // Clear sessionStorage if messages become empty (e.g., new session started)
+        } else {
             sessionStorage.removeItem('ai_teacher_messages');
         }
     }, [messages]);
 
 
     useEffect(() => {
-        if (typeof window !== 'undefined') { // Guard window access
-            localStorage.setItem(GUEST_USAGE_KEY, guestUsageCount.toString());
-            if (!currentUser && guestUsageCount >= GUEST_AI_TEACHER_LIMIT) {
-                setError(`You have reached the guest limit of ${GUEST_AI_TEACHER_LIMIT} AI Teacher sessions. Please login or sign up for unlimited access.`);
-            } else {
-                setError('');
-            }
+        localStorage.setItem(GUEST_USAGE_KEY, guestUsageCount.toString());
+        if (!currentUser && guestUsageCount >= GUEST_AI_TEACHER_LIMIT) {
+            setError(`You have reached the guest limit of ${GUEST_AI_TEACHER_LIMIT} AI Teacher sessions. Please login or sign up for unlimited access.`);
+        } else {
+            setError('');
         }
     }, [guestUsageCount, currentUser]);
 
@@ -67,7 +59,7 @@ const AITeacherPage = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     };
 
-    useEffect(scrollToBottom, [messages]); // Scroll to bottom when messages change
+    useEffect(scrollToBottom, [messages]);
 
     const checkGuestLimit = () => {
         if (currentUser) return true;
@@ -79,7 +71,7 @@ const AITeacherPage = () => {
     };
 
     const incrementGuestUsage = () => {
-        if (!currentUser && typeof window !== 'undefined') {
+        if (!currentUser) {
             setGuestUsageCount(prev => prev + 1);
         }
     };
@@ -91,7 +83,8 @@ const AITeacherPage = () => {
         setError('');
         setLoading(true);
         const userMessage: Message = { role: 'user', text: inputPrompt };
-        setMessages(prev => [...prev, userMessage]);
+        const currentMessages = [...messages, userMessage];
+        setMessages(currentMessages);
         setInputPrompt('');
 
         try {
@@ -99,8 +92,7 @@ const AITeacherPage = () => {
             const headers = accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
             const response = await axios.post(`${API_BASE_URL}/ai-teacher/chat`, {
                 current_prompt: userMessage.text,
-                chat_history: [...messages, userMessage].map(m => ({ role: m.role, text: m.text })),
-                gemini_api_key: userGeminiApiKey || null,
+                chat_history: currentMessages.map(m => ({ role: m.role, text: m.text })),
             }, { headers });
 
             if (response.data.success && response.data.ai_text) {
@@ -111,8 +103,17 @@ const AITeacherPage = () => {
             }
         } catch (err: unknown) {
             if (axios.isAxiosError(err)) {
-                console.error('AI Teacher chat error:', err.response?.data || err);
-                setError(err.response?.data?.detail || 'An error occurred during chat.');
+                const axiosError = err as AxiosError<any>;
+                console.error('AI Teacher chat error:', axiosError.response?.data || axiosError);
+                if (axiosError.response?.status === 429) {
+                    // Rate limit error
+                    setError(axiosError.response.data.detail || "You are making too many requests. Please try again shortly.");
+                } else if (axiosError.response?.status === 503) {
+                    // AI service unavailable
+                    setError(axiosError.response.data.detail || "The AI service is currently unavailable. Please try again later.");
+                } else {
+                    setError(axiosError.response?.data?.detail || 'An error occurred during chat.');
+                }
             } else {
                 console.error('AI Teacher chat error:', err);
                 setError('An unexpected error occurred during chat.');
@@ -127,7 +128,7 @@ const AITeacherPage = () => {
         setMessages([]);
         setInputPrompt('');
         setError('');
-        sessionStorage.removeItem('ai_teacher_messages'); // Clear stored messages
+        sessionStorage.removeItem('ai_teacher_messages');
     };
 
     const handleDownloadNotes = () => {
@@ -149,35 +150,21 @@ const AITeacherPage = () => {
         URL.revokeObjectURL(url);
     };
 
-    const handleResetGuestUsage = () => {
-        localStorage.setItem(GUEST_USAGE_KEY, '0');
-        setGuestUsageCount(0);
-    };
-
     return (
         <div className={`page-container ${styles.aiTeacherPageContainer}`}>
             <h2>🧠 Your AI Teacher</h2>
             <p>Struggling with a topic? Ask your teacher anything!</p>
 
-            <ApiKeyInput
-                userApiKey={userGeminiApiKey}
-                setUserApiKey={setUserGeminiApiKey}
-            />
-
             <div className={styles.chatWindow}>
-                {messages.length === 0 ? (
-                    <p>Start a conversation with your AI Teacher...</p>
-                ) : (
-                    messages.map((msg: Message, index) => (
-                        <div key={index} className={`${styles.chatMessage} ${msg.role === 'user' ? styles.userMessage : styles.modelMessage}`}>
-                            {msg.role === 'user' ? (
-                                <span>{msg.text}</span>
-                            ) : (
-                                <div><MarkdownRenderer content={msg.text} /></div>
-                            )}
-                        </div>
-                    ))
+                {messages.length === 0 && !loading && (
+                    <div className={styles.placeholder}>Start a conversation with your AI Teacher...</div>
                 )}
+                {messages.map((msg: Message, index) => (
+                    <div key={index} className={`${styles.chatMessage} ${msg.role === 'user' ? styles.userMessage : styles.modelMessage}`}>
+                        <MarkdownRenderer content={msg.text} />
+                    </div>
+                ))}
+                {loading && <div className={`${styles.chatMessage} ${styles.modelMessage} ${styles.loading}`}>...</div>}
                 <div ref={messagesEndRef} />
             </div>
 
@@ -189,7 +176,7 @@ const AITeacherPage = () => {
                     value={inputPrompt}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => setInputPrompt(e.target.value)}
                     placeholder="Ask your teacher a question..."
-                    disabled={loading}
+                    disabled={loading || (!currentUser && guestUsageCount >= GUEST_AI_TEACHER_LIMIT)}
                     className={styles.chatInput}
                 />
                 <button
@@ -201,13 +188,13 @@ const AITeacherPage = () => {
                 </button>
             </form>
 
-            {/* Session Actions for New Session and Download */}
             <div className={styles.sessionActions}>
                 <button
                     type="button"
                     onClick={handleDownloadNotes}
-                    disabled={messages.length === 0 || !currentUser} // Disabled if no messages or not logged in
+                    disabled={messages.length === 0 || !currentUser}
                     className={styles.downloadNotesButton}
+                    title={!currentUser ? "Login to download notes" : ""}
                 >
                     Download Notes
                 </button>
@@ -216,7 +203,7 @@ const AITeacherPage = () => {
                     onClick={handleStartNewSession}
                     className={styles.newSessionButton}
                 >
-                    Start New Teaching Session
+                    Start New Session
                 </button>
             </div>
 
@@ -226,7 +213,6 @@ const AITeacherPage = () => {
                         {`You have used ${guestUsageCount} of ${GUEST_AI_TEACHER_LIMIT} guest sessions.`}
                         Please <a onClick={() => router.push('/login')}>Login</a> or <a onClick={() => router.push('/signup')}>Sign Up</a> for unlimited access.
                     </p>
-
                 </div>
             )}
         </div>

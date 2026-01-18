@@ -23,7 +23,6 @@ class QuizGenerateRequest(BaseModel):
     num_questions: int
     quiz_type: str
     difficulty: int
-    gemini_api_key: Optional[str] = None
 
 class QuizGenerateResponse(BaseModel):
     success: bool
@@ -63,13 +62,18 @@ async def generate_quiz_route(
             quiz_topic=request.quiz_topic,
             num_questions=request.num_questions,
             quiz_type=request.quiz_type,
-            difficulty=request.difficulty,
-            api_key=request.gemini_api_key
+            difficulty=request.difficulty
         )
 
         if not response["success"]:
+            if "Rate Limit Hit" in response.get("message", ""):
+                raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail=response["message"])
+            if "feature is currently unavailable" in response.get("message", ""):
+                raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=response["message"])
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=response["message"])
         return QuizGenerateResponse(success=True, quiz_data=response["quiz_data"])
+    except HTTPException as e:
+        raise e
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"An error occurred: {e}")
 

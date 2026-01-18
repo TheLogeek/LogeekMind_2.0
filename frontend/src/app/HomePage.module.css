@@ -202,7 +202,7 @@
 /* Mobile Responsiveness */
 @media (max-width: 768px) {
   .heroSection {
-    padding: 60px var(--spacing-sm);
+    padding: 40px var(--spacing-sm);
     margin-bottom: var(--spacing-xl);
   }
 

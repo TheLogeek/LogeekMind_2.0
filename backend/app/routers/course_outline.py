@@ -21,7 +21,6 @@ class CourseOutlineRequest(BaseModel):
     course_full_name: str
     course_code: Optional[str] = None
     university_name: Optional[str] = None
-    gemini_api_key: Optional[str] = None
     outline_text: Optional[str] = None # For download endpoint
 
 class CourseOutlineResponse(BaseModel):
@@ -54,12 +53,17 @@ async def generate_course_outline_route(
             username=username,
             course_full_name=request.course_full_name,
             course_code=request.course_code,
-            university_name=request.university_name,
-            api_key=request.gemini_api_key
+            university_name=request.university_name
         )
         if not response["success"]:
+            if "Rate Limit Hit" in response.get("message", ""):
+                raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail=response["message"])
+            if "feature is currently unavailable" in response.get("message", ""):
+                raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=response["message"])
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=response["message"])
         return CourseOutlineResponse(success=True, outline_text=response["outline_text"])
+    except HTTPException as e:
+        raise e
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

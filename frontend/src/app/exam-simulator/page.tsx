@@ -1,11 +1,10 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation'; // Use useRouter from next/navigation
-import AuthService from '../../services/AuthService'; // Adjust path
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
+import AuthService from '../../services/AuthService';
 import axios, { AxiosError } from 'axios';
-import MarkdownRenderer from '../../components/MarkdownRenderer'; // Adjust path relative to app/exam-simulator/page.tsx
-import ApiKeyInput from '../../components/ApiKeyInput'; // Adjust path relative to app/exam-simulator/page.tsx
+import MarkdownRenderer from '../../components/MarkdownRenderer';
 import styles from './ExamSimulatorPage.module.css';
 
 interface ExamQuestion {
@@ -22,7 +21,7 @@ const ExamSimulatorPage = () => {
     const [examStage, setExamStage] = useState("setup");
     const [examData, setExamData] = useState<ExamQuestion[]>([]);
     const [userAnswers, setUserAnswers] = useState<{ [key: number]: string }>({});
-    const [startTime, setStartTime] = useState<number | null>(null); // Explicitly define type
+    const [startTime, setStartTime] = useState<number | null>(null);
     const [durationMins, setDurationMins] = useState(10);
     const [remainingSeconds, setRemainingSeconds] = useState(0);
     const [examScore, setExamScore] = useState(0);
@@ -32,15 +31,11 @@ const ExamSimulatorPage = () => {
     const [courseName, setCourseName] = useState('');
     const [topic, setTopic] = useState('');
     const [numQuestions, setNumQuestions] = useState(20);
-    const [userGeminiApiKey, setUserGeminiApiKey] = useState('');
 
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
-    // Guard localStorage access for client-side only
-    const [currentUser, setCurrentUser] = useState(
-        typeof window !== 'undefined' ? AuthService.getCurrentUser() : null
-    );
+    const [currentUser, setCurrentUser] = useState<any>(null);
 
     const GUEST_EXAM_LIMIT = 1;
     const GUEST_USAGE_KEY = 'exam_simulator_guest_usage';
@@ -48,75 +43,18 @@ const ExamSimulatorPage = () => {
         return typeof window !== 'undefined' ? parseInt(localStorage.getItem(GUEST_USAGE_KEY) || '0', 10) : 0;
     });
 
-
-    useEffect(() => {
-        if (typeof window !== 'undefined') {
-            const savedInputs = sessionStorage.getItem('exam_simulator_inputs');
-            if (savedInputs) {
-                const { courseName, topic, numQuestions, durationMins } = JSON.parse(savedInputs);
-                setCourseName(courseName || '');
-                setTopic(topic || '');
-                setNumQuestions(numQuestions || 20);
-                setDurationMins(durationMins || 10);
-            }
-
-            const savedResults = sessionStorage.getItem('exam_simulator_results');
-            if (savedResults) {
-                const { examData, userAnswers, examScore, grade, remark } = JSON.parse(savedResults);
-                setExamData(examData || []);
-                setUserAnswers(userAnswers || {});
-                setExamScore(examScore || 0);
-                setGrade(grade || '');
-                setRemark(remark || '');
-                setExamStage("finished");
-            }
-        }
-    }, []);
-
-    useEffect(() => {
-        if (typeof window !== 'undefined') {
-            localStorage.setItem(GUEST_USAGE_KEY, guestUsageCount.toString());
-        }
-    }, [guestUsageCount]);
-
-    useEffect(() => {
-        if (examStage === "active" && startTime !== null) {
-            const totalDurationSeconds = durationMins * 60;
-            const timerInterval = setInterval(() => {
-                const elapsed = Math.floor((Date.now() - startTime) / 1000);
-                const remaining = totalDurationSeconds - elapsed;
-
-                if (remaining <= 0) {
-                    clearInterval(timerInterval);
-                    // Using a ref to stable handleSubmitExam across renders for useEffect dependency
-                    // Or wrap handleSubmitExam in useCallback with its dependencies
-                    if (submitExamRef.current) {
-                        submitExamRef.current();
-                    }
-                } else {
-                    setRemainingSeconds(remaining);
-                }
-            }, 1000);
-            return () => clearInterval(timerInterval);
-        }
-    }, [examStage, startTime, durationMins]);
-
-    const submitExamRef = useRef<(() => Promise<void>) | null>(null); // Create a ref for handleSubmitExam
-
-    const handleSubmitExam = async () => {
+    const handleSubmitExam = useCallback(async () => {
         setError('');
         setLoading(true);
         try {
             const accessToken = AuthService.getAccessToken();
-            if (!currentUser && !accessToken) { // Guests can finish but can't log results
-                const score = examData.reduce((acc, q: ExamQuestion, idx) => acc + (userAnswers[idx] === q.answer ? 1 : 0), 0);
-                const total = examData.length;
-                const [finalGrade, finalRemark] = calculateGradeFrontend(score, total);
+            if (!currentUser || !accessToken) {
+                const score = examData.reduce((acc, q, idx) => acc + (userAnswers[idx] === q.answer ? 1 : 0), 0);
+                const [finalGrade, finalRemark] = calculateGradeFrontend(score, examData.length);
                 setExamScore(score);
                 setGrade(finalGrade);
                 setRemark(finalRemark);
                 setExamStage("finished");
-                setLoading(false);
                 return;
             }
 
@@ -132,32 +70,61 @@ const ExamSimulatorPage = () => {
                 setGrade(response.data.grade);
                 setRemark(response.data.remark);
                 setExamStage("finished");
-                // Save results to sessionStorage
-                if (typeof window !== 'undefined') {
-                    const results = { examData, userAnswers, examScore: response.data.score, grade: response.data.grade, remark: response.data.remark };
-                    sessionStorage.setItem('exam_simulator_results', JSON.stringify(results));
-                }
+                sessionStorage.setItem('exam_simulator_results', JSON.stringify({
+                    examData, userAnswers, examScore: response.data.score, grade: response.data.grade, remark: response.data.remark
+                }));
             } else {
                 setError(response.data.message || 'Failed to submit exam results.');
             }
-        } catch (err: unknown) { // Explicitly type err as unknown
-            if (axios.isAxiosError(err)) {
-                console.error('Exam submission error:', err.response?.data || err);
-                setError(err.response?.data?.detail || 'An error occurred during exam submission.');
-            } else {
-                console.error('Exam submission error:', err);
-                setError('An unexpected error occurred during exam submission.');
-            }
+        } catch (err) {
+            const axiosError = err as AxiosError<any>;
+            setError(axiosError.response?.data?.detail || 'An error occurred during exam submission.');
         } finally {
             setLoading(false);
         }
-    };
+    }, [currentUser, examData, userAnswers, courseName, topic]);
 
     useEffect(() => {
-        if (submitExamRef.current) { // Add null check
-            submitExamRef.current = handleSubmitExam; // Update the ref whenever handleSubmitExam changes
+        setCurrentUser(AuthService.getCurrentUser());
+        const savedInputs = sessionStorage.getItem('exam_simulator_inputs');
+        if (savedInputs) {
+            const { courseName, topic, numQuestions, durationMins } = JSON.parse(savedInputs);
+            setCourseName(courseName || '');
+            setTopic(topic || '');
+            setNumQuestions(numQuestions || 20);
+            setDurationMins(durationMins || 10);
         }
-    }, [handleSubmitExam]);
+        const savedResults = sessionStorage.getItem('exam_simulator_results');
+        if (savedResults) {
+            const { examData, userAnswers, examScore, grade, remark } = JSON.parse(savedResults);
+            setExamData(examData || []);
+            setUserAnswers(userAnswers || {});
+            setExamScore(examScore || 0);
+            setGrade(grade || '');
+            setRemark(remark || '');
+            setExamStage("finished");
+        }
+    }, []);
+
+    useEffect(() => {
+        localStorage.setItem(GUEST_USAGE_KEY, guestUsageCount.toString());
+    }, [guestUsageCount]);
+
+    useEffect(() => {
+        if (examStage === "active" && startTime) {
+            const timer = setInterval(() => {
+                const elapsed = Math.floor((Date.now() - startTime) / 1000);
+                const remaining = (durationMins * 60) - elapsed;
+                if (remaining <= 0) {
+                    clearInterval(timer);
+                    handleSubmitExam();
+                } else {
+                    setRemainingSeconds(remaining);
+                }
+            }, 1000);
+            return () => clearInterval(timer);
+        }
+    }, [examStage, startTime, durationMins, handleSubmitExam]);
 
     const checkGuestLimit = () => {
         if (currentUser) return true;
@@ -169,12 +136,12 @@ const ExamSimulatorPage = () => {
     };
 
     const incrementGuestUsage = () => {
-        if (!currentUser && typeof window !== 'undefined') {
+        if (!currentUser) {
             setGuestUsageCount(prev => prev + 1);
         }
     };
 
-    const calculateGradeFrontend = (score: number, total: number) => { // Explicitly define types
+    const calculateGradeFrontend = (score: number, total: number): [string, string] => {
         if (total === 0) return ["N/A", "No questions graded."];
         const percentage = (score / total) * 100;
         if (percentage >= 70) return ["A", "Excellent! Distinction level."];
@@ -188,19 +155,11 @@ const ExamSimulatorPage = () => {
     const handleGenerateExam = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         setError('');
-        setExamData([]);
-        setExamScore(0);
-        setGrade("");
-        setRemark("");
-        setUserAnswers({});
-
         if (!courseName.trim()) {
             setError("Please enter a Course Name.");
             return;
         }
-        if (!checkGuestLimit()) {
-            return;
-        }
+        if (!checkGuestLimit()) return;
 
         setLoading(true);
         try {
@@ -212,7 +171,6 @@ const ExamSimulatorPage = () => {
                 topic: topic || null,
                 num_questions: numQuestions,
                 duration_mins: durationMins,
-                gemini_api_key: userGeminiApiKey || null,
             }, { headers });
 
             if (response.data.success && response.data.exam_data) {
@@ -221,40 +179,28 @@ const ExamSimulatorPage = () => {
                 setRemainingSeconds(durationMins * 60);
                 setExamStage("active");
                 incrementGuestUsage();
-                // Save inputs to sessionStorage
-                if (typeof window !== 'undefined') {
-                    const inputs = { courseName, topic, numQuestions, durationMins };
-                    sessionStorage.setItem('exam_simulator_inputs', JSON.stringify(inputs));
-                }
+                sessionStorage.setItem('exam_simulator_inputs', JSON.stringify({ courseName, topic, numQuestions, durationMins }));
             } else {
                 setError(response.data.message || 'Failed to generate exam.');
             }
-        } catch (err: unknown) { // Explicitly type err as unknown
-            if (axios.isAxiosError(err)) {
-                console.error('Exam generation error:', err.response?.data || err);
-                if (err.response && err.response.status === 401) {
-                    setError('Unauthorized. Please log in.');
-                    AuthService.logout();
-                    router.push('/login');
-                } else {
-                    setError(err.response?.data?.detail || 'An error occurred during exam generation.');
-                }
+        } catch (err: unknown) {
+            const axiosError = err as AxiosError<any>;
+            if (axiosError.response?.status === 429) {
+                setError(axiosError.response.data.detail || "You are making too many requests. Please try again shortly.");
+            } else if (axiosError.response?.status === 503) {
+                setError(axiosError.response.data.detail || "The AI service is currently unavailable. Please try again later.");
             } else {
-                console.error('Exam generation error:', err);
-                setError('An unexpected error occurred during exam generation.');
+                setError(axiosError.response?.data?.detail || 'An error occurred during exam generation.');
             }
         } finally {
             setLoading(false);
         }
     };
 
-    const handleAnswerChange = (questionIndex: number, selectedOption: string) => { // Explicitly define types
-        setUserAnswers(prevAnswers => ({
-            ...prevAnswers,
-            [questionIndex]: selectedOption
-        }));
+    const handleAnswerChange = (questionIndex: number, selectedOption: string) => {
+        setUserAnswers(prev => ({ ...prev, [questionIndex]: selectedOption }));
     };
-
+    
     const handleDownloadResultsDocx = async () => {
         setError('');
         if (!examData.length || examStage !== "finished" || !currentUser) {
@@ -265,13 +211,13 @@ const ExamSimulatorPage = () => {
         setLoading(true);
         try {
             const accessToken = AuthService.getAccessToken();
-            const headers = { Authorization: `Bearer ${accessToken}` };
+            const headers = accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
 
             const formData = new FormData();
             formData.append('examDataJson', JSON.stringify(examData));
             formData.append('userAnswersJson', JSON.stringify(userAnswers));
-            formData.append('score', examScore.toString()); // Convert to string
-            formData.append('total_questions', examData.length.toString()); // Convert to string
+            formData.append('score', examScore.toString());
+            formData.append('total_questions', examData.length.toString());
             formData.append('grade', grade);
             formData.append('course_name', courseName);
             formData.append('topic', topic || '');
@@ -291,14 +237,10 @@ const ExamSimulatorPage = () => {
             a.click();
             document.body.removeChild(a);
             window.URL.revokeObjectURL(url);
-        } catch (err: unknown) { // Explicitly type err as unknown
-            if (axios.isAxiosError(err)) {
-                console.error('Download DOCX error:', err.response?.data || err);
-                setError(err.response?.data?.detail || 'Failed to download DOCX.');
-            } else {
-                console.error('Download DOCX error:', err);
-                setError('An unexpected error occurred while downloading DOCX.');
-            }
+        } catch (err: unknown) {
+            const axiosError = err as AxiosError<any>;
+            console.error('Download DOCX error:', axiosError.response?.data || axiosError);
+            setError(axiosError.response?.data?.detail || 'Failed to download DOCX.');
         } finally {
             setLoading(false);
         }
@@ -313,29 +255,14 @@ const ExamSimulatorPage = () => {
         setExamScore(0);
         setGrade("");
         setRemark("");
-        setCourseName("");
-        setTopic("");
-        setNumQuestions(20);
-        setDurationMins(10);
-        // Clear sessionStorage
-        if (typeof window !== 'undefined') {
-            sessionStorage.removeItem('exam_simulator_inputs');
-            sessionStorage.removeItem('exam_simulator_results');
-        }
+        // Do not clear courseName, topic etc. to allow for easy re-take
+        sessionStorage.removeItem('exam_simulator_results');
     };
 
-    const formatTime = (totalSeconds: number) => { // Explicitly define type
+    const formatTime = (totalSeconds: number) => {
         const minutes = Math.floor(totalSeconds / 60);
         const seconds = totalSeconds % 60;
         return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-    };
-
-    const handleResetGuestUsage = () => {
-        if (typeof window !== 'undefined') {
-            localStorage.removeItem(GUEST_USAGE_KEY);
-            setGuestUsageCount(0);
-            setError('');
-        }
     };
 
     return (
@@ -344,75 +271,38 @@ const ExamSimulatorPage = () => {
             <p>Prepare for your exams with customizable mock tests.</p>
 
             {error && <p className={styles.errorText}>{error}</p>}
-
-            <ApiKeyInput
-                userApiKey={userGeminiApiKey}
-                setUserApiKey={setUserGeminiApiKey}
-            />
-
+            
             {examStage === "setup" && (
                 <form onSubmit={handleGenerateExam} className={styles.examSetupForm}>
+                    {/* Form elements remain the same, just no ApiKeyInput */}
                     <div className={styles.examSetupGrid}>
                         <div className={styles.formGroup}>
                             <label htmlFor="courseName">Course Name:</label>
-                            <input
-                                type="text"
-                                id="courseName"
-                                value={courseName}
-                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCourseName(e.target.value)}
-                                placeholder="e.g., Introduction to Computer Science"
-                                required
-                            />
+                            <input type="text" id="courseName" value={courseName} onChange={(e) => setCourseName(e.target.value)} placeholder="e.g., Introduction to Computer Science" required />
                         </div>
                         <div className={styles.formGroup}>
                             <label htmlFor="topic">Specific Topic (Optional):</label>
-                            <input
-                                type="text"
-                                id="topic"
-                                value={topic}
-                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTopic(e.target.value)}
-                                placeholder="e.g., Algorithms"
-                            />
+                            <input type="text" id="topic" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="e.g., Algorithms" />
                         </div>
                     </div>
                     <div className={styles.examSetupGrid}>
                         <div className={styles.formGroup}>
                             <label htmlFor="duration">Exam Duration:</label>
-                            <select
-                                id="duration"
-                                value={durationMins}
-                                onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setDurationMins(parseInt(e.target.value))}
-                            >
+                            <select id="duration" value={durationMins} onChange={(e) => setDurationMins(parseInt(e.target.value))}>
                                 {[1, 5, 10, 30, 60].map(d => <option key={d} value={d}>{d} Minutes</option>)}
                             </select>
                         </div>
                         <div className={styles.formGroup}>
                             <label htmlFor="numQuestions">Number of Questions:</label>
-                            <input
-                                type="range"
-                                id="numQuestions"
-                                min="5"
-                                max="50"
-                                value={numQuestions}
-                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNumQuestions(parseInt(e.target.value))}
-                            />
+                            <input type="range" id="numQuestions" min="5" max="50" value={numQuestions} onChange={(e) => setNumQuestions(parseInt(e.target.value))} />
                             <span>{numQuestions} Questions</span>
                         </div>
                     </div>
-                    <button
-                        type="submit"
-                        disabled={loading || !courseName.trim() || (!currentUser && guestUsageCount >= GUEST_EXAM_LIMIT)}
-                        className={styles.startButton}
-                    >
+                    <button type="submit" disabled={loading || !courseName.trim() || (!currentUser && guestUsageCount >= GUEST_EXAM_LIMIT)} className={styles.startButton}>
                         {loading ? 'Preparing Exam...' : 'Start Exam ⏱️'}
                     </button>
                     {!currentUser && (
-                        <div className={styles.guestMessage}>
-                            <p>
-                                {`You have used ${guestUsageCount} of ${GUEST_EXAM_LIMIT} guest exams.`}
-                                Please <a href="/login">Login</a> or <a href="/signup">Sign Up</a> for unlimited access.
-                            </p>
-                        </div>
+                        <div className={styles.guestMessage}><p>{`You have used ${guestUsageCount} of ${GUEST_EXAM_LIMIT} guest exams.`} Please <a href="/login">Login</a> or <a href="/signup">Sign Up</a> for unlimited access.</p></div>
                     )}
                 </form>
             )}
@@ -422,31 +312,21 @@ const ExamSimulatorPage = () => {
                     <div className={`${styles.timerDisplay} ${remainingSeconds < 120 ? styles.warning : ''}`}>
                         <b>Time Left: {formatTime(remainingSeconds)}</b>
                     </div>
-                    <h3 className={styles.questionProgress}>Questions ({Object.keys(userAnswers).filter(k => userAnswers[parseInt(k, 10)]).length}/{examData.length} Answered)</h3>
-                    {examData.map((q: ExamQuestion, qIndex) => (
+                    <h3 className={styles.questionProgress}>Questions ({Object.keys(userAnswers).length}/{examData.length} Answered)</h3>
+                    {examData.map((q, qIndex) => (
                         <div key={qIndex} className={styles.questionItem}>
                             <p>{qIndex + 1}. <MarkdownRenderer content={q.question} /></p>
                             {q.options.map((option, oIndex) => (
                                 <div key={oIndex} className={styles.optionItem}>
                                     <label>
-                                        <input
-                                            type="radio"
-                                            name={`question-${qIndex}`}
-                                            value={option}
-                                            checked={userAnswers[qIndex] === option}
-                                            onChange={() => handleAnswerChange(qIndex, option)}
-                                        />
+                                        <input type="radio" name={`question-${qIndex}`} value={option} checked={userAnswers[qIndex] === option} onChange={() => handleAnswerChange(qIndex, option)} />
                                         <MarkdownRenderer content={option} inline={true} />
                                     </label>
                                 </div>
                             ))}
                         </div>
                     ))}
-                    <button
-                        onClick={handleSubmitExam}
-                        disabled={loading}
-                        className={styles.submitExamButton}
-                    >
+                    <button onClick={handleSubmitExam} disabled={loading} className={styles.submitExamButton}>
                         {loading ? 'Submitting...' : 'Submit Exam Now'}
                     </button>
                 </div>
@@ -460,31 +340,21 @@ const ExamSimulatorPage = () => {
                         <h3>Score: {examScore} / {examData.length}</h3>
                         <p>{remark}</p>
                     </div>
-
                     <h4 className={styles.correctionsSection}>🔍 Answer Key & Explanations</h4>
                     {examData.map((q, qIndex) => {
-                        const userChoice = userAnswers[qIndex];
-                        const isCorrect = userChoice === q.answer;
+                        const isCorrect = userAnswers[qIndex] === q.answer;
                         return (
                             <div key={qIndex} className={`${styles.correctionItem} ${isCorrect ? styles.correct : styles.incorrect}`}>
                                 <p>{qIndex + 1}. <MarkdownRenderer content={q.question} /></p>
                                 <p>Your Answer: <span className={isCorrect ? styles.correctAnswer : styles.incorrectAnswer}><MarkdownRenderer content={userAnswers[qIndex] || '(No answer)'} inline={true} /></span></p>
-                                {!isCorrect && (
-                                    <p className={styles.correctAnswer}>Correct Answer: <MarkdownRenderer content={q.answer} inline={true} /></p>
-                                )}
+                                {!isCorrect && <p className={styles.correctAnswer}>Correct Answer: <MarkdownRenderer content={q.answer} inline={true} /></p>}
                                 <p><strong>Explanation:</strong></p>
                                 <MarkdownRenderer content={q.explanation} />
                             </div>
                         );
                     })}
-
                     <div className={styles.resultsActions}>
-                        <button
-                            onClick={handleDownloadResultsDocx}
-                            className={styles.downloadButton}
-                            disabled={!currentUser}
-                            title={!currentUser ? "Login to download" : "Download Results as DOCX"}
-                        >
+                        <button onClick={handleDownloadResultsDocx} className={styles.downloadButton} disabled={!currentUser} title={!currentUser ? "Login to download" : "Download Results as DOCX"}>
                             Download Results as DOCX
                         </button>
                         <button onClick={handleTakeAnotherExam} className={styles.takeAnotherExamButton}>
@@ -493,8 +363,6 @@ const ExamSimulatorPage = () => {
                     </div>
                 </div>
             )}
-
-
         </div>
     );
 };
