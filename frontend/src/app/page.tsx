@@ -66,7 +66,7 @@ const HomePage = () => {
                 <h2 className={styles.featureSectionTitle}> Powering Your Learning Journey</h2>
 
                 <div className={styles.featureCategory}>
-                    <h3>💡 AI Learning</h3>
+                    <h3>AI Learning</h3>
                     <div className={styles.featureCardGrid}>
                         {AI_LEARNING_FEATURES.map((feature: Feature, index: number) => ( // Added types
                             <div key={index} className={styles.featureCardWrapper}>
@@ -77,7 +77,7 @@ const HomePage = () => {
                 </div>
 
                 <div className={styles.featureCategory}>
-                    <h3>📝 Content Mastery</h3>
+                    <h3>Content Mastery</h3>
                     <div className={styles.featureCardGrid}>
                         {CONTENT_MASTERY_FEATURES.map((feature: Feature, index: number) => ( // Added types
                             <div key={index} className={styles.featureCardWrapper}>
@@ -88,7 +88,7 @@ const HomePage = () => {
                 </div>
 
                 <div className={styles.featureCategory}>
-                    <h3>⚙️ Planning & Solving</h3>
+                    <h3>Planning & Solving</h3>
                     <div className={styles.featureCardGrid}>
                         {PLANNING_SOLVING_FEATURES.map((feature: Feature, index: number) => ( // Added types
                            <div key={index} className={styles.featureCardWrapper}>
