@@ -159,7 +159,7 @@ const SummarizerPage = () => {
 
     return (
         <div className={`page-container ${styles.summarizerPageContainer}`}>
-            <h2>📝 Document Summarizer</h2>
+            <h2>Document Summarizer</h2>
             <p>Upload your document or paste text to get a quick summary.</p>
 
             <div className={styles.inputSection}>
