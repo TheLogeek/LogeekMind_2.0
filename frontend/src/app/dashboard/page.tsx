@@ -162,7 +162,7 @@ const UserDashboardPage = () => {
 
             <div className={styles.chartGrid}>
                 <div className={styles.chartContainer}>
-                    <h3>📈 Performance Over Time</h3>
+                    <h3>Performance Over Time</h3>
                     <Line data={lineChartData} />
                 </div>
                 <div className={styles.chartContainer}>
