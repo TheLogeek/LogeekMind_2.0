@@ -185,7 +185,7 @@ const GPACalculatorPage = () => {
             ))}
 
             <button onClick={addCourse} className={styles.addCourseButton}>
-                ➕ Add Another Course
+                Add Another Course
             </button>
 
             <button
