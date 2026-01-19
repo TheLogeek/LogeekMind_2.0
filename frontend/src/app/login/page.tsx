@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'; // Use useRouter from next/navigati
 import AuthService from '../../services/AuthService'; // Adjust path
 import axios, { AxiosError } from 'axios';
 import styles from './LoginPage.module.css'; // Import the CSS Module(s)
+import { useUser } from '../layout'; // Import useUser hook from layout
 
 const LoginPage = () => {
     const [email, setEmail] = useState('');
@@ -12,19 +13,20 @@ const LoginPage = () => {
     const [rememberMe, setRememberMe] = useState(false); // New state for remember me
     const [message, setMessage] = useState('');
     const router = useRouter();
+    const { setCurrentUser } = useUser(); // Use the global user context
 
-    const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => { // Added type
+    const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         setMessage('');
         try {
-            // Pass rememberMe state to AuthService.login serv
             const response = await AuthService.login(email, password, rememberMe);
-            if (response.success) {
+            if (response.success && response.user) {
+                setCurrentUser(response.user); // Update global user state
                 router.push('/'); // Redirect to home page on successful login
             } else {
                 setMessage(response.message || 'Login failed.');
             }
-        } catch (error: unknown) { // Explicitly type error as unknown
+        } catch (error: unknown) {
             if (axios.isAxiosError(error)) {
                 console.error('Login error:', error);
                 setMessage(error.response?.data?.detail || 'An unexpected error occurred.');
