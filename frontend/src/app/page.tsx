@@ -18,8 +18,8 @@ const HomePage = () => {
 
     const AI_LEARNING_FEATURES: Feature[] = [
         { icon: " ", title: "AI Teacher", description: "Get interactive explanations and practice on any topic.", linkTo: "/ai-teacher" },
-        { icon: "❓", title: "Smart Quiz Generator", description: "Create customized quizzes with instant feedback.", linkTo: "/smart-quiz" },
-        { icon: "💻", title: "Exam Simulator", description: "Prepare with simulated exams.", linkTo: "/exam-simulator" },
+        { icon: " ", title: "Smart Quiz Generator", description: "Create customized quizzes with instant feedback.", linkTo: "/smart-quiz" },
+        { icon: " ", title: "Exam Simulator", description: "Prepare with simulated exams.", linkTo: "/exam-simulator" },
     ];
 
     const CONTENT_MASTERY_FEATURES: Feature[] = [
@@ -126,7 +126,7 @@ const HomePage = () => {
                     <Link href="/terms-of-service" className={styles.footerLink}>Terms of Service</Link>
                 </div>
                 <p className={styles.footerInfo}>©️ 2026 <strong><a href="https://www.linkedin.com/in/solomon-adenuga-6251a5316" target="_blank" rel="noopener noreferrer"> LogeekMind </a></strong>.</p>
-                <p className={styles.footerContact}>Contact: solomonadenuga8@gmail.com | WhatsApp: +2348023710562</p>
+                <p className={styles.footerContact}>Contact: logeekmind@gmail.com | WhatsApp: +2348023710562</p>
                 <div className={styles.footerSocial}>
                     <span></span>
                     <span></span>
