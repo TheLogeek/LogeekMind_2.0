@@ -5,7 +5,10 @@ import { useRouter } from 'next/navigation'; // Use useRouter from next/navigati
 import axios, { AxiosError } from 'axios';
 import styles from './ForgotPasswordPage.module.css'; // Import the CSS Module
 
-const API_BASE_URL = "http://127.0.0.1:8000"; // Use your backend URL
+import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import axios, { AxiosError } from 'axios';
+import styles from './ForgotPasswordPage.module.css';
 
 const ForgotPasswordPage = () => {
     const [email, setEmail] = useState('');
@@ -19,9 +22,10 @@ const ForgotPasswordPage = () => {
         setLoading(true);
 
         try {
-            const response = await axios.post(`${API_BASE_URL}/auth/forgot-password`, { email });
+            const backendApiBase = process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000"; // Fallback for local dev
+            const response = await axios.post(`${backendApiBase}/auth/forgot-password`, { email });
             setMessage(response.data.message || "If an account with that email exists, a password reset link has been sent.");
-        } catch (error: unknown) { // Explicitly type error as unknown
+        } catch (error: unknown) {
             if (axios.isAxiosError(error)) {
                 console.error('Forgot password error:', error);
                 setMessage(error.response?.data?.detail || 'An unexpected error occurred. Please try again.');
