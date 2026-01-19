@@ -156,7 +156,7 @@ const Navbar: React.FC<NavbarProps> = ({ toggleSidebar, isSidebarOpen }) => {
 };
 
 // New AdminLink component to check admin status for mobile menu
-const AdminLink: React.FC<{ onNavLinkClick: () => void }> = ({ onNavLinkClick }) => {
+const AdminLink: React.FC<{ isNavOpen: boolean, onNavLinkClick: () => void }> = ({ isNavOpen, onNavLinkClick }) => {
     const [isAdmin, setIsAdmin] = useState(false);
     const { currentUser } = useUser();
     const router = useRouter(); // Use useRouter in AdminLink
@@ -169,7 +169,7 @@ const AdminLink: React.FC<{ onNavLinkClick: () => void }> = ({ onNavLinkClick })
                     if (accessToken) {
                         const response = await axios.get(`${API_BASE_URL}/auth/check-admin`, {
                             headers: {
-                                Authorization: `Bearer ${accessToken`,
+                                Authorization: `Bearer ${accessToken}`, // Corrected Authorization header
                             },
                         });
                         setIsAdmin(response.data.is_admin);
@@ -184,9 +184,13 @@ const AdminLink: React.FC<{ onNavLinkClick: () => void }> = ({ onNavLinkClick })
                 setIsAdmin(false);
             }
         };
-        // Check admin status whenever currentUser changes
-        checkAdminStatus();
-    }, [currentUser]);
+        // Only check admin status if the nav is open and user is logged in
+        if (isNavOpen && currentUser) {
+            checkAdminStatus();
+        } else if (!currentUser) {
+            setIsAdmin(false);
+        }
+    }, [currentUser, isNavOpen]);
 
     if (isAdmin && currentUser) {
         return (
