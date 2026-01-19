@@ -185,7 +185,7 @@ const NotesToAudioPage = () => {
 
     return (
         <div className={`page-container ${styles.notesToAudioPageContainer}`}>
-            <h2>🎧 Lecture Notes-to-Audio Converter</h2>
+            <h2>Lecture Notes-to-Audio Converter</h2>
             <p>Convert your notes into an MP3 lecture instantly!</p>
 
             <div className={styles.inputModeToggle}>
