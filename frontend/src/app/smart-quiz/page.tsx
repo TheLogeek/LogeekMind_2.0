@@ -203,7 +203,7 @@ const SmartQuizPage = () => {
 
     return (
         <div className={`page-container ${styles.smartQuizPageContainer}`}>
-            <h2>❓ Smart Quiz Generator</h2>
+            <h2>Smart Quiz Generator</h2>
             <p>Generate interactive quizzes with instant grading and explanations.</p>
 
             <form onSubmit={handleGenerateQuiz} className={styles.quizForm}>
@@ -236,7 +236,7 @@ const SmartQuizPage = () => {
 
             {quizData && !quizSubmitted && (
                 <div className={styles.quizDisplay}>
-                    <h3>📝 Quiz: {quizTopic}</h3>
+                    <h3>Quiz: {quizTopic}</h3>
                     <form onSubmit={handleSubmitQuiz}>
                         {quizData.map((q, qIndex) => (
                             <div key={qIndex} className={styles.questionItem}>
@@ -262,7 +262,7 @@ const SmartQuizPage = () => {
                     <p className={styles.quizResultsScore}>
                         You scored {quizScore}/{quizData.length} ({(quizScore / quizData.length * 100).toFixed(0)}%)
                     </p>
-                    <h4 className={styles.answerKeyHeading}>🔍 Answer Key & Explanations</h4>
+                    <h4 className={styles.answerKeyHeading}>Answer Key & Explanations</h4>
                     {quizData.map((q, qIndex) => (
                         <div key={qIndex} className={`${styles.answerItem} ${userAnswers[qIndex] === q.answer ? styles.correct : styles.incorrect}`}>
                             <p>{qIndex + 1}. <MarkdownRenderer content={q.question} /></p>
