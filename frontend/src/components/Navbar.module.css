@@ -209,13 +209,13 @@
   }
 
   .navbarAuthMobile .welcomeText {
-      font-size: 0.9em;
+      font-size: 1.1em; /* Increased font size for username/guest */
   }
   
   .navbarAuthMobile .authButton,
   .navbarAuthMobile .logoutButton {
-      padding: 5px 10px;
-      font-size: 0.9em;
+      padding: 8px 15px; /* Increased padding */
+      font-size: 1em; /* Increased font size */
   }
 
   .hamburgerMenu {
