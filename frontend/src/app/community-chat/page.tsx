@@ -188,7 +188,7 @@ const CommunityChatPage = () => {
                         onClick={() => setSelectedRoom(room)}
                         className={`${styles.roomButton} ${selectedRoom === room ? styles.active : ''}`}
                     >
-                        # {room}
+                        {room}
                     </button>
                 ))}
                 <h3>Online Users ({onlineUsers.length})</h3>
