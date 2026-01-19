@@ -57,100 +57,91 @@ const Navbar: React.FC<NavbarProps> = ({ toggleSidebar, isSidebarOpen }) => {
                 </Link>
             </div>
 
-            {/* Desktop Navigation Links (Visible only on desktop) */}
-            {typeof window !== 'undefined' && window.innerWidth >= 768 && (
-                <div className={styles.navbarNavDesktop}>
+            {/* Desktop Navigation Links */}
+            <div className={styles.navbarNavDesktop}>
+                <Link href="/" className={styles.navLink} onClick={handleNavLinkClick}>Home</Link>
+                <Link href="/dashboard" className={styles.navLink} onClick={handleNavLinkClick}>Dashboard</Link>
+                <Link href="/contact" className={styles.navLink} onClick={handleNavLinkClick}>Contact</Link>
+            </div>
+
+            {/* Desktop Auth Buttons */}
+            <div className={styles.navbarAuthDesktop}>
+                {currentUser ? (
+                    <>
+                        <span className={styles.welcomeText}>{username}</span>
+                        <button type="button" onClick={handleLogout} className={styles.logoutButton}>Log Out</button>
+                    </>
+                ) : (
+                    <>
+                        <span className={styles.welcomeText}>Guest</span>
+                        <button type="button" onClick={() => router.push('/login')} className={styles.authButton}>Login / Sign Up</button>
+                    </>
+                )}
+            </div>
+
+            {/* Mobile Auth Buttons */}
+            <div className={styles.navbarAuthMobile}>
+                {currentUser ? (
+                    <>
+                        <span className={styles.welcomeText}>{username}</span>
+                    </>
+                ) : (
+                    <button type="button" onClick={() => router.push('/login')} className={styles.authButton}>Login</button>
+                )}
+            </div>
+
+            {/* Mobile Full-Screen Overlay Nav */}
+            <div className={`${styles.mobileNavOverlay} ${isNavOpen ? styles.open : ''}`}>
+                <button type="button" className={styles.mobileNavCloseButton} onClick={handleMobileNavToggle}>
+                    ✕
+                </button>
+                <div className={styles.mobileNavContent}>
+                    {/* Auth Section for Mobile */}
+                    <div className={styles.mobileNavAuth}>
+                        {currentUser ? (
+                            <>
+                                <span className={styles.welcomeText}>{username}</span>
+                                <button type="button" onClick={handleLogout} className={styles.logoutButton}>Log Out</button>
+                            </>
+                        ) : (
+                            <>
+                                <span className={styles.welcomeText}>Guest</span>
+                                <button type="button" onClick={() => router.push('/login')} className={styles.authButton}>Login / Sign Up</button>
+                            </>
+                        )}
+                    </div>
+                    <hr className={styles.linkSeparator} />
+
+                    {/* Main Nav Links for Mobile */}
                     <Link href="/" className={styles.navLink} onClick={handleNavLinkClick}>Home</Link>
                     <Link href="/dashboard" className={styles.navLink} onClick={handleNavLinkClick}>Dashboard</Link>
                     <Link href="/contact" className={styles.navLink} onClick={handleNavLinkClick}>Contact</Link>
-                </div>
-            )}
-
-            {/* Desktop Auth Buttons (Visible only on desktop) */}
-            {typeof window !== 'undefined' && window.innerWidth >= 768 && (
-                <div className={styles.navbarAuthDesktop}>
-                    {currentUser ? (
-                        <>
-                            <span className={styles.welcomeText}>{username}</span>
-                            <button
-                                type="button"
-                                onClick={handleLogout}
-                                className={styles.logoutButton}
-                            >
-                                Log Out
-                            </button>
-                        </>
-                    ) : (
-                        <>
-                            <span className={styles.welcomeText}>Guest</span>
-                            <button
-                                type="button"
-                                onClick={() => router.push('/login')}
-                                className={styles.authButton}
-                            >
-                                Login / Sign Up
-                            </button>
-                        </>
+                    
+                    {/* Feature Links (from original Sidebar) for Mobile */}
+                    <hr className={styles.linkSeparator}/>
+                    <h4 className={styles.categoryTitle}>AI Tools</h4>
+                    <Link href="/ai-teacher" className={styles.navLink} onClick={handleNavLinkClick}>AI Teacher</Link>
+                    <Link href="/summarizer" className={styles.navLink} onClick={handleNavLinkClick}>Summarizer</Link>
+                    <Link href="/smart-quiz" className={styles.navLink} onClick={handleNavLinkClick}>Smart Quiz</Link>
+                    <Link href="/exam-simulator" className={styles.navLink} onClick={handleNavLinkClick}>Exam Simulator</Link>
+                    <Link href="/course-outline" className={styles.navLink} onClick={handleNavLinkClick}>Course Outline</Link>
+                    <Link href="/homework-assistant" className={styles.navLink} onClick={handleNavLinkClick}>Homework Assistant</Link>
+                    <hr className={styles.linkSeparator}/>
+                    <h4 className={styles.categoryTitle}>Utilities</h4>
+                    <Link href="/gpa-calculator" className={styles.navLink} onClick={handleNavLinkClick}>GPA Calculator</Link>
+                    <Link href="/study-scheduler" className={styles.navLink} onClick={handleNavLinkClick}>Study Scheduler</Link>
+                    <Link href="/audio-to-text" className={styles.navLink} onClick={handleNavLinkClick}>Audio to Text</Link>
+                    <Link href="/notes-to-audio" className={styles.navLink} onClick={handleNavLinkClick}>Notes to Audio</Link>
+                    <hr className={styles.linkSeparator}/>
+                    <h4 className={styles.categoryTitle}>Community</h4>
+                    <Link href="/community-chat" className={styles.navLink} onClick={handleNavLinkClick}>Community Chat</Link>
+                    
+                    {/* Admin Link for Mobile */}
+                    {currentUser && (
+                        <AdminLink isNavOpen={isNavOpen} onNavLinkClick={handleNavLinkClick} />
                     )}
                 </div>
-            )}
-
-            {/* Mobile Full-Screen Overlay Nav (Visible only on mobile when open) */}
-            {isNavOpen && (
-                <div className={styles.mobileNavOverlay}>
-                    <button type="button" className={styles.mobileNavCloseButton} onClick={handleMobileNavToggle}>
-                        ✕
-                    </button>
-                    <div className={styles.mobileNavContent}>
-                        {/* Auth Section for Mobile */}
-                        <div className={styles.mobileNavAuth}>
-                            {currentUser ? (
-                                <>
-                                    <span className={styles.welcomeText}>{username}</span>
-                                    <button type="button" onClick={handleLogout} className={styles.logoutButton}>Log Out</button>
-                                </>
-                            ) : (
-                                <>
-                                    <span className={styles.welcomeText}>Guest</span>
-                                    <button type="button" onClick={() => router.push('/login')} className={styles.authButton}>Login / Sign Up</button>
-                                </>
-                            )}
-                        </div>
-                        <hr className={styles.linkSeparator} />
-
-                        {/* Main Nav Links for Mobile */}
-                        <Link href="/" className={styles.navLink} onClick={handleNavLinkClick}>Home</Link>
-                        <Link href="/dashboard" className={styles.navLink} onClick={handleNavLinkClick}>Dashboard</Link>
-                        <Link href="/contact" className={styles.navLink} onClick={handleNavLinkClick}>Contact</Link>
-                        
-                        {/* Feature Links (from original Sidebar) for Mobile */}
-                        <hr className={styles.linkSeparator}/>
-                        <h4 className={styles.categoryTitle}>AI Tools</h4>
-                        <Link href="/ai-teacher" className={styles.navLink} onClick={handleNavLinkClick}>AI Teacher</Link>
-                        <Link href="/summarizer" className={styles.navLink} onClick={handleNavLinkClick}>Summarizer</Link>
-                        <Link href="/smart-quiz" className={styles.navLink} onClick={handleNavLinkClick}>Smart Quiz</Link>
-                        <Link href="/exam-simulator" className={styles.navLink} onClick={handleNavLinkClick}>Exam Simulator</Link>
-                        <Link href="/course-outline" className={styles.navLink} onClick={handleNavLinkClick}>Course Outline</Link>
-                        <Link href="/homework-assistant" className={styles.navLink} onClick={handleNavLinkClick}>Homework Assistant</Link>
-                        <hr className={styles.linkSeparator}/>
-                        <h4 className={styles.categoryTitle}>Utilities</h4>
-                        <Link href="/gpa-calculator" className={styles.navLink} onClick={handleNavLinkClick}>GPA Calculator</Link>
-                        <Link href="/study-scheduler" className={styles.navLink} onClick={handleNavLinkClick}>Study Scheduler</Link>
-                        <Link href="/audio-to-text" className={styles.navLink} onClick={handleNavLinkClick}>Audio to Text</Link>
-                        <Link href="/notes-to-audio" className={styles.navLink} onClick={handleNavLinkClick}>Notes to Audio</Link>
-                        <hr className={styles.linkSeparator}/>
-                        <h4 className={styles.categoryTitle}>Community</h4>
-                        <Link href="/community-chat" className={styles.navLink} onClick={handleNavLinkClick}>Community Chat</Link>
-                        {/* Admin Link for Mobile (isAdmin status is checked in Sidebar directly now) */}
-                        {/* Admin status should ideally be passed down or checked by Sidebar itself */}
-                        {/* For simplicity, if Sidebar had admin check, we'll let it handle that */}
-                        {/* Re-adding isAdmin check here for mobile menu completeness */}
-                        {currentUser && (
-                            <AdminLink isNavOpen={isNavOpen} onNavLinkClick={handleNavLinkClick} />
-                        )}
-                    </div>
-                </div>
-            )}
+            </div>
         </nav>
     );
 };
