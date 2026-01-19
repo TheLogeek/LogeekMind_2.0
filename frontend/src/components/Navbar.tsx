@@ -29,7 +29,7 @@ const Navbar = () => {
         <nav className={styles.navbar}>
             <div className={styles.navbarLogo}>
                 <Link href="/" className={styles.navbarLogo}>
-                    // <span className={styles.navbarLogoSpan1}>🧠</span>
+                    <span className={styles.navbarLogoSpan1}></span>
                     <span className={styles.navbarLogoSpan2}>LogeekMind</span>
                 </Link>
             </div>
@@ -48,7 +48,7 @@ const Navbar = () => {
             <div className={`${styles.navbarAuth} ${isNavOpen ? styles.open : ''}`}>
                 {currentUser ? (
                     <>
-                        <span className={styles.welcomeText}>👋 {username}</span>
+                        <span className={styles.welcomeText}>{username}</span>
                         <button
                             type="button"
                             onClick={handleLogout}
