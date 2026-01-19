@@ -143,10 +143,10 @@ const StudySchedulerPage = () => {
 
     return (
         <div className={`page-container ${styles.studySchedulerPageContainer}`}>
-            <h2>📅 Study Scheduler</h2>
+            <h2>Study Scheduler</h2>
             <p>Create a structured daily or weekly study plan by listing your subjects and estimated time needs.</p>
 
-            <h3 className={styles.subjectInputSectionH3}>📚 Subject Input</h3>
+            <h3 className={styles.subjectInputSectionH3}>Subject Input</h3>
             <div className={styles.subjectInputGridHeader}>
                 <div>Subject Name</div>
                 <div>Priority (1-5)</div>
@@ -184,7 +184,7 @@ const StudySchedulerPage = () => {
             ))}
 
             <button type="button" onClick={addSubject} className={styles.addSubjectButton}>
-                ➕ Add Another Course
+                Add Another Course
             </button>
 
             <button
@@ -200,7 +200,7 @@ const StudySchedulerPage = () => {
 
             {schedule && (
                 <div className={styles.scheduleOutput}>
-                    <h3>📅 Your Weekly Study Plan</h3>
+                    <h3>Your Weekly Study Plan</h3>
                     <p>Total Weekly Study Time Allocated: {totalTimeAllocated} Hours</p>
                     
                     <div className={styles.scheduleGridHeader}>
