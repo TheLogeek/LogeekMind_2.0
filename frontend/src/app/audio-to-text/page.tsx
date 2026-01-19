@@ -147,7 +147,7 @@ const AudioToTextPage = () => {
 
     return (
         <div className={`page-container ${styles.audioToTextPageContainer}`}>
-            <h2>🎧 Lecture Audio-to-Text Converter</h2>
+            <h2>Lecture Audio-to-Text Converter</h2>
             <p>Upload an audio file to transcribe it and download the text.</p>
 
             <div className={styles.inputSection}>
