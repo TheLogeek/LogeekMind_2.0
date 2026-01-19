@@ -29,7 +29,7 @@ const Navbar = () => {
         <nav className={styles.navbar}>
             <div className={styles.navbarLogo}>
                 <Link href="/" className={styles.navbarLogo}>
-                    <span className={styles.navbarLogoSpan1}>🧠</span>
+                    // <span className={styles.navbarLogoSpan1}>🧠</span>
                     <span className={styles.navbarLogoSpan2}>LogeekMind</span>
                 </Link>
             </div>
