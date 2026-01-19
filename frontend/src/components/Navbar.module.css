@@ -27,15 +27,51 @@
   color: var(--primary-gradient-start);
 }
 
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-sm) var(--spacing-lg); /* Responsive padding */
+  background-color: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  font-family: 'Inter', sans-serif;
+  backdrop-filter: blur(5px);
+  height: var(--navbar-height); /* Ensure Navbar has a defined height */
+}
+
+.navbarLeft {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+}
+
+.navbarLogo {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  color: var(--text-dark);
+}
+
+.navbarLogoSpan1 {
+  font-size: 28px;
+  font-weight: 800;
+  margin-right: 8px;
+  color: var(--primary-gradient-start);
+}
+
 .navbarLogoSpan2 {
   font-size: 24px;
   font-weight: 700;
   color: var(--text-dark);
 }
 
-.navbarNav {
-  display: flex;
-  gap: var(--spacing-lg);
+/* Desktop Navigation Links */
+.navbarNavDesktop {
+    display: flex;
+    gap: var(--spacing-lg);
 }
 
 .navLink {
@@ -65,7 +101,8 @@
     margin: var(--spacing-md) 0;
 }
 
-.navbarAuth {
+/* Desktop Auth Buttons */
+.navbarAuthDesktop {
   display: flex;
   align-items: center;
   gap: var(--spacing-sm);
@@ -119,65 +156,67 @@
   z-index: 1001; /* Ensure it's above other elements */
 }
 
+/* Mobile Full-Screen Overlay Nav */
+.mobileNavOverlay {
+    display: none; /* Hidden by default */
+    flex-direction: column;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: var(--bg-white);
+    padding: var(--spacing-xl);
+    padding-top: calc(var(--navbar-height) + var(--spacing-md));
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    align-items: flex-start;
+    justify-content: flex-start;
+    gap: var(--spacing-md);
+    overflow-y: auto;
+    z-index: 999;
+}
+
+.mobileNavOverlay.open {
+    display: flex;
+}
+
+.mobileNavCloseButton {
+    position: absolute;
+    top: var(--spacing-md);
+    right: var(--spacing-md);
+    background: none;
+    border: none;
+    font-size: 30px;
+    cursor: pointer;
+    color: var(--text-dark);
+    z-index: 1002;
+}
+
+.mobileNavContent {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.mobileNavAuth {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    margin-bottom: var(--spacing-md);
+    gap: var(--spacing-sm);
+    align-items: flex-start;
+    padding-left: var(--spacing-sm);
+}
+
 /* Mobile Responsiveness */
 @media (max-width: 768px) {
   .navbar {
     padding: var(--spacing-sm) var(--spacing-md);
   }
 
-  .navbarNav {
-    display: none; /* Hidden by default */
-    flex-direction: column;
-    position: fixed; /* Fixed position for full screen overlay */
-    top: 0; /* Cover from the top */
-    left: 0;
-    width: 100vw; /* Full viewport width */
-    height: 100vh; /* Full viewport height */
-    background-color: var(--bg-white); /* Solid white background */
-    padding: var(--spacing-xl);
-    padding-top: calc(var(--navbar-height) + var(--spacing-md)); /* Space below main navbar */
-    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-    align-items: flex-start; /* Align items to the left */
-    justify-content: flex-start;
-    gap: var(--spacing-md);
-    overflow-y: auto; /* Enable scrolling for nav items if too many */
-    z-index: 999; /* Ensure it covers content but is below the Navbar itself */
-  }
-
-  .navbarNav.open {
-    display: flex; /* Show nav links when open */
-    align-items: stretch; /* Make items take full width */
-  }
-  
-  .navLink {
-    font-size: var(--font-size-xl);
-    padding: var(--spacing-sm);
-    text-align: left; /* Align text to the left for mobile view */
-    width: 100%;
-  }
-
-  .navbarAuth {
-    display: none; /* Hide auth buttons by default within the .navbarAuth container */
-    flex-direction: column;
-    width: 100%;
-    margin-top: var(--spacing-md);
-    gap: var(--spacing-sm); /* Add gap for buttons */
-    align-items: flex-start; /* Center buttons within the column */
-  }
-
-  .navbarAuth.open {
-    display: flex; /* Show auth buttons when mobile nav is open */
-  }
-
-  .welcomeText {
-    padding-left: var(--spacing-sm); /* Indent welcome text */
-    width: 100%;
-    text-align: left;
-  }
-
-  .logoutButton, .authButton {
-    width: calc(100% - var(--spacing-sm) * 2); /* Adjust width considering padding */
-    margin-left: var(--spacing-sm); /* Indent buttons */
+  .navbarNavDesktop, .navbarAuthDesktop {
+    display: none; /* Hide desktop nav and auth on mobile */
   }
 
   .hamburgerMenu {
@@ -191,4 +230,34 @@
   .navbarLogoSpan2 {
     font-size: 20px; /* Adjust font size for mobile */
   }
+
+  .mobileNavOverlay {
+    /* Styles already defined above, but ensure they apply */
+  }
+
+  .mobileNavOverlay .navLink,
+  .mobileNavOverlay .categoryTitle {
+    width: 100%;
+    text-align: left;
+    padding: var(--spacing-sm);
+    box-sizing: border-box;
+  }
+}
+
+@media (min-width: 769px) {
+    .hamburgerMenu {
+        display: none; /* Hide hamburger on desktop */
+    }
+
+    .navbarNavDesktop, .navbarAuthDesktop {
+        display: flex; /* Show desktop nav and auth on desktop */
+    }
+
+    .navbarLeft {
+        gap: var(--spacing-lg); /* Adjust gap for desktop */
+    }
+
+    .mobileNavOverlay {
+        display: none !important; /* Ensure mobile overlay is hidden on desktop */
+    }
 }

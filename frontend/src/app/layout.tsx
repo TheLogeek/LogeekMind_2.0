@@ -1,19 +1,7 @@
-'use client';
-
-import React, { useState, useEffect, createContext, useContext } from 'react';
-import AuthService from '../services/AuthService'; // Import AuthService
-import { Geist, Geist_Mono } from "next/font/google";
-import "./globals.css";
-
 // Import components
 import Navbar from '../components/Navbar';
+import Sidebar from '../components/Sidebar';
 
-interface User {
-    id: string;
-    email: string;
-    username?: string; // profile contains username, so it might be on the user object too
-    // Add other user properties if available
-}
 
 // --- User Context for Global State ---
 // This context will provide the currentUser and a way to set it to all components.
@@ -45,6 +33,7 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true); // Re-add isSidebarOpen state
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   // --- Auto-login Effect ---
@@ -65,6 +54,25 @@ export default function RootLayout({
     initializeUserSession();
   }, []); // Empty dependency array ensures this runs only once on mount
 
+  // --- Sidebar Responsive Logic (Re-added) ---
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 768) {
+        setIsSidebarOpen(false); // Sidebar closed by default on mobile
+      } else {
+        setIsSidebarOpen(true); // Sidebar open by default on desktop
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    handleResize(); // Call once on mount to set initial state
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const toggleSidebar = () => {
+    setIsSidebarOpen(!isSidebarOpen);
+  };
+
+
   return (
     <html lang="en">
       <head>
@@ -78,11 +86,14 @@ export default function RootLayout({
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         {/* Provide the user context to the entire application */}
         <UserContext.Provider value={{ currentUser, setCurrentUser }}>
-          <div className={`main-layout-container`}>
-            <Navbar />
-            <main className="main-content-area">
+          <div className={`main-layout-container ${isSidebarOpen ? '' : 'sidebar-closed'}`}> {/* Apply class for sidebar state */}
+            <Navbar toggleSidebar={toggleSidebar} isSidebarOpen={isSidebarOpen} /> {/* Pass toggleSidebar to Navbar */}
+            <div className="content-area-container"> {/* Re-add content-area-container */}
+              <Sidebar isOpen={isSidebarOpen} onClose={toggleSidebar} /> {/* Render Sidebar */}
+              <main className="main-content-area">
                 {children}
-            </main>
+              </main>
+            </div>
           </div>
         </UserContext.Provider>
       </body>
