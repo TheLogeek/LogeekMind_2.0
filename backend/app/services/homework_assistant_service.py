@@ -71,15 +71,36 @@ async def create_docx_from_solution(solution_text: str, context: Optional[str] =
     if context:
         doc.add_heading(f"Instructions: {context}", 1)
     
+    # Process the markdown line by line
     for line in solution_text.split('\n'):
-        if line.strip().startswith('###'):
-            doc.add_heading(line.replace('###', '').strip(), level=3)
-        elif line.strip().startswith('##'):
-            doc.add_heading(line.replace('##', '').strip(), level=2)
-        elif line.strip().startswith('*') or line.strip().startswith('-'):
-            doc.add_paragraph(line.strip(), style='List Bullet')
+        stripped_line = line.strip()
+
+        # Handle Headers
+        if stripped_line.startswith('###'):
+            doc.add_heading(stripped_line.replace('###', '').strip(), level=3)
+        elif stripped_line.startswith('##'):
+            doc.add_heading(stripped_line.replace('##', '').strip(), level=2)
+        elif stripped_line.startswith('#'):
+            doc.add_heading(stripped_line.replace('#', '').strip(), level=1)
+        # Handle List Items
+        elif stripped_line.startswith('* ') or stripped_line.startswith('- '):
+            # Remove Markdown list prefix
+            text_content = stripped_line[2:].strip()
+            # Clean up inline formatting for list items
+            text_content = text_content.replace('**', '').replace('__', '').replace('*', '').replace('_', '') # Remove bold/italic markers
+            text_content = text_content.replace('$', '') # Remove inline math markers
+            doc.add_paragraph(text_content, style='List Bullet')
+        # Handle regular paragraphs and other formatting
         else:
-            doc.add_paragraph(line.strip())
+            # Clean up inline formatting for paragraphs
+            text_content = stripped_line.replace('**', '').replace('__', '').replace('*', '').replace('_', '') # Remove bold/italic markers
+            text_content = text_content.replace('$', '') # Remove inline math markers
+            # More aggressive cleanup for math environments for simpler display if not rendering
+            text_content = re.sub(r'\\[a-zA-Z]+', '', text_content) # Remove LaTeX commands like \frac, \sqrt
+            text_content = re.sub(r'\{.*?\}', '', text_content) # Remove content in curly braces after LaTeX commands
+
+            if text_content: # Only add if there's content after stripping
+                doc.add_paragraph(text_content)
 
     doc_io = io.BytesIO()
     doc.save(doc_io)

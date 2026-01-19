@@ -127,7 +127,17 @@ const SummarizerPage = () => {
             setError("Please log in to download the summary.");
             return;
         }
-        const blob = new Blob([summary], { type: 'text/plain;charset=utf-8' });
+
+        const plainTextSummary = summary
+            .replace(/^#+\s/gm, '') // Remove ATX headings (e.g., # Heading)
+            .replace(/(\*\*|__)(.*?)\1/g, '$2') // Remove bold (e.g., **bold**)
+            .replace(/(\*|_)(.*?)\1/g, '$2') // Remove italics (e.g., *italic*)
+            .replace(/\[(.*?)\]\(.*?\)/g, '$1') // Remove links (e.g., [text](url) -> text)
+            .replace(/`{1,3}(.*?)`{1,3}/g, '$1') // Remove inline code (e.g., `code`)
+            .replace(/^-+\s/gm, '') // Remove list item markers (e.g., - item)
+            .replace(/^\d+\.\s/gm, ''); // Remove ordered list item markers (e.g., 1. item)
+
+        const blob = new Blob([plainTextSummary], { type: 'text/plain;charset=utf-8' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;

@@ -136,7 +136,17 @@ const AITeacherPage = () => {
 
         let formattedNotes = `# AI Teacher Session\n\n`;
         messages.forEach(msg => {
-            formattedNotes += `## ${msg.role === 'user' ? 'User' : 'AI Teacher'}:\n${msg.text}\n\n`;
+            // Strip Markdown from each message before adding to formattedNotes
+            const plainText = msg.text
+                .replace(/^#+\s/gm, '') // Remove ATX headings (e.g., # Heading)
+                .replace(/(\*\*|__)(.*?)\1/g, '$2') // Remove bold (e.g., **bold**)
+                .replace(/(\*|_)(.*?)\1/g, '$2') // Remove italics (e.g., *italic*)
+                .replace(/\[(.*?)\]\(.*?\)/g, '$1') // Remove links (e.g., [text](url) -> text)
+                .replace(/`{1,3}(.*?)`{1,3}/g, '$1') // Remove inline code (e.g., `code`)
+                .replace(/^-+\s/gm, '') // Remove list item markers (e.g., - item)
+                .replace(/^\d+\.\s/gm, ''); // Remove ordered list item markers (e.g., 1. item)
+
+            formattedNotes += `## ${msg.role === 'user' ? 'User' : 'AI Teacher'}:\n${plainText}\n\n`;
         });
 
         const blob = new Blob([formattedNotes], { type: 'text/plain;charset=utf-8' });

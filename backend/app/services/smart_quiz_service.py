@@ -79,23 +79,121 @@ async def log_quiz_performance_service(
 
 
 async def create_docx_from_quiz_results(
+
+
     quiz_data: List[Dict[str, Any]],
+
+
     quiz_topic: str,
+
+
     user_score: int,
+
+
     total_questions: int
+
+
 ) -> io.BytesIO:
+
+
     doc = Document()
+
+
     doc.add_heading(f"Quiz Results: {quiz_topic}", 0)
+
+
     doc.add_paragraph(f"Final Score: {user_score}/{total_questions}\n")
 
+
+
+
+
     for idx, q in enumerate(quiz_data):
-        doc.add_heading(f"Q{idx + 1}: {q['question']}", level=2)
-        doc.add_paragraph(f"Options: {', '.join(q['options'])}")
-        doc.add_paragraph(f"Correct Answer: {q['answer']}")
-        doc.add_paragraph(f"Explanation: {q['explanation']}")
+
+
+        doc.add_heading(f"Q{idx + 1}: {q['question'].replace('**', '').replace('__', '')}", level=2)
+
+
+        
+
+
+        # Process options as list items
+
+
+        doc.add_paragraph("Options:")
+
+
+        for option in q['options']:
+
+
+            clean_option = option.replace('**', '').replace('__', '').replace('*', '').replace('_', '')
+
+
+            doc.add_paragraph(clean_option, style='List Bullet')
+
+
+        
+
+
+        # Process Correct Answer
+
+
+        clean_answer = q['answer'].replace('**', '').replace('__', '').replace('*', '').replace('_', '')
+
+
+        doc.add_paragraph(f"Correct Answer: {clean_answer}")
+
+
+        
+
+
+        # Process Explanation
+
+
+        doc.add_paragraph("Explanation:")
+
+
+        for exp_line in q['explanation'].split('\n'):
+
+
+            stripped_exp_line = exp_line.strip()
+
+
+            text_content = stripped_exp_line.replace('**', '').replace('__', '').replace('*', '').replace('_', '')
+
+
+            text_content = text_content.replace(', '')
+
+
+            text_content = re.sub(r'\\[a-zA-Z]+', '', text_content)
+
+
+            text_content = re.sub(r'\{.*?\}', '', text_content)
+
+
+            if text_content:
+
+
+                doc.add_paragraph(text_content)
+
+
+
+
+
         doc.add_paragraph("-" * 20)
 
+
+
+
+
     doc_io = io.BytesIO()
+
+
     doc.save(doc_io)
+
+
     doc_io.seek(0)
+
+
     return doc_io
+

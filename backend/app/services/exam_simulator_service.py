@@ -152,11 +152,40 @@ async def create_docx_from_exam_results(
 
     for idx, q in enumerate(exam_data):
         user_choice = user_answers.get(str(idx))
-        doc.add_heading(f"Q{idx+1}: {q['question']}", level=2)
-        doc.add_paragraph(f"Options: {', '.join(q['options'])}")
-        doc.add_paragraph(f"Your Answer: {user_choice if user_choice else '(No answer)'}")
-        doc.add_paragraph(f"Correct Answer: {q['answer']}")
-        doc.add_paragraph(f"Explanation: {q.get('explanation', 'No explanation provided.')}")
+        
+        # Process Question
+        clean_question = q['question'].replace('**', '').replace('__', '').replace('*', '').replace('_', '')
+        clean_question = clean_question.replace('$', '')
+        clean_question = re.sub(r'\\[a-zA-Z]+', '', clean_question)
+        clean_question = re.sub(r'\{.*?\}', '', clean_question)
+        doc.add_heading(f"Q{idx+1}: {clean_question}", level=2)
+        
+        # Process Options
+        doc.add_paragraph("Options:")
+        for option in q['options']:
+            clean_option = option.replace('**', '').replace('__', '').replace('*', '').replace('_', '')
+            doc.add_paragraph(clean_option, style='List Bullet')
+        
+        # Process User Answer
+        clean_user_choice = user_choice.replace('**', '').replace('__', '').replace('*', '').replace('_', '') if user_choice else '(No answer)'
+        doc.add_paragraph(f"Your Answer: {clean_user_choice}")
+        
+        # Process Correct Answer
+        clean_correct_answer = q['answer'].replace('**', '').replace('__', '').replace('*', '').replace('_', '')
+        doc.add_paragraph(f"Correct Answer: {clean_correct_answer}")
+        
+        # Process Explanation
+        doc.add_paragraph("Explanation:")
+        explanation_text = q.get('explanation', 'No explanation provided.')
+        for exp_line in explanation_text.split('\n'):
+            stripped_exp_line = exp_line.strip()
+            text_content = stripped_exp_line.replace('**', '').replace('__', '').replace('*', '').replace('_', '')
+            text_content = text_content.replace('$', '')
+            text_content = re.sub(r'\\[a-zA-Z]+', '', text_content)
+            text_content = re.sub(r'\{.*?\}', '', text_content)
+            if text_content:
+                doc.add_paragraph(text_content)
+
         doc.add_paragraph("-" * 20)
 
     doc_io = io.BytesIO()
