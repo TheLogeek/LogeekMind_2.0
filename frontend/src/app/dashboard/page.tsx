@@ -152,7 +152,7 @@ const UserDashboardPage = () => {
 
     return (
         <div className={`page-container ${styles.dashboardPageContainer}`}>
-            <h2>📊 Your Performance Dashboard</h2>
+            <h2>Your Performance Dashboard</h2>
 
             <div className={styles.metricsGrid}>
                 <div className={styles.metricCard}><h4>Total Attempts</h4><p>{totalAttempts}</p></div>
@@ -166,13 +166,13 @@ const UserDashboardPage = () => {
                     <Line data={lineChartData} />
                 </div>
                 <div className={styles.chartContainer}>
-                    <h3>📊 Average by Feature</h3>
+                    <h3>Average by Feature</h3>
                     <Bar data={barChartData} />
                 </div>
             </div>
 
             <div className={styles.tableContainer}>
-                <h3>📝 Recent Attempts</h3>
+                <h3>Recent Attempts</h3>
                 <table className={styles.attemptsTable}>
                     <thead>
                         <tr>
