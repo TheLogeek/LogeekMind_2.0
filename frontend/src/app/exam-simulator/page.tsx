@@ -267,7 +267,7 @@ const ExamSimulatorPage = () => {
 
     return (
         <div className={`page-container ${styles.examSimulatorPageContainer}`}>
-            <h2>💻 Exam Simulator</h2>
+            <h2>Exam Simulator</h2>
             <p>Prepare for your exams with customizable mock tests.</p>
 
             {error && <p className={styles.errorText}>{error}</p>}
@@ -299,7 +299,7 @@ const ExamSimulatorPage = () => {
                         </div>
                     </div>
                     <button type="submit" disabled={loading || !courseName.trim() || (!currentUser && guestUsageCount >= GUEST_EXAM_LIMIT)} className={styles.startButton}>
-                        {loading ? 'Preparing Exam...' : 'Start Exam ⏱️'}
+                        {loading ? 'Preparing Exam...' : 'Start Exam'}
                     </button>
                     {!currentUser && (
                         <div className={styles.guestMessage}><p>{`You have used ${guestUsageCount} of ${GUEST_EXAM_LIMIT} guest exams.`} Please <a href="/login">Login</a> or <a href="/signup">Sign Up</a> for unlimited access.</p></div>
@@ -340,7 +340,7 @@ const ExamSimulatorPage = () => {
                         <h3>Score: {examScore} / {examData.length}</h3>
                         <p>{remark}</p>
                     </div>
-                    <h4 className={styles.correctionsSection}>🔍 Answer Key & Explanations</h4>
+                    <h4 className={styles.correctionsSection}>Answer Key & Explanations</h4>
                     {examData.map((q, qIndex) => {
                         const isCorrect = userAnswers[qIndex] === q.answer;
                         return (
