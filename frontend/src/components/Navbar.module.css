@@ -237,6 +237,10 @@
         display: none; /* Hide hamburger on desktop */
     }
 
+    .sidebarToggleButton {
+        display: block; /* Show sidebar toggle on desktop */
+    }
+
     .navbarNavDesktop, .navbarAuthDesktop {
         display: flex; /* Show desktop nav and auth on desktop */
         gap: var(--spacing-lg); /* Add gap for desktop links */
@@ -249,4 +253,4 @@
     .mobileNavOverlay {
         display: none !important; /* Ensure mobile overlay is hidden on desktop */
     }
-}}
+}
