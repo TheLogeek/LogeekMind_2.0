@@ -8,6 +8,9 @@ import styles from './Navbar.module.css';
 import { useUser } from '../app/layout'; // Import the useUser hook
 import axios from 'axios'; // Import axios for check-admin-status
 
+// Define API_BASE_URL within the file's scope, using environment variable with a fallback
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000";
+
 interface NavbarProps {
     toggleSidebar: () => void;
     isSidebarOpen: boolean;
@@ -17,7 +20,6 @@ const Navbar: React.FC<NavbarProps> = ({ toggleSidebar, isSidebarOpen }) => {
     const router = useRouter();
     const [isNavOpen, setIsNavOpen] = useState(false);
     const { currentUser, setCurrentUser } = useUser(); // Use the global user context
-    // Removed isAdmin state and useEffect - admin status is handled by Sidebar and not needed for Navbar display logic
 
     // Access username directly from currentUser
     const username = currentUser?.username || "Guest";
@@ -139,8 +141,13 @@ const Navbar: React.FC<NavbarProps> = ({ toggleSidebar, isSidebarOpen }) => {
                         <hr className={styles.linkSeparator}/>
                         <h4 className={styles.categoryTitle}>Community</h4>
                         <Link href="/community-chat" className={styles.navLink} onClick={handleNavLinkClick}>Community Chat</Link>
-                        {/* Admin link handled by AdminLink component */}
-                        <AdminLink onNavLinkClick={handleNavLinkClick} />
+                        {/* Admin Link for Mobile (isAdmin status is checked in Sidebar directly now) */}
+                        {/* Admin status should ideally be passed down or checked by Sidebar itself */}
+                        {/* For simplicity, if Sidebar had admin check, we'll let it handle that */}
+                        {/* Re-adding isAdmin check here for mobile menu completeness */}
+                        {currentUser && (
+                            <AdminLink onNavLinkClick={handleNavLinkClick} />
+                        )}
                     </div>
                 </div>
             )}
@@ -162,7 +169,7 @@ const AdminLink: React.FC<{ onNavLinkClick: () => void }> = ({ onNavLinkClick })
                     if (accessToken) {
                         const response = await axios.get(`${API_BASE_URL}/auth/check-admin`, {
                             headers: {
-                                Authorization: `Bearer ${accessToken}`,
+                                Authorization: `Bearer ${accessToken`,
                             },
                         });
                         setIsAdmin(response.data.is_admin);

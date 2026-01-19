@@ -10,10 +10,15 @@ import { useUser } from '../layout'; // Import useUser hook from layout
 const LoginPage = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [rememberMe, setRememberMe] = useState(false); // New state for remember me
+    const [rememberMe, setRememberMe] = useState(false);
+    const [isPasswordVisible, setIsPasswordVisible] = useState(false);
     const [message, setMessage] = useState('');
     const router = useRouter();
-    const { setCurrentUser } = useUser(); // Use the global user context
+    const { setCurrentUser } = useUser();
+
+    const togglePasswordVisibility = () => {
+        setIsPasswordVisible(prevState => !prevState);
+    };
 
     const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -21,8 +26,8 @@ const LoginPage = () => {
         try {
             const response = await AuthService.login(email, password, rememberMe);
             if (response.success && response.user) {
-                setCurrentUser(response.user); // Update global user state
-                router.push('/'); // Redirect to home page on successful login
+                setCurrentUser(response.user);
+                router.push('/');
             } else {
                 setMessage(response.message || 'Login failed.');
             }
@@ -47,21 +52,24 @@ const LoginPage = () => {
                         type="email"
                         id="email"
                         value={email}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
+                        onChange={(e) => setEmail(e.target.value)}
                         required
                         className={styles.formInput}
                     />
                 </div>
-                <div className={styles.formGroup}>
+                <div className={`${styles.formGroup} ${styles.passwordWrapper}`}>
                     <label htmlFor="password">Password:</label>
                     <input
-                        type="password"
+                        type={isPasswordVisible ? "text" : "password"}
                         id="password"
                         value={password}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
+                        onChange={(e) => setPassword(e.target.value)}
                         required
                         className={styles.formInput}
                     />
+                    <button type="button" onClick={togglePasswordVisibility} className={styles.togglePassword}>
+                        {isPasswordVisible ? '👁️' : '👁️'}
+                    </button>
                 </div>
                 {/* Remember Me Checkbox */}
                 <div className={styles.rememberMeGroup}>
@@ -69,7 +77,7 @@ const LoginPage = () => {
                         type="checkbox"
                         id="rememberMe"
                         checked={rememberMe}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setRememberMe(e.target.checked)}
+                        onChange={(e) => setRememberMe(e.target.checked)}
                         className={styles.rememberMeCheckbox}
                     />
                     <label htmlFor="rememberMe">Remember Me</label>
@@ -78,13 +86,11 @@ const LoginPage = () => {
             </form>
             {message && <p className={styles.message}>{message}</p>}
             <p className={styles.forgotPasswordLink}>
-                <a onClick={() => router.push('/forgot-password')}>Forgot Password?</a> {/* Use router.push */}
+                <a onClick={() => router.push('/forgot-password')}>Forgot Password?</a>
             </p>
             <p className={styles.signupLink}>
-                Don't have an account? <a onClick={() => router.push('/signup')}>Sign Up</a> {/* Use router.push */}
+                Don't have an account? <a onClick={() => router.push('/signup')}>Sign Up</a>
             </p>
         </div>
     );
 };
-
-export default LoginPage;

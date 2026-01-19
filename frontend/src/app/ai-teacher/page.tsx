@@ -156,6 +156,8 @@ const AITeacherPage = () => {
                 .replace(/\s{2,}/g, ' ') // Normalize multiple spaces
                 .replace(/\n{2,}/g, '\n\n') // Normalize multiple newlines
                 .trim();
+            
+            formattedNotes += `## ${msg.role === 'user' ? 'User' : 'AI Teacher'}:\n${plainText}\n\n`;
         });
 
         const blob = new Blob([formattedNotes], { type: 'text/plain;charset=utf-8' });
