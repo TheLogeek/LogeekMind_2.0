@@ -146,7 +146,7 @@ const Navbar: React.FC<NavbarProps> = ({ toggleSidebar, isSidebarOpen }) => {
                         {/* For simplicity, if Sidebar had admin check, we'll let it handle that */}
                         {/* Re-adding isAdmin check here for mobile menu completeness */}
                         {currentUser && (
-                            <AdminLink onNavLinkClick={handleNavLinkClick} />
+                            <AdminLink isNavOpen={isNavOpen} onNavLinkClick={handleNavLinkClick} />
                         )}
                     </div>
                 </div>
