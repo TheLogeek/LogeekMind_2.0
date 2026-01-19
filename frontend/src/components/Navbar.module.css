@@ -203,8 +203,19 @@
 
   .navbarAuthMobile {
       display: flex;
-      align-items: center;
-      gap: var(--spacing-sm);
+      flex-direction: column; /* Stack username and button vertically */
+      align-items: flex-end; /* Align to the right */
+      gap: 2px; /* Small gap between username and button */
+  }
+
+  .navbarAuthMobile .welcomeText {
+      font-size: 0.9em;
+  }
+  
+  .navbarAuthMobile .authButton,
+  .navbarAuthMobile .logoutButton {
+      padding: 5px 10px;
+      font-size: 0.9em;
   }
 
   .hamburgerMenu {
@@ -229,6 +240,11 @@
     text-align: left;
     padding: var(--spacing-sm);
     box-sizing: border-box;
+  }
+
+  /* Hide auth section within the overlay as it's now in the header */
+  .mobileNavOverlay .mobileNavAuth {
+      display: none;
   }
 }
 

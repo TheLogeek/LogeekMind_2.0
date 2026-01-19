@@ -102,7 +102,7 @@ async def grade_exam_and_log_performance(
     total_questions = len(exam_data)
 
     for idx, q in enumerate(exam_data):
-        if user_answers.get(str(idx)) == q.get('answer'):
+        if user_answers.get(str(idx)) == q.answer:
             score += 1
 
     grade, remark = calculate_grade(score, total_questions)

@@ -55,6 +55,11 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         <div className={`${styles.sidebar} ${isOpen ? styles.open : styles.closed}`}>
             <h2 className={styles.sidebarH2}>
                 <Link href="/" onClick={onClose}>LogeekMind</Link>
+                {isOpen && ( // Render button only if sidebar is open
+                    <button type="button" className={styles.collapseButton} onClick={onClose}>
+                        ❮
+                    </button>
+                )}
             </h2>
             <nav>
                 <Link href="/dashboard" className={getNavLinkClass('/dashboard')} onClick={onClose}>Dashboard</Link>
@@ -83,11 +88,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                     </>
                 )}
             </nav>
-            {isOpen && (
-                <button type="button" className={styles.collapseButton} onClick={onClose}>
-                    ❮
-                </button>
-            )}
         </div>
     );
 };

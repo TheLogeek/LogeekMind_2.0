@@ -77,12 +77,18 @@ const Navbar: React.FC<NavbarProps> = ({ toggleSidebar, isSidebarOpen }) => {
                 )}
             </div>
 
-            {/* Mobile Auth Buttons - Now always in header for mobile */}
+            {/* Mobile Auth Buttons - Always in header for mobile */}
             <div className={styles.navbarAuthMobile}>
                 {currentUser ? (
-                    <span className={styles.welcomeText}>{username}</span>
+                    <>
+                        <span className={styles.welcomeText}>{username}</span>
+                        <button type="button" onClick={handleLogout} className={styles.logoutButton}>Log Out</button>
+                    </>
                 ) : (
-                    <button type="button" onClick={() => router.push('/login')} className={styles.authButton}>Login</button>
+                    <>
+                        <span className={styles.welcomeText}>Guest</span>
+                        <button type="button" onClick={() => router.push('/login')} className={styles.authButton}>Login</button>
+                    </>
                 )}
             </div>
 
