@@ -87,7 +87,7 @@ const Navbar: React.FC<NavbarProps> = ({ toggleSidebar, isSidebarOpen }) => {
                 ) : (
                     <>
                         <span className={styles.welcomeText}>Guest</span>
-                        <button type="button" onClick={() => router.push('/login')} className={styles.authButton}>Login</button>
+                        <button type="button" onClick={() => router.push('/login')} className={styles.authButton}>Login / Sign Up</button>
                     </>
                 )}
             </div>
