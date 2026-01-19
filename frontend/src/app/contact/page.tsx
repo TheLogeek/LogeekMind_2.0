@@ -1,9 +1,28 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import styles from './ContactPage.module.css'; // Import the CSS Module
 
 const ContactPage = () => {
+    const [name, setName] = useState('');
+    const [email, setEmail] = useState('');
+    const [subject, setSubject] = useState('');
+    const [messageBody, setMessageBody] = useState('');
+
+    const handleSendMessage = (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        
+        // Construct the mailto link
+        const recipient = 'logeekmind@gmail.com';
+        const mailtoSubject = encodeURIComponent(subject);
+        const mailtoBody = encodeURIComponent(
+            `Name: ${name}\nEmail: ${email}\n\nMessage:\n${messageBody}`
+        );
+        
+        // Open the user's default email client
+        window.location.href = `mailto:${recipient}?subject=${mailtoSubject}&body=${mailtoBody}`;
+    };
+
     return (
         <div className={`page-container ${styles.contactPageContainer}`}>
             <h2 className={styles.heading}>Contact LogeekMind Support</h2>
@@ -31,22 +50,54 @@ const ContactPage = () => {
             </div>
 
             <h3 className={styles.messageFormHeading}>Send Us a Message</h3>
-            <form className={styles.messageForm}>
+            <form className={styles.messageForm} onSubmit={handleSendMessage}>
                 <div className={styles.formGroup}>
                     <label htmlFor="name" className={styles.formLabel}>Your Name:</label>
-                    <input type="text" id="name" name="name" className={styles.formInput} placeholder="John Doe" />
+                    <input 
+                        type="text" 
+                        id="name" 
+                        name="name" 
+                        className={styles.formInput} 
+                        placeholder="John Doe" 
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                    />
                 </div>
                 <div className={styles.formGroup}>
                     <label htmlFor="email" className={styles.formLabel}>Your Email:</label>
-                    <input type="email" id="email" name="email" className={styles.formInput} placeholder="your.email@example.com" />
+                    <input 
+                        type="email" 
+                        id="email" 
+                        name="email" 
+                        className={styles.formInput} 
+                        placeholder="your.email@example.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                    />
                 </div>
                 <div className={styles.formGroup}>
                     <label htmlFor="subject" className={styles.formLabel}>Subject:</label>
-                    <input type="text" id="subject" name="subject" className={styles.formInput} placeholder="Regarding LogeekMind Feature" />
+                    <input 
+                        type="text" 
+                        id="subject" 
+                        name="subject" 
+                        className={styles.formInput} 
+                        placeholder="Regarding LogeekMind Feature" 
+                        value={subject}
+                        onChange={(e) => setSubject(e.target.value)}
+                    />
                 </div>
                 <div className={styles.formGroup}>
                     <label htmlFor="message" className={styles.formLabel}>Message:</label>
-                    <textarea id="message" name="message" rows={6} className={styles.formInput} placeholder="Type your message here..."></textarea>
+                    <textarea 
+                        id="message" 
+                        name="message" 
+                        rows={6} 
+                        className={styles.formInput} 
+                        placeholder="Type your message here..."
+                        value={messageBody}
+                        onChange={(e) => setMessageBody(e.target.value)}
+                    ></textarea>
                 </div>
                 <button type="submit" className={styles.submitButton}>
                     Send Message

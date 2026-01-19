@@ -35,9 +35,7 @@ const Navbar: React.FC<NavbarProps> = ({ toggleSidebar, isSidebarOpen }) => {
     };
 
     const handleNavLinkClick = () => {
-        if (isNavOpen) { // Only close if mobile nav is open
-            setIsNavOpen(false); 
-        }
+        setIsNavOpen(false); // Close mobile nav when a link is clicked
     };
 
     return (
@@ -79,28 +77,21 @@ const Navbar: React.FC<NavbarProps> = ({ toggleSidebar, isSidebarOpen }) => {
                 )}
             </div>
 
+            {/* Mobile Auth Buttons - Now always in header for mobile */}
+            <div className={styles.navbarAuthMobile}>
+                {currentUser ? (
+                    <span className={styles.welcomeText}>{username}</span>
+                ) : (
+                    <button type="button" onClick={() => router.push('/login')} className={styles.authButton}>Login</button>
+                )}
+            </div>
+
             {/* Mobile Full-Screen Overlay Nav */}
             <div className={`${styles.mobileNavOverlay} ${isNavOpen ? styles.open : ''}`}>
                 <button type="button" className={styles.mobileNavCloseButton} onClick={handleMobileNavToggle}>
                     ✕
                 </button>
                 <div className={styles.mobileNavContent}>
-                    {/* Auth Section for Mobile */}
-                    <div className={styles.mobileNavAuth}>
-                        {currentUser ? (
-                            <>
-                                <span className={styles.welcomeText}>{username}</span>
-                                <button type="button" onClick={handleLogout} className={styles.logoutButton}>Log Out</button>
-                            </>
-                        ) : (
-                            <>
-                                <span className={styles.welcomeText}>Guest</span>
-                                <button type="button" onClick={() => router.push('/login')} className={styles.authButton}>Login / Sign Up</button>
-                            </>
-                        )}
-                    </div>
-                    <hr className={styles.linkSeparator} />
-
                     {/* Main Nav Links for Mobile */}
                     <Link href="/" className={styles.navLink} onClick={handleNavLinkClick}>Home</Link>
                     <Link href="/dashboard" className={styles.navLink} onClick={handleNavLinkClick}>Dashboard</Link>
@@ -127,7 +118,7 @@ const Navbar: React.FC<NavbarProps> = ({ toggleSidebar, isSidebarOpen }) => {
                     
                     {/* Admin Link for Mobile */}
                     {currentUser && (
-                        <AdminLink isNavOpen={isNavOpen} onNavLinkClick={handleNavLinkClick} />
+                        <AdminLink onNavLinkClick={handleNavLinkClick} />
                     )}
                 </div>
             </div>
@@ -135,10 +126,11 @@ const Navbar: React.FC<NavbarProps> = ({ toggleSidebar, isSidebarOpen }) => {
     );
 };
 
-// AdminLink component remains the same
-const AdminLink: React.FC<{ isNavOpen: boolean, onNavLinkClick: () => void }> = ({ isNavOpen, onNavLinkClick }) => {
+// AdminLink component to check admin status for mobile menu
+const AdminLink: React.FC<{ onNavLinkClick: () => void }> = ({ onNavLinkClick }) => {
     const [isAdmin, setIsAdmin] = useState(false);
     const { currentUser } = useUser();
+    const router = useRouter(); // Use useRouter in AdminLink
 
     useEffect(() => {
         const checkAdminStatus = async () => {
@@ -148,7 +140,7 @@ const AdminLink: React.FC<{ isNavOpen: boolean, onNavLinkClick: () => void }> = 
                     if (accessToken) {
                         const response = await axios.get(`${API_BASE_URL}/auth/check-admin`, {
                             headers: {
-                                Authorization: `Bearer ${accessToken}`,
+                                Authorization: `Bearer ${accessToken}`, // Corrected Authorization header
                             },
                         });
                         setIsAdmin(response.data.is_admin);
@@ -163,12 +155,10 @@ const AdminLink: React.FC<{ isNavOpen: boolean, onNavLinkClick: () => void }> = 
                 setIsAdmin(false);
             }
         };
-        if (isNavOpen && currentUser) {
-            checkAdminStatus();
-        } else if (!currentUser) {
-            setIsAdmin(false);
-        }
-    }, [currentUser, isNavOpen]);
+        // Check admin status whenever currentUser changes
+        // This check is now always triggered when currentUser changes, not just if nav is open
+        checkAdminStatus();
+    }, [currentUser]);
 
     if (isAdmin && currentUser) {
         return (

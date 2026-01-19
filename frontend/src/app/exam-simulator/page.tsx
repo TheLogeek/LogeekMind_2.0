@@ -43,7 +43,7 @@ const ExamSimulatorPage = () => {
         return typeof window !== 'undefined' ? parseInt(localStorage.getItem(GUEST_USAGE_KEY) || '0', 10) : 0;
     });
 
-    const handleSubmitExam = useCallback(async () => {
+    const handleSubmitExam = async () => {
         setError('');
         setLoading(true);
         try {
@@ -82,7 +82,7 @@ const ExamSimulatorPage = () => {
         } finally {
             setLoading(false);
         }
-    }, [currentUser, examData, userAnswers, courseName, topic]);
+    };
 
     useEffect(() => {
         setCurrentUser(AuthService.getCurrentUser());

@@ -64,6 +64,27 @@
   font-weight: bold;
 }
 
+.collapseButton {
+    display: none; /* Hidden by default */
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    background-color: var(--primary-gradient-start);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    font-size: 18px;
+    cursor: pointer;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    transition: background-color 0.3s ease;
+}
+
+.collapseButton:hover {
+    background-color: var(--primary-gradient-end);
+}
+
 /* Mobile Responsiveness */
 @media (max-width: 768px) {
   .sidebar {
@@ -89,4 +110,10 @@
     width: 250px; /* Keep mobile width fixed when closed */
     padding: var(--spacing-md); /* Keep mobile padding */
   }
+}
+
+@media (min-width: 769px) {
+    .collapseButton {
+        display: block; /* Show only on desktop */
+    }
 }

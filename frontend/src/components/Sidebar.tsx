@@ -83,6 +83,11 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                     </>
                 )}
             </nav>
+            {isOpen && (
+                <button type="button" className={styles.collapseButton} onClick={onClose}>
+                    ❮
+                </button>
+            )}
         </div>
     );
 };
