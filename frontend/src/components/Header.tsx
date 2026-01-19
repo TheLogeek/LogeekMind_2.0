@@ -44,7 +44,7 @@ const Header = () => {
             <div style={{ textAlign: 'right' }}>
                 {currentUser ? (
                     <>
-                        <div style={{ fontSize: '18px', marginBottom: '10px' }}>👋 {username}</div>
+                        <div style={{ fontSize: '18px', marginBottom: '10px' }}>{username}</div>
                         <button
                             type="button" // Added type to prevent form submission
                             onClick={handleLogout}
