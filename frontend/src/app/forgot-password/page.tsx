@@ -5,11 +5,6 @@ import { useRouter } from 'next/navigation'; // Use useRouter from next/navigati
 import axios, { AxiosError } from 'axios';
 import styles from './ForgotPasswordPage.module.css'; // Import the CSS Module
 
-import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import axios, { AxiosError } from 'axios';
-import styles from './ForgotPasswordPage.module.css';
-
 const ForgotPasswordPage = () => {
     const [email, setEmail] = useState('');
     const [message, setMessage] = useState('');

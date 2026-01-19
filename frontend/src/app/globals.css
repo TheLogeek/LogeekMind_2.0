@@ -72,59 +72,19 @@ body {
   min-height: 100vh;
 }
 
-.content-area-container {
-  display: flex;
-  flex-grow: 1;
-}
-
 .main-content-area {
   flex-grow: 1;
   padding: var(--spacing-md);
   position: relative;
-  margin-left: 280px; /* Default margin for open sidebar on desktop */
-  transition: margin-left 0.3s ease; /* For desktop sidebar shift */
+  /* margin-left: 280px; Removed as sidebar is gone */
+  /* transition: margin-left 0.3s ease; Removed as sidebar is gone */
 }
 
-.main-layout-container.sidebar-closed .main-content-area {
-  margin-left: 0; /* No margin when sidebar is closed on desktop */
-}
+/* Removed: .content-area-container */
+/* Removed: .main-layout-container.sidebar-closed .main-content-area */
+/* Removed: .mobile-backdrop */
+/* Removed: .sidebar-toggle-button */
 
-/* Mobile backdrop for when sidebar is open */
-.mobile-backdrop {
-  display: none; /* Hidden by default */
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  z-index: 1000; /* Below sidebar toggle, above other content */
-}
-
-/* Sidebar Toggle Button */
-.sidebar-toggle-button {
-  position: absolute;
-  top: 15px;
-  left: 15px;
-  background-color: var(--primary-gradient-start);
-  color: white;
-  border: none;
-  border-radius: 5px;
-  width: 40px;
-  height: 40px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-size: 24px;
-  cursor: pointer;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-  z-index: 1002;
-  transition: background-color 0.3s ease, left 0.3s ease;
-}
-
-.sidebar-toggle-button:hover {
-  background-color: var(--primary-gradient-end);
-}
 
 /* Generic Page Container for consistent layout */
 .page-container {
@@ -152,19 +112,9 @@ body {
     margin-left: 0 !important; /* Override desktop margin on mobile */
   }
 
-  .content-area-container {
-    flex-direction: column; /* Stack content vertically on mobile */
-  }
-
-  /* When sidebar is open, show backdrop */
-  .mobile-backdrop {
-    display: block; /* Show backdrop on mobile when sidebar is active */
-  }
-
-  .sidebar-toggle-button {
-    left: 15px; /* Fixed position on mobile */
-    top: 15px;
-  }
+  /* Removed: .content-area-container */
+  /* Removed: When sidebar is open, show backdrop */
+  /* Removed: .sidebar-toggle-button */
 
   .page-container {
     margin: var(--spacing-xl) auto;

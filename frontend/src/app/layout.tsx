@@ -7,15 +7,7 @@ import "./globals.css";
 
 // Import components
 import Navbar from '../components/Navbar';
-import Sidebar from '../components/Sidebar';
-import SidebarToggleButton from '../components/SidebarToggleButton';
 
-interface User {
-    id: string;
-    email: string;
-    username?: string; // profile contains username, so it might be on the user object too
-    // Add other user properties if available
-}
 
 // --- User Context for Global State ---
 // This context will provide the currentUser and a way to set it to all components.
@@ -47,7 +39,6 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   // --- Auto-login Effect ---
@@ -68,24 +59,6 @@ export default function RootLayout({
     initializeUserSession();
   }, []); // Empty dependency array ensures this runs only once on mount
 
-  // --- Sidebar Responsive Logic ---
-  useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth < 768) {
-        setIsSidebarOpen(false);
-      } else {
-        setIsSidebarOpen(true);
-      }
-    };
-    window.addEventListener('resize', handleResize);
-    handleResize();
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  const toggleSidebar = () => {
-    setIsSidebarOpen(!isSidebarOpen);
-  };
-
   return (
     <html lang="en">
       <head>
@@ -99,16 +72,11 @@ export default function RootLayout({
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         {/* Provide the user context to the entire application */}
         <UserContext.Provider value={{ currentUser, setCurrentUser }}>
-          <div className={`main-layout-container ${!isSidebarOpen ? 'sidebar-closed' : ''}`}>
+          <div className={`main-layout-container`}>
             <Navbar />
-            <div className="content-area-container">
-              <Sidebar isOpen={isSidebarOpen} onClose={toggleSidebar} />
-              {isSidebarOpen && typeof window !== 'undefined' && window.innerWidth < 768 && <div className="mobile-backdrop" onClick={toggleSidebar}></div>}
-              <SidebarToggleButton toggleSidebar={toggleSidebar} isSidebarOpen={isSidebarOpen} />
-              <main className="main-content-area">
+            <main className="main-content-area">
                 {children}
-              </main>
-            </div>
+            </main>
           </div>
         </UserContext.Provider>
       </body>

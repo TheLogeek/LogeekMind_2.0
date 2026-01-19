@@ -50,6 +50,21 @@
   color: var(--primary-gradient-start);
 }
 
+.categoryTitle {
+    font-size: var(--font-size-md);
+    font-weight: 600;
+    color: var(--text-dark);
+    margin-top: var(--spacing-md);
+    margin-bottom: var(--spacing-sm);
+    padding-left: var(--spacing-sm); /* Indent category titles */
+}
+
+.linkSeparator {
+    border: none;
+    border-top: 1px solid var(--border-light);
+    margin: var(--spacing-md) 0;
+}
+
 .navbarAuth {
   display: flex;
   align-items: center;
@@ -122,7 +137,7 @@
     padding: var(--spacing-xl);
     padding-top: calc(var(--navbar-height) + var(--spacing-md)); /* Space below main navbar */
     box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-    align-items: center;
+    align-items: flex-start; /* Align items to the left */
     justify-content: flex-start;
     gap: var(--spacing-md);
     overflow-y: auto; /* Enable scrolling for nav items if too many */
@@ -137,16 +152,32 @@
   .navLink {
     font-size: var(--font-size-xl);
     padding: var(--spacing-sm);
-    text-align: center; /* Center text for mobile view */
+    text-align: left; /* Align text to the left for mobile view */
+    width: 100%;
   }
 
   .navbarAuth {
-    display: flex; /* Always display in the flow within the .navbarNav.open */
+    display: none; /* Hide auth buttons by default within the .navbarAuth container */
     flex-direction: column;
     width: 100%;
     margin-top: var(--spacing-md);
     gap: var(--spacing-sm); /* Add gap for buttons */
-    align-items: center; /* Center buttons within the column */
+    align-items: flex-start; /* Center buttons within the column */
+  }
+
+  .navbarAuth.open {
+    display: flex; /* Show auth buttons when mobile nav is open */
+  }
+
+  .welcomeText {
+    padding-left: var(--spacing-sm); /* Indent welcome text */
+    width: 100%;
+    text-align: left;
+  }
+
+  .logoutButton, .authButton {
+    width: calc(100% - var(--spacing-sm) * 2); /* Adjust width considering padding */
+    margin-left: var(--spacing-sm); /* Indent buttons */
   }
 
   .hamburgerMenu {
