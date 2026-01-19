@@ -109,7 +109,8 @@ async def send_password_reset_email(supabase: Client, email: str, redirect_to: s
         return {"success": True, "message": "Password reset email sent successfully (if user exists)."}
     except Exception as e:
         print(f"Error sending password reset email: {e}")
-        return {"success": False, "message": f"Failed to send password reset email: {e}"}
+        # Temporarily return the full exception message for debugging purposes
+        return {"success": False, "message": f"Failed to send password reset email: {str(e)}"}
 
 async def update_password(supabase: Client, access_token: str, new_password: str) -> Dict[str, Any]:
     try:
