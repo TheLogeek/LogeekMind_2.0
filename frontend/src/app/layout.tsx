@@ -8,6 +8,12 @@ import "./globals.css";
 // Import components
 import Navbar from '../components/Navbar';
 
+interface User {
+    id: string;
+    email: string;
+    username?: string; // profile contains username, so it might be on the user object too
+    // Add other user properties if available
+}
 
 // --- User Context for Global State ---
 // This context will provide the currentUser and a way to set it to all components.
