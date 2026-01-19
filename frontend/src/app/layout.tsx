@@ -1,7 +1,20 @@
+'use client';
+
+import React, { useState, useEffect, createContext, useContext } from 'react';
+import AuthService from '../services/AuthService'; // Import AuthService
+import { Geist, Geist_Mono } from "next/font/google";
+import "./globals.css";
+
 // Import components
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 
+interface User {
+    id: string;
+    email: string;
+    username?: string; // profile contains username, so it might be on the user object too
+    // Add other user properties if available
+}
 
 // --- User Context for Global State ---
 // This context will provide the currentUser and a way to set it to all components.

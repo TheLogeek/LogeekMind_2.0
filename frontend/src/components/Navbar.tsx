@@ -6,8 +6,7 @@ import { useRouter } from 'next/navigation';
 import AuthService from '../services/AuthService';
 import styles from './Navbar.module.css';
 import { useUser } from '../app/layout'; // Import the useUser hook
-// import axios from 'axios'; // No longer needed directly in Navbar
-// const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000"; // No longer needed directly in Navbar
+import axios from 'axios'; // Import axios for check-admin-status
 
 interface NavbarProps {
     toggleSidebar: () => void;
@@ -31,25 +30,25 @@ const Navbar: React.FC<NavbarProps> = ({ toggleSidebar, isSidebarOpen }) => {
 
     const handleMobileNavToggle = () => {
         setIsNavOpen(!isNavOpen);
-        // Toggle the desktop sidebar only if on desktop
-        if (window.innerWidth >= 768) {
-            toggleSidebar();
-        }
     };
 
     const handleNavLinkClick = () => {
-        if (window.innerWidth < 768) { // Only close mobile nav on mobile
-            setIsNavOpen(false); 
-        }
+        setIsNavOpen(false); // Close mobile nav when a link is clicked
     };
 
     return (
         <nav className={styles.navbar}>
             <div className={styles.navbarLeft}>
                 {/* Hamburger menu for mobile, Desktop sidebar toggle for desktop */}
-                <button type="button" className={styles.hamburgerMenu} onClick={handleMobileNavToggle}>
-                    {isNavOpen ? '✕' : '☰'}
-                </button>
+                {typeof window !== 'undefined' && window.innerWidth < 768 ? ( // Hamburger on mobile
+                    <button type="button" className={styles.hamburgerMenu} onClick={handleMobileNavToggle}>
+                        {isNavOpen ? '✕' : '☰'}
+                    </button>
+                ) : ( // Sidebar toggle for desktop
+                    <button type="button" className={styles.sidebarToggleButton} onClick={toggleSidebar}>
+                        {isSidebarOpen ? '❮' : '❯'}
+                    </button>
+                )}
                 <Link href="/" className={styles.navbarLogo}>
                     <span className={styles.navbarLogoSpan1}></span>
                     <span className={styles.navbarLogoSpan2}>    LogeekMind</span>
@@ -57,38 +56,42 @@ const Navbar: React.FC<NavbarProps> = ({ toggleSidebar, isSidebarOpen }) => {
             </div>
 
             {/* Desktop Navigation Links (Visible only on desktop) */}
-            <div className={styles.navbarNavDesktop}>
-                <Link href="/" className={styles.navLink} onClick={handleNavLinkClick}>Home</Link>
-                <Link href="/dashboard" className={styles.navLink} onClick={handleNavLinkClick}>Dashboard</Link>
-                <Link href="/contact" className={styles.navLink} onClick={handleNavLinkClick}>Contact</Link>
-            </div>
+            {typeof window !== 'undefined' && window.innerWidth >= 768 && (
+                <div className={styles.navbarNavDesktop}>
+                    <Link href="/" className={styles.navLink} onClick={handleNavLinkClick}>Home</Link>
+                    <Link href="/dashboard" className={styles.navLink} onClick={handleNavLinkClick}>Dashboard</Link>
+                    <Link href="/contact" className={styles.navLink} onClick={handleNavLinkClick}>Contact</Link>
+                </div>
+            )}
 
             {/* Desktop Auth Buttons (Visible only on desktop) */}
-            <div className={styles.navbarAuthDesktop}>
-                {currentUser ? (
-                    <>
-                        <span className={styles.welcomeText}>{username}</span>
-                        <button
-                            type="button"
-                            onClick={handleLogout}
-                            className={styles.logoutButton}
-                        >
-                            Log Out
-                        </button>
-                    </>
-                ) : (
-                    <>
-                        <span className={styles.welcomeText}>Guest</span>
-                        <button
-                            type="button"
-                            onClick={() => router.push('/login')}
-                            className={styles.authButton}
-                        >
-                            Login / Sign Up
-                        </button>
-                    </>
-                )}
-            </div>
+            {typeof window !== 'undefined' && window.innerWidth >= 768 && (
+                <div className={styles.navbarAuthDesktop}>
+                    {currentUser ? (
+                        <>
+                            <span className={styles.welcomeText}>{username}</span>
+                            <button
+                                type="button"
+                                onClick={handleLogout}
+                                className={styles.logoutButton}
+                            >
+                                Log Out
+                            </button>
+                        </>
+                    ) : (
+                        <>
+                            <span className={styles.welcomeText}>Guest</span>
+                            <button
+                                type="button"
+                                onClick={() => router.push('/login')}
+                                className={styles.authButton}
+                            >
+                                Login / Sign Up
+                            </button>
+                        </>
+                    )}
+                </div>
+            )}
 
             {/* Mobile Full-Screen Overlay Nav (Visible only on mobile when open) */}
             {isNavOpen && (
@@ -136,13 +139,8 @@ const Navbar: React.FC<NavbarProps> = ({ toggleSidebar, isSidebarOpen }) => {
                         <hr className={styles.linkSeparator}/>
                         <h4 className={styles.categoryTitle}>Community</h4>
                         <Link href="/community-chat" className={styles.navLink} onClick={handleNavLinkClick}>Community Chat</Link>
-                        {/* Admin Link for Mobile (isAdmin status is checked in Sidebar directly now) */}
-                        {/* Admin status should ideally be passed down or checked by Sidebar itself */}
-                        {/* For simplicity, if Sidebar had admin check, we'll let it handle that */}
-                        {/* Re-adding isAdmin check here for mobile menu completeness */}
-                        {currentUser && (
-                            <AdminLink isNavOpen={isNavOpen} onNavLinkClick={handleNavLinkClick} />
-                        )}
+                        {/* Admin link handled by AdminLink component */}
+                        <AdminLink onNavLinkClick={handleNavLinkClick} />
                     </div>
                 </div>
             )}
@@ -151,9 +149,10 @@ const Navbar: React.FC<NavbarProps> = ({ toggleSidebar, isSidebarOpen }) => {
 };
 
 // New AdminLink component to check admin status for mobile menu
-const AdminLink: React.FC<{ isNavOpen: boolean, onNavLinkClick: () => void }> = ({ isNavOpen, onNavLinkClick }) => {
+const AdminLink: React.FC<{ onNavLinkClick: () => void }> = ({ onNavLinkClick }) => {
     const [isAdmin, setIsAdmin] = useState(false);
     const { currentUser } = useUser();
+    const router = useRouter(); // Use useRouter in AdminLink
 
     useEffect(() => {
         const checkAdminStatus = async () => {
@@ -178,13 +177,9 @@ const AdminLink: React.FC<{ isNavOpen: boolean, onNavLinkClick: () => void }> = 
                 setIsAdmin(false);
             }
         };
-        // Only check admin status if the nav is open and user is logged in
-        if (isNavOpen && currentUser) {
-            checkAdminStatus();
-        } else if (!currentUser) {
-            setIsAdmin(false);
-        }
-    }, [currentUser, isNavOpen]);
+        // Check admin status whenever currentUser changes
+        checkAdminStatus();
+    }, [currentUser]);
 
     if (isAdmin && currentUser) {
         return (
