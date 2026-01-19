@@ -162,7 +162,7 @@ const AITeacherPage = () => {
 
     return (
         <div className={`page-container ${styles.aiTeacherPageContainer}`}>
-            <h2>🧠 Your AI Teacher</h2>
+            <h2>Your AI Teacher</h2>
             <p>Struggling with a topic? Ask your teacher anything!</p>
 
             <div className={styles.chatWindow}>
