@@ -35,22 +35,22 @@ const Navbar: React.FC<NavbarProps> = ({ toggleSidebar, isSidebarOpen }) => {
     };
 
     const handleNavLinkClick = () => {
-        setIsNavOpen(false); // Close mobile nav when a link is clicked
+        if (isNavOpen) { // Only close if mobile nav is open
+            setIsNavOpen(false); 
+        }
     };
 
     return (
         <nav className={styles.navbar}>
             <div className={styles.navbarLeft}>
-                {/* Hamburger menu for mobile, Desktop sidebar toggle for desktop */}
-                {typeof window !== 'undefined' && window.innerWidth < 768 ? ( // Hamburger on mobile
-                    <button type="button" className={styles.hamburgerMenu} onClick={handleMobileNavToggle}>
-                        {isNavOpen ? '✕' : '☰'}
-                    </button>
-                ) : ( // Sidebar toggle for desktop
-                    <button type="button" className={styles.sidebarToggleButton} onClick={toggleSidebar}>
-                        {isSidebarOpen ? '❮' : '❯'}
-                    </button>
-                )}
+                {/* Desktop sidebar toggle button */}
+                <button type="button" className={styles.sidebarToggleButton} onClick={toggleSidebar}>
+                    {isSidebarOpen ? '❮' : '❯'}
+                </button>
+                {/* Mobile hamburger menu */}
+                <button type="button" className={styles.hamburgerMenu} onClick={handleMobileNavToggle}>
+                    {isNavOpen ? '✕' : '☰'}
+                </button>
                 <Link href="/" className={styles.navbarLogo}>
                     <span className={styles.navbarLogoSpan1}></span>
                     <span className={styles.navbarLogoSpan2}>    LogeekMind</span>
@@ -59,9 +59,9 @@ const Navbar: React.FC<NavbarProps> = ({ toggleSidebar, isSidebarOpen }) => {
 
             {/* Desktop Navigation Links */}
             <div className={styles.navbarNavDesktop}>
-                <Link href="/" className={styles.navLink} onClick={handleNavLinkClick}>Home</Link>
-                <Link href="/dashboard" className={styles.navLink} onClick={handleNavLinkClick}>Dashboard</Link>
-                <Link href="/contact" className={styles.navLink} onClick={handleNavLinkClick}>Contact</Link>
+                <Link href="/" className={styles.navLink}>Home</Link>
+                <Link href="/dashboard" className={styles.navLink}>Dashboard</Link>
+                <Link href="/contact" className={styles.navLink}>Contact</Link>
             </div>
 
             {/* Desktop Auth Buttons */}
@@ -76,17 +76,6 @@ const Navbar: React.FC<NavbarProps> = ({ toggleSidebar, isSidebarOpen }) => {
                         <span className={styles.welcomeText}>Guest</span>
                         <button type="button" onClick={() => router.push('/login')} className={styles.authButton}>Login / Sign Up</button>
                     </>
-                )}
-            </div>
-
-            {/* Mobile Auth Buttons */}
-            <div className={styles.navbarAuthMobile}>
-                {currentUser ? (
-                    <>
-                        <span className={styles.welcomeText}>{username}</span>
-                    </>
-                ) : (
-                    <button type="button" onClick={() => router.push('/login')} className={styles.authButton}>Login</button>
                 )}
             </div>
 
@@ -117,7 +106,7 @@ const Navbar: React.FC<NavbarProps> = ({ toggleSidebar, isSidebarOpen }) => {
                     <Link href="/dashboard" className={styles.navLink} onClick={handleNavLinkClick}>Dashboard</Link>
                     <Link href="/contact" className={styles.navLink} onClick={handleNavLinkClick}>Contact</Link>
                     
-                    {/* Feature Links (from original Sidebar) for Mobile */}
+                    {/* Feature Links for Mobile */}
                     <hr className={styles.linkSeparator}/>
                     <h4 className={styles.categoryTitle}>AI Tools</h4>
                     <Link href="/ai-teacher" className={styles.navLink} onClick={handleNavLinkClick}>AI Teacher</Link>
@@ -146,11 +135,10 @@ const Navbar: React.FC<NavbarProps> = ({ toggleSidebar, isSidebarOpen }) => {
     );
 };
 
-// New AdminLink component to check admin status for mobile menu
+// AdminLink component remains the same
 const AdminLink: React.FC<{ isNavOpen: boolean, onNavLinkClick: () => void }> = ({ isNavOpen, onNavLinkClick }) => {
     const [isAdmin, setIsAdmin] = useState(false);
     const { currentUser } = useUser();
-    const router = useRouter(); // Use useRouter in AdminLink
 
     useEffect(() => {
         const checkAdminStatus = async () => {
@@ -160,7 +148,7 @@ const AdminLink: React.FC<{ isNavOpen: boolean, onNavLinkClick: () => void }> = 
                     if (accessToken) {
                         const response = await axios.get(`${API_BASE_URL}/auth/check-admin`, {
                             headers: {
-                                Authorization: `Bearer ${accessToken}`, // Corrected Authorization header
+                                Authorization: `Bearer ${accessToken}`,
                             },
                         });
                         setIsAdmin(response.data.is_admin);
@@ -175,7 +163,6 @@ const AdminLink: React.FC<{ isNavOpen: boolean, onNavLinkClick: () => void }> = 
                 setIsAdmin(false);
             }
         };
-        // Only check admin status if the nav is open and user is logged in
         if (isNavOpen && currentUser) {
             checkAdminStatus();
         } else if (!currentUser) {

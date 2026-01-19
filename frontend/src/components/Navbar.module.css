@@ -42,6 +42,7 @@
 /* Desktop Navigation Links */
 .navbarNavDesktop {
     display: none; /* Hidden by default, shown on desktop */
+    gap: var(--spacing-lg); /* Add gap for desktop links */
 }
 
 .navbarAuthDesktop {
@@ -124,12 +125,6 @@
     cursor: pointer;
     color: var(--text-dark);
     display: none; /* Hidden by default */
-}
-
-@media (min-width: 769px) {
-    .sidebarToggleButton {
-        display: block; /* Show only on desktop */
-    }
 }
 
 .hamburgerMenu {
@@ -216,6 +211,10 @@
     display: block; /* Show hamburger on mobile */
   }
 
+  .sidebarToggleButton {
+      display: none; /* Hide sidebar toggle on mobile */
+  }
+
   .navbarLogoSpan1 {
     font-size: 24px; /* Adjust font size for mobile */
   }
@@ -236,6 +235,10 @@
 @media (min-width: 769px) {
     .hamburgerMenu {
         display: none; /* Hide hamburger on desktop */
+    }
+
+    .sidebarToggleButton {
+        display: block; /* Show sidebar toggle on desktop */
     }
 
     .navbarNavDesktop, .navbarAuthDesktop {
