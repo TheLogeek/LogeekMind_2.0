@@ -4,8 +4,43 @@ from app.services.usage_service import log_usage, log_performance
 from supabase import Client
 import json
 from docx import Document
+from docx.shared import Pt
+from docx.enum.text import WD_ALIGN_PARAGRAPH
 import io
-from google import genai
+import re # Import re for regex operations
+
+# Helper function to clean markdown text for docx
+def _clean_markdown_text_for_docx(text_content: str) -> str:
+    # Replace HTML <br> with newline
+    text_content = text_content.replace('<br>', '\n')
+    
+    # Remove bold, italic, and strikethrough markers
+    text_content = re.sub(r'(\*\*|__)(.*?)\1', r'\2', text_content) # **bold** or __bold__
+    text_content = re.sub(r'(\*|_)(.*?)\1', r'\2', text_content)   # *italic* or _italic_
+    text_content = re.sub(r'~~(.*?)~~', r'\1', text_content)       # ~~strikethrough~~
+
+    # Remove links [text](url) -> text
+    text_content = re.sub(r'\[(.*?)\]\(.*?\)', r'\1', text_content)
+
+    # Remove inline code blocks `code`
+    text_content = re.sub(r'`([^`]+)`', r'\1', text_content)
+
+    # More aggressive cleanup for math environments for simpler display if not rendering
+    text_content = re.sub(r'\[a-zA-Z]+\{.*?\}', '', text_content) # Remove LaTeX commands like \frac{..., \sqrt{...}
+    text_content = re.sub(r'\[a-zA-Z]+', '', text_content) # Remove LaTeX commands like \frac, \sqrt
+    text_content = re.sub(r'\{.*?\}', '', text_content) # Remove content in curly braces after LaTeX commands
+    text_content = text_content.replace('$', '') # Catch any remaining lone $
+
+    # Handle Markdown tables: simply strip pipes and header separators
+    # This will turn tables into continuous lines of text, which is a compromise for simplicity
+    text_content = re.sub(r'\|.*\|', lambda m: m.group(0).replace('|', ' '), text_content) # Replace pipes with spaces
+    text_content = re.sub(r'[-=]+\s*[-=]+\s*[-=]+', '', text_content) # Remove table header separators (---)
+    
+    # Remove block code fences ```
+    text_content = text_content.replace('```', '')
+
+    return text_content.strip()
+
 
 DIFFICULTY_MAP = {1: "introductory", 2: "beginner", 3: "intermediate", 4: "advanced", 5: "expert"}
 
@@ -34,10 +69,10 @@ async def generate_quiz_service(
     OUTPUT FORMAT:
     Return ONLY a raw JSON list of dictionaries. Do NOT use Markdown code blocks (like ```json).
     Each dictionary must have these keys:
-    - "question": The question text
-    - "options": A list of strings (e.g., ["Option A", "Option B", "Option C", "Option D"] or ["True", "False"])
-    - "answer": The exact string of the correct option
-    - "explanation": A short explanation of why it is correct
+    - \"question\": The question text
+    - \"options\": A list of strings (e.g., [\"Option A\", \"Option B\", \"Option C\", \"Option D\"] or [\"True\", \"False\"])
+    - \"answer\": The exact string of the correct option
+    - \"explanation\": A short explanation of why it is correct
     """
 
     try:
@@ -79,121 +114,39 @@ async def log_quiz_performance_service(
 
 
 async def create_docx_from_quiz_results(
-
-
     quiz_data: List[Dict[str, Any]],
-
-
     quiz_topic: str,
-
-
     user_score: int,
-
-
     total_questions: int
-
-
 ) -> io.BytesIO:
-
-
     doc = Document()
-
-
     doc.add_heading(f"Quiz Results: {quiz_topic}", 0)
-
-
     doc.add_paragraph(f"Final Score: {user_score}/{total_questions}\n")
 
-
-
-
-
     for idx, q in enumerate(quiz_data):
-
-
-        doc.add_heading(f"Q{idx + 1}: {q['question'].replace('**', '').replace('__', '')}", level=2)
-
-
+        # Process Question
+        question_text = q['question']
+        doc.add_heading(f"Q{idx + 1}: {_clean_markdown_text_for_docx(question_text)}", level=2)
         
-
-
-        # Process options as list items
-
-
+        # Process Options
         doc.add_paragraph("Options:")
-
-
         for option in q['options']:
-
-
-            clean_option = option.replace('**', '').replace('__', '').replace('*', '').replace('_', '')
-
-
-            doc.add_paragraph(clean_option, style='List Bullet')
-
-
+            doc.add_paragraph(_clean_markdown_text_for_docx(option), style='List Bullet')
         
-
-
         # Process Correct Answer
-
-
-        clean_answer = q['answer'].replace('**', '').replace('__', '').replace('*', '').replace('_', '')
-
-
-        doc.add_paragraph(f"Correct Answer: {clean_answer}")
-
-
+        doc.add_paragraph(f"Correct Answer: {_clean_markdown_text_for_docx(q['answer'])}")
         
-
-
         # Process Explanation
-
-
         doc.add_paragraph("Explanation:")
-
-
-        for exp_line in q['explanation'].split('\n'):
-
-
+        explanation_text = q['explanation']
+        for exp_line in explanation_text.split('\n'):
             stripped_exp_line = exp_line.strip()
-
-
-            text_content = stripped_exp_line.replace('**', '').replace('__', '').replace('*', '').replace('_', '')
-
-
-            text_content = text_content.replace(', '')
-
-
-            text_content = re.sub(r'\\[a-zA-Z]+', '', text_content)
-
-
-            text_content = re.sub(r'\{.*?\}', '', text_content)
-
-
-            if text_content:
-
-
-                doc.add_paragraph(text_content)
-
-
-
-
+            if stripped_exp_line:
+                doc.add_paragraph(_clean_markdown_text_for_docx(stripped_exp_line))
 
         doc.add_paragraph("-" * 20)
 
-
-
-
-
     doc_io = io.BytesIO()
-
-
     doc.save(doc_io)
-
-
     doc_io.seek(0)
-
-
     return doc_io
-

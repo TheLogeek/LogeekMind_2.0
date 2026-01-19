@@ -143,10 +143,19 @@ const AITeacherPage = () => {
                 .replace(/(\*|_)(.*?)\1/g, '$2') // Remove italics (e.g., *italic*)
                 .replace(/\[(.*?)\]\(.*?\)/g, '$1') // Remove links (e.g., [text](url) -> text)
                 .replace(/`{1,3}(.*?)`{1,3}/g, '$1') // Remove inline code (e.g., `code`)
-                .replace(/^-+\s/gm, '') // Remove list item markers (e.g., - item)
-                .replace(/^\d+\.\s/gm, ''); // Remove ordered list item markers (e.g., 1. item)
-
-            formattedNotes += `## ${msg.role === 'user' ? 'User' : 'AI Teacher'}:\n${plainText}\n\n`;
+                .replace(/^-+\s/gm, '') // Remove unordered list item markers (e.g., - item)
+                .replace(/^\d+\.\s/gm, '') // Remove ordered list item markers (e.g., 1. item)
+                .replace(/^>\s?/gm, '') // Remove blockquote markers (e.g., > text)
+                .replace(/^-{3,}|^\*{3,}|^_{3,}/gm, '') // Remove horizontal rules (---, ***, ___)
+                .replace(/\$\$.*?\$\$/g, '') // Remove block math $$...$$
+                .replace(/\$.*?$/g, '') // Remove inline math $...$
+                .replace(/\\(frac|sqrt|text|begin|end){.*?}/g, '') // Remove common LaTeX commands
+                .replace(/\\(alpha|beta|gamma|delta|epsilon|zeta|eta|theta|iota|kappa|lambda|mu|nu|xi|omicron|pi|rho|sigma|tau|upsilon|phi|chi|psi|omega|Gamma|Delta|Theta|Lambda|Xi|Pi|Sigma|Phi|Psi|Omega)/g, '') // Remove common Greek letters
+                .replace(/\s*\|.*\n/g, '') // Remove table rows (simple approach, might need refinement for complex tables)
+                .replace(/\|.*-/g, '') // Remove table header separator line
+                .replace(/\s{2,}/g, ' ') // Normalize multiple spaces
+                .replace(/\n{2,}/g, '\n\n') // Normalize multiple newlines
+                .trim();
         });
 
         const blob = new Blob([formattedNotes], { type: 'text/plain;charset=utf-8' });
