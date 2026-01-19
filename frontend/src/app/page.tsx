@@ -23,16 +23,16 @@ const HomePage = () => {
     ];
 
     const CONTENT_MASTERY_FEATURES: Feature[] = [
-        { icon: "📝", title: "Summarizer", description: "Summarize texts, PDFs, and documents instantly.", linkTo: "/summarizer" },
-        { icon: "📚", title: "Course Outline Generator", description: "Generate structured course syllabi and outlines.", linkTo: "/course-outline" },
-        { icon: "🎧", title: "Audio to Text", description: "Transcribe lecture audio to text notes.", linkTo: "/audio-to-text" },
-        { icon: "📢", title: "Notes to Audio", description: "Convert your written notes into audio lectures.", linkTo: "/notes-to-audio" },
+        { icon: " ", title: "Summarizer", description: "Summarize texts, PDFs, and documents instantly.", linkTo: "/summarizer" },
+        { icon: " ", title: "Course Outline Generator", description: "Generate structured course syllabi and outlines.", linkTo: "/course-outline" },
+        { icon: " ", title: "Audio to Text", description: "Transcribe lecture audio to text notes.", linkTo: "/audio-to-text" },
+        { icon: " ", title: "Notes to Audio", description: "Convert your written notes into audio lectures.", linkTo: "/notes-to-audio" },
     ];
 
     const PLANNING_SOLVING_FEATURES: Feature[] = [
-        { icon: "📸", title: "Homework Assistant", description: "Get step-by-step solutions for homework problems.", linkTo: "/homework-assistant" },
-        { icon: "🧮", title: "GPA Calculator", description: "Calculate your GPA with ease.", linkTo: "/gpa-calculator" },
-        { icon: "📅", title: "Study Scheduler", description: "Plan and organize your study time effectively.", linkTo: "/study-scheduler" },
+        { icon: " ", title: "Homework Assistant", description: "Get step-by-step solutions for homework problems.", linkTo: "/homework-assistant" },
+        { icon: " ", title: "GPA Calculator", description: "Calculate your GPA with ease.", linkTo: "/gpa-calculator" },
+        { icon: " ", title: "Study Scheduler", description: "Plan and organize your study time effectively.", linkTo: "/study-scheduler" },
     ];
 
     return (
