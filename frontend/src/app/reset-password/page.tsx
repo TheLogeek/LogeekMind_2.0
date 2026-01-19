@@ -9,6 +9,8 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8
 
 const ResetPasswordForm = () => {
 
+
+
     const [newPassword, setNewPassword] = useState('');
 
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -21,13 +23,53 @@ const ResetPasswordForm = () => {
 
     const router = useRouter();
 
-    const searchParams = useSearchParams();
+    // useSearchParams is for query parameters, Supabase often uses hash parameters for tokens
+
+    const queryParams = useSearchParams();
 
 
 
-    const accessToken = searchParams.get('access_token');
+    // State to hold token and type extracted from hash
 
-    const type = searchParams.get('type');
+    const [hashAccessToken, setHashAccessToken] = useState<string | null>(null);
+
+    const [hashType, setHashType] = useState<string | null>(null);
+
+
+
+    // Effect to parse hash parameters on component mount
+
+    useEffect(() => {
+
+        if (typeof window !== 'undefined' && window.location.hash) {
+
+            const hash = window.location.hash.substring(1); // Remove the '#'
+
+            const params = new URLSearchParams(hash);
+
+            const token = params.get('access_token');
+
+            const type = params.get('type');
+
+            setHashAccessToken(token);
+
+            setHashType(type);
+
+            console.log('Extracted token from hash:', token); // Debugging
+
+            console.log('Extracted type from hash:', type); // Debugging
+
+        }
+
+    }, []); // Run only once on mount
+
+
+
+    // Use token and type from hash if available, otherwise fallback to query params (less likely for Supabase)
+
+    const accessToken = hashAccessToken || queryParams.get('access_token');
+
+    const type = hashType || queryParams.get('type');
 
 
 
@@ -36,6 +78,10 @@ const ResetPasswordForm = () => {
         if (!accessToken || type !== 'recovery') {
 
             setMessage('Invalid or missing password reset token.');
+
+        } else {
+
+            setMessage(''); // Clear message if token seems valid
 
         }
 

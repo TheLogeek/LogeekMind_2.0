@@ -13,7 +13,7 @@ interface User {
     id: string;
     email: string;
     username?: string; // profile contains username, so it might be on the user object too
-    // Add other user properties if available
+    // Add other user properties if availables
 }
 
 // --- User Context for Global State ---

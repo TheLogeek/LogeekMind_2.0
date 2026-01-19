@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import AuthService from '../../services/AuthService';
 import axios, { AxiosError } from 'axios';
 import styles from './CommunityChatPage.module.css';
-import { useUser } from '../app/layout'; // Import useUser hook
+import { useUser } from '../layout'; // Import useUser hook
 
 interface Message {
     id: string;
