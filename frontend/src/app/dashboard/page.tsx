@@ -6,12 +6,33 @@ import AuthService from '../../services/AuthService';
 import axios, { AxiosError } from 'axios';
 import { Bar, Line } from 'react-chartjs-2';
 import styles from './DashboardPage.module.css';
+import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, ArcElement, PointElement, LineElement, Title, Tooltip, Legend } from 'chart.js';
+
+// Register Chart.js components (ensure these are registered once globally if not already)
+ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, PointElement, LineElement, Title, Tooltip, Legend);
+
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000";
 
+// Define TypeScript interfaces matching the backend Pydantic models
+interface PerformanceItem {
+    feature: string;
+    score: number;
+    total_questions: number;
+    correct_answers: number;
+    created_at: string; // ISO string from backend
+    percentage: number;
+}
+
+interface UserPerformanceResponse {
+    success: boolean;
+    message?: string;
+    data: PerformanceItem[];
+}
+
 const UserDashboardPage = () => {
     const router = useRouter();
-    const [performanceData, setPerformanceData] = useState<any[]>([]);
+    const [performanceData, setPerformanceData] = useState<PerformanceItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [currentUser, setCurrentUser] = useState<any>(null);
@@ -25,17 +46,42 @@ const UserDashboardPage = () => {
         setCurrentUser(user);
 
         const fetchData = async () => {
+            setError(''); // Clear previous errors
+            setLoading(true); // Set loading true at the start of fetch
             try {
                 const accessToken = AuthService.getAccessToken();
-                const response = await axios.get(`${API_BASE_URL}/user-dashboard/performance`, {
+                if (!accessToken) { // Extra check in case token is somehow lost
+                    setError('Authentication required. Please log in.');
+                    AuthService.logout();
+                    router.push('/login');
+                    return;
+                }
+                const response = await axios.get<UserPerformanceResponse>(`${API_BASE_URL}/user-dashboard/performance`, {
                     headers: { Authorization: `Bearer ${accessToken}` },
                 });
-                setPerformanceData(response.data || []);
-            } catch (err: unknown) {
-                if (axios.isAxiosError(err) && err.response?.status === 401) {
-                    router.push('/login');
+
+                if (response.data.success) {
+                    setPerformanceData(response.data.data || []);
+                    if (response.data.data.length === 0 && response.data.message) {
+                        setError(response.data.message); // Display message if no data but message present
+                    }
                 } else {
-                    setError('Failed to fetch performance data.');
+                    setError(response.data.message || 'Failed to fetch performance data from the server.');
+                }
+            } catch (err: unknown) {
+                if (axios.isAxiosError(err)) {
+                    const axiosError = err as AxiosError<any>;
+                    console.error('Error fetching performance data:', axiosError.response?.data || axiosError);
+                    if (axiosError.response?.status === 401 || axiosError.response?.status === 403) {
+                        setError('Unauthorized access. Please log in with appropriate credentials.');
+                        AuthService.logout();
+                        router.push('/login');
+                    } else {
+                        setError(axiosError.response?.data?.detail || axiosError.response?.data?.message || 'An error occurred while fetching performance data.');
+                    }
+                } else {
+                    console.error('Error fetching performance data:', err);
+                    setError('An unexpected error occurred.');
                 }
             } finally {
                 setLoading(false);
@@ -43,14 +89,14 @@ const UserDashboardPage = () => {
         };
 
         fetchData();
-    }, [router]);
+    }, [router]); // Rerun effect if router changes (e.g., path changes for some reason)
 
     if (loading) {
         return <p className={styles.loadingMessage}>Loading your dashboard...</p>;
     }
 
     if (error) {
-        return <p className={`${styles.loadingMessage} ${styles.errorMessage}`}>{error}</p>;
+        return <p className={`${styles.loadingMessage} ${styles.errorMessage}`}>Error: {error}</p>;
     }
 
     if (performanceData.length === 0) {
@@ -58,10 +104,10 @@ const UserDashboardPage = () => {
     }
 
     // --- Data Processing for Charts and Metrics ---
+    // Ensure created_at is converted to Date object for frontend plotting
     const df = performanceData.map(d => ({
         ...d,
-        percentage: (d.score / d.total_questions) * 100,
-        created_at: new Date(d.created_at),
+        created_at: new Date(d.created_at), // Convert ISO string back to Date object
     }));
 
     // KPI Metrics
@@ -84,9 +130,9 @@ const UserDashboardPage = () => {
     };
     
     // Average Performance by Feature (Bar Chart)
-    const featureGroups: { [key: string]: number[] } = df.reduce((acc: { [key: string]: number[] }, d: any) => {
-        acc[d.feature_name] = acc[d.feature_name] || [];
-        acc[d.feature_name].push(d.percentage);
+    const featureGroups: { [key: string]: number[] } = df.reduce((acc: { [key: string]: number[] }, d) => {
+        acc[d.feature] = acc[d.feature] || []; // Use d.feature, not d.feature_name
+        acc[d.feature].push(d.percentage);
         return acc;
     }, {});
 
@@ -139,7 +185,7 @@ const UserDashboardPage = () => {
                         {recentAttempts.map((attempt, index) => (
                             <tr key={index}>
                                 <td>{attempt.created_at.toLocaleString()}</td>
-                                <td>{attempt.feature_name}</td>
+                                <td>{attempt.feature}</td>
                                 <td>{attempt.score} / {attempt.total_questions} ({attempt.percentage.toFixed(0)}%)</td>
                             </tr>
                         ))}
