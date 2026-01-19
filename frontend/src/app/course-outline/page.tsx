@@ -151,7 +151,7 @@ const CourseOutlinePage = () => {
 
     return (
         <div className={`page-container ${styles.courseOutlinePageContainer}`}>
-            <h2>📝 Course Outline Generator</h2>
+            <h2>Course Outline Generator</h2>
             <p>Instantly generate a detailed, university-level course syllabus and outline.</p>
 
             <form onSubmit={handleGenerateOutline} className={styles.courseOutlineForm}>
