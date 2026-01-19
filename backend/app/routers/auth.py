@@ -82,11 +82,10 @@ async def forgot_password_route(request: ForgotPasswordRequest, supabase: Client
     FRONTEND_RESET_PASSWORD_URL = os.getenv("FRONTEND_RESET_PASSWORD_URL", "http://localhost:3000/reset-password")
 
     result = await auth_service.send_password_reset_email(supabase, request.email, redirect_to=FRONTEND_RESET_PASSWORD_URL)
+    # TEMPORARY DEBUGGING CHANGE: Directly return the result if not successful
     if not result["success"]:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=result["message"]
-        )
+        return result 
+    # END TEMPORARY DEBUGGING CHANGE
     return {"message": "If an account with that email exists, a password reset link has been sent."}
 
 @router.post("/reset-password")
