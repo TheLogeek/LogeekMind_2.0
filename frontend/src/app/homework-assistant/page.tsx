@@ -158,7 +158,7 @@ const HomeworkAssistantPage = () => {
 
     return (
         <div className={`page-container ${styles.homeworkAssistantPageContainer}`}>
-            <h2>📸 Homework Assistant</h2>
+            <h2>Homework Assistant</h2>
             <p>Upload a picture of your homework problem and get a step-by-step, downloadable solution.</p>
 
             <form onSubmit={handleGenerateSolution} className={styles.homeworkForm}>
