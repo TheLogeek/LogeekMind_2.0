@@ -20,7 +20,7 @@ async def check_username_availability(supabase: Client, username: str):
 
 
 async def sign_up_user(supabase: Client, email: str, password: str, username: str, terms_accepted: bool):
-    if not await check_username_availability(username): # Assuming check_username_availability can take only username
+    if not await check_username_availability(supabase, username):
         return {"success": False, "message": "Username already taken. Please choose another."}
 
     try:
