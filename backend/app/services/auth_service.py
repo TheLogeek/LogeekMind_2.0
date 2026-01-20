@@ -39,16 +39,21 @@ async def sign_up_user(supabase: Client, email: str, password: str, username: st
         if response.user:
             return {"success": True, "message": "Account created! Please proceed to login.", "user": response.user.dict()}
         else:
-            error_message = response.error.message if response.error else "Unknown error during signup."
+            error_message = response.error.message if response.error else "An unknown error occurred with Supabase during signup."
             if "already registered" in error_message.lower() or "user already exists" in error_message.lower():
                 return {"success": False, "message": "This email is already registered. Please log in or use a different email."}
             if "password should be at least" in error_message.lower():
                 return {"success": False, "message": "Password must be at least 6 characters long."}
+            if "invalid email format" in error_message.lower() or "email is not valid" in error_message.lower():
+                return {"success": False, "message": "The email address provided is not valid. Please check the format."}
+            
+            # Log the unhandled Supabase error message for debugging
+            logger.error(f"Unhandled Supabase signup error: {error_message}")
             return {"success": False, "message": error_message} # Default to raw error message if not specifically handled
 
     except Exception as e:
-        logger.error(f"Error during signup: {e}", exc_info=True)
-        return {"success": False, "message": "An unexpected error occurred during signup. Please try again."}
+        logger.error(f"An unhandled exception occurred during signup: {e}", exc_info=True)
+        return {"success": False, "message": "A server error occurred during signup. Please try again or contact support."}
 
 
 async def sign_in_user(supabase: Client, email: str, password: str):
