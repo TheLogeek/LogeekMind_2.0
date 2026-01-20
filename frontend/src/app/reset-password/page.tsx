@@ -31,129 +31,145 @@ const ResetPasswordForm = () => {
 
     // State to hold token and type extracted from hash
 
-    const [hashAccessToken, setHashAccessToken] = useState<string | null>(null);
+        const [hashAccessToken, setHashAccessToken] = useState<string | null>(null);
 
-    const [hashType, setHashType] = useState<string | null>(null);
+        const [hashRefreshToken, setHashRefreshToken] = useState<string | null>(null); // New state for refresh token
 
+        const [hashType, setHashType] = useState<string | null>(null);
 
+    
 
-    // Effect to parse hash parameters on component mount
+        // Effect to parse hash parameters on component mount
 
-    useEffect(() => {
+        useEffect(() => {
 
-        if (typeof window !== 'undefined' && window.location.hash) {
+            if (typeof window !== 'undefined' && window.location.hash) {
 
-            const hash = window.location.hash.substring(1); // Remove the '#'
+                const hash = window.location.hash.substring(1); // Remove the '#'
 
-            const params = new URLSearchParams(hash);
+                const params = new URLSearchParams(hash);
 
-            const token = params.get('access_token');
+                const token = params.get('access_token');
 
-            const type = params.get('type');
+                const refreshToken = params.get('refresh_token'); // Extract refresh_token
 
-            setHashAccessToken(token);
+                const type = params.get('type');
 
-            setHashType(type);
+                setHashAccessToken(token);
 
-            console.log('Extracted token from hash:', token); // Debugging
+                setHashRefreshToken(refreshToken); // Set refresh token state
 
-            console.log('Extracted type from hash:', type); // Debugging
+                setHashType(type);
 
-        }
+                console.log('Extracted access_token from hash:', token); // Debugging
 
-    }, []); // Run only once on mount
+                console.log('Extracted refresh_token from hash:', refreshToken); // Debugging
 
+                console.log('Extracted type from hash:', type); // Debugging
 
+            }
 
-    // Use token and type from hash if available, otherwise fallback to query params (less likely for Supabase)
+        }, []); // Run only once on mount
 
-    const accessToken = hashAccessToken || queryParams.get('access_token');
+    
 
-    const type = hashType || queryParams.get('type');
+        // Use tokens and type from hash if available, otherwise fallback to query params (less likely for Supabase)
 
+        const accessToken = hashAccessToken || queryParams.get('access_token');
 
+        const refreshToken = hashRefreshToken || queryParams.get('refresh_token'); // Use refresh token
 
-    useEffect(() => {
+        const type = hashType || queryParams.get('type');
 
-        if (!accessToken || type !== 'recovery') {
+    
 
-            setMessage('Invalid or missing password reset token.');
+        useEffect(() => {
 
-        } else {
+            if (!accessToken || !refreshToken || type !== 'recovery') { // Check for both tokens
 
-            setMessage(''); // Clear message if token seems valid
+                setMessage('Invalid or missing password reset token.');
 
-        }
+            } else {
 
-    }, [accessToken, type]);
+                setMessage(''); // Clear message if tokens seem valid
 
+            }
 
+        }, [accessToken, refreshToken, type]); // Depend on both tokens
 
-    const togglePasswordVisibility = () => {
+    
 
-        setIsPasswordVisible(prevState => !prevState);
+        const togglePasswordVisibility = () => {
 
-    };
+            setIsPasswordVisible(prevState => !prevState);
 
+        };
 
+    
 
-    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+        const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
 
-        e.preventDefault();
+            e.preventDefault();
 
-        setMessage('');
+            setMessage('');
 
-        setLoading(true);
+            setLoading(true);
 
+    
 
+            if (!accessToken || !refreshToken) { // Check for both tokens
 
-        if (!accessToken) {
+                setMessage('Invalid password reset link. Please try again.');
 
-            setMessage('Invalid password reset link. Please try again.');
+                setLoading(false);
 
-            setLoading(false);
+                return;
 
-            return;
+            }
 
-        }
+    
 
+            if (newPassword !== confirmPassword) {
 
+                setMessage('New password and confirm password do not match.');
 
-        if (newPassword !== confirmPassword) {
+                setLoading(false);
 
-            setMessage('New password and confirm password do not match.');
+                return;
 
-            setLoading(false);
+            }
 
-            return;
+    
 
-        }
+            if (newPassword.length < 6) {
 
+                setMessage('Password must be at least 6 characters long.');
 
+                setLoading(false);
 
-        if (newPassword.length < 6) {
+                return;
 
-            setMessage('Password must be at least 6 characters long.');
+            }
 
-            setLoading(false);
+    
 
-            return;
+            try {
 
-        }
+                const response = await axios.post(`${API_BASE_URL}/auth/reset-password`,
 
+                    { 
 
+                        new_password: newPassword,
 
-        try {
+                        access_token: accessToken, // Send access_token in body
 
-            const response = await axios.post(`${API_BASE_URL}/auth/reset-password`,
+                        refresh_token: refreshToken // Send refresh_token in body
 
-                { new_password: newPassword },
+                    }
 
-                { headers: { Authorization: `Bearer ${accessToken}` } }
+                ); // Removed headers as tokens are in body
 
-            );
-
-            setMessage(response.data.message || 'Password reset successfully!');
+                setMessage(response.data.message || 'Password reset successfully!');
 
             setTimeout(() => {
 

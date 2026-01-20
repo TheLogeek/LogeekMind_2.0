@@ -29,6 +29,8 @@ class ForgotPasswordRequest(BaseModel):
 
 class ResetPasswordRequest(BaseModel):
     new_password: str
+    access_token: str # Expect access_token from frontend in body
+    refresh_token: str # Expect refresh_token from frontend in body
 
 class AuthResponse(BaseModel):
     success: bool
@@ -91,15 +93,17 @@ async def forgot_password_route(request: ForgotPasswordRequest, supabase: Client
 @router.post("/reset-password")
 async def reset_password_route(
     request: ResetPasswordRequest,
-    supabase: Client = Depends(get_supabase_client),
-    authorization: Optional[str] = Header(None)
+    supabase: Client = Depends(get_supabase_client)
 ):
-    if not authorization or not authorization.startswith("Bearer "):
+    # Tokens are now expected in the request body as per ResetPasswordRequest model
+    access_token = request.access_token
+    refresh_token = request.refresh_token
+
+    if not access_token or not refresh_token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authorization header missing or invalid. Requires Bearer token."
+            detail="Access token or refresh token missing."
         )
-    access_token = authorization.split(" ")[1]
 
     if len(request.new_password) < 6:
          raise HTTPException(
@@ -107,12 +111,15 @@ async def reset_password_route(
             detail="Password must be at least 6 characters long."
         )
 
-    result = await auth_service.update_password(supabase, access_token, request.new_password)
+    result = await auth_service.update_password(supabase, access_token, refresh_token, request.new_password)
     if not result["success"]:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=result["message"]
-        )
+        # TEMPORARY DEBUGGING CHANGE: Directly return the result if not successful
+        return result
+        # END TEMPORARY DEBUGGING CHANGE
+        # raise HTTPException(
+        #     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        #     detail=result["message"]
+        # )
     return {"message": "Password updated successfully!"}
 
 @router.get("/check-admin")

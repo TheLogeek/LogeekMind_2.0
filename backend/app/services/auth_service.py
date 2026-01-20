@@ -99,9 +99,10 @@ async def send_password_reset_email(supabase: Client, email: str, redirect_to: s
         return {"success": False, "message": f"Failed to send password reset email: {repr(e)}"}
 
 
-async def update_password(supabase: Client, access_token: str, new_password: str) -> Dict[str, Any]:
+async def update_password(supabase: Client, access_token: str, refresh_token: str, new_password: str) -> Dict[str, Any]:
     try:
-        supabase.auth.set_session(access_token) 
+        # Set the session using both access and refresh tokens
+        supabase.auth.set_session(access_token, refresh_token) 
         
         response = supabase.auth.update_user({"password": new_password})
 
