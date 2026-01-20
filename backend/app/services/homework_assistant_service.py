@@ -1,5 +1,6 @@
 from typing import Dict, Any, Optional
 from app.services.gemini_service import get_gemini_client
+from google import genai
 from app.services.usage_service import log_usage
 from supabase import Client
 from docx import Document
@@ -76,7 +77,7 @@ async def generate_homework_solution(
     try:
         # Calling client.models.generate_content exactly as in the original utils.py and feature page
         response = client.models.generate_content(
-            model="gemini-pro-vision", # Using gemini-pro-vision for multimodal input
+            model="gemini-2.5-flash", # Using gemini-pro-vision for multimodal input
             contents=contents
         )
         
@@ -93,11 +94,20 @@ async def generate_homework_solution(
 
         return {"success": True, "solution_text": solution_text}
 
+    except genai.errors.APIError as e:
+        error_message = str(e)
+        if "429" in error_message or "RESOURCE_EXHAUSTED" in error_message.upper():
+            print(f"Gemini API rate limit exceeded during summarization: {e}")
+            return "", "Gemini API rate limit exceeded. Please try again in a moment."
+        elif "503" in error_message:
+            print(f"AI is currently eperiencing high traffic. Try again shortly.")
+            return "", "AI is currently eperiencing high traffic. Please try again shortly."
+        else:
+            print(f"An API error occurred: {e}")
+            return "", f"An API error occurred: {e}"
+
     except Exception as e:
         print(f"Error during homework solution generation: {e}")
-        # A more specific check for multimodal model errors might be needed if they differ
-        if "gemini-pro-vision" in str(e):
-             return {"success": False, "message": "The vision model is currently unavailable. Please try again later."}
         return {"success": False, "message": "An unexpected error occurred while generating the solution."}
 
 async def create_docx_from_solution(solution_text: str, context: Optional[str] = None) -> io.BytesIO:

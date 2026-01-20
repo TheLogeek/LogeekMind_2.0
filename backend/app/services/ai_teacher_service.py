@@ -115,6 +115,17 @@ async def generate_ai_teacher_response(
 
         return {"success": True, "ai_text": ai_text}
 
+    except genai.errors.APIError as e:
+        error_message = str(e)
+        if "429" in error_message or "RESOURCE_EXHAUSTED" in error_message.upper():
+            print(f"Gemini API rate limit exceeded during summarization: {e}")
+            return "", "Gemini API rate limit exceeded. Please try again in a moment."
+        elif "503" in error_message:
+            print(f"AI is currently eperiencing high traffic. Try again shortly.")
+            return "", "AI is currently eperiencing high traffic. Please try again shortly."
+        else:
+            print(f"An API error occurred: {e}")
+            return "", f"An API error occurred: {e}"
     except Exception as e:
         # This catches errors during the generate_content call itself.
         print(f"Error during AI Teacher response generation: {e}")

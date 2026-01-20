@@ -2,6 +2,7 @@ from typing import Dict, Any, List, Optional
 from app.services.gemini_service import get_gemini_client
 from app.services.usage_service import log_usage, log_performance
 from supabase import Client
+from google import genai
 import json
 from docx import Document
 from docx.shared import Pt
@@ -95,8 +96,22 @@ async def generate_quiz_service(
 
         return {"success": True, "quiz_data": quiz_data}
 
+    except genai.types.BlockedPromptException:
+        print("BlockedPromptException during Gemini quiz generation.")
+        return {"success": False, "message": "Your quiz topic was blocked due to content safety concerns. Please revise your input."}
+    except genai.errors.APIError as e:
+        error_message = str(e)
+        if "429" in error_message or "RESOURCE_EXHAUSTED" in error_message.upper():
+            print(f"Gemini API rate limit exceeded during summarization: {e}")
+            return "", "Gemini API rate limit exceeded. Please try again in a moment."
+        elif "503" in error_message:
+            print(f"AI is currently eperiencing high traffic. Try again shortly.")
+            return "", "AI is currently eperiencing high traffic. Please try again shortly."
+        else:
+            print(f"An API error occurred: {e}")
+            return "", f"An API error occurred: {e}"
     except json.JSONDecodeError:
-        return {"success": False, "message": "The AI generated an invalid format. Please try again."}
+        return {"success": False, "message": "The AI generated an invalid quiz format. Please try generating again or try a different topic."}
     except Exception as e:
         print(f"Error during quiz generation: {e}")
         return {"success": False, "message": "An unexpected error occurred while generating the quiz."}
