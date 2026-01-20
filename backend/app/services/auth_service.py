@@ -53,7 +53,7 @@ async def sign_up_user(supabase: Client, email: str, password: str, username: st
 
     except Exception as e:
         logger.error(f"An unhandled exception occurred during signup: {e}", exc_info=True)
-        return {"success": False, "message": "A server error occurred during signup. Please try again or contact support."}
+        return {"success": False, "message": "A server error occurred during signup or you entered an invalid email address. Please try again or contact support."}
 
 
 async def sign_in_user(supabase: Client, email: str, password: str):
