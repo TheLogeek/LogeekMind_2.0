@@ -90,7 +90,7 @@ async def generate_exam_questions(
         prompt = f"""
 You are an expert university professor. Generate {num_questions} examination-standard multiple-choice questions
 based on the provided lecture notes. Do not include any information that is not explicitly mentioned in the text. Focus on the key terms, dates, and logical relationships defined in the notes. Make sure the questions test the student's ability to connect different parts of the lecture.
-Ensure questions are relevant ONLY to the content within the provided notes.
+Ensure questions are relevant ONLY to the content within the provided notes. Employ methods to prevent hitting rate limit like first summarising the notes before setting the questions.
 
 Course: {course_name}
 
