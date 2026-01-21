@@ -151,15 +151,12 @@ Each dictionary must have these keys:
 
     except json.JSONDecodeError:
         print(f"JSON Decode Error: {response.text if response.text else 'No response text'}")
-        return {"success": False, "message": "The AI generated an invalid quiz format. Please try generating again or check your input."}
-    except genai.types.BlockedPromptException:
-        print("BlockedPromptException during Gemini exam generation.")
-        return {"success": False, "message": "Your request was blocked due to content safety concerns. Please revise your input."}
+        return {"success": False, "message": "The AI generated an invalid quiz format. Please try generating again or check your input.")
     except genai.errors.APIError as e:
         error_message = str(e)
         if "429" in error_message or "RESOURCE_EXHAUSTED" in error_message.upper():
             print(f"Gemini API rate limit exceeded during exam generation: {e}")
-            return {"success": False, "message": "Gemini API rate limit exceeded. Please try again in a moment."}
+            return {"success": False, "message": "AI is currently experiencing high traffic. Please try again shortly."}
         elif "503" in error_message:
             print(f"AI is currently experiencing high traffic. Try again shortly.")
             return {"success": False, "message": "AI is currently experiencing high traffic. Please try again shortly."}
