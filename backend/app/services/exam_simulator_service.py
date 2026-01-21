@@ -88,8 +88,8 @@ async def generate_exam_questions(
     # Construct prompt dynamically
     if lecture_notes_content:
         prompt = f"""
-You are a strict university professor. Generate {num_questions} examination-standard multiple-choice questions
-based on the provided lecture notes. The questions should be a mix of requiring critical thinking or application of concepts from the notes and definitions, types, examples and other concepts from the notes.
+You are an expert university professor. Generate {num_questions} examination-standard multiple-choice questions
+based on the provided lecture notes. Do not include any information that is not explicitly mentioned in the text. Focus on the key terms, dates, and logical relationships defined in the notes. Make sure the questions test the student's ability to connect different parts of the lecture.
 Ensure questions are relevant ONLY to the content within the provided notes.
 
 Course: {course_name}
@@ -101,14 +101,14 @@ Lecture Notes:
 OUTPUT FORMAT:
 Return ONLY a raw JSON list of dictionaries. Do NOT use Markdown code blocks.
 Each dictionary must have these keys:
-- \"question\": complex scenario or problem statement derived from the notes
+- \"question\": follow the instructions provided and introduce at least one complex scenario or problem statement question where needed and relevant to context without making the question too long
 - \"options\": A list of strings
 - \"answer\": The exact string of the correct option
 - \"explanation\": A short explanation of why it is correct, referencing the notes where applicable.
         """
     else: # Use topic if no lecture notes are provided
         prompt = f"""
-You are a strict university professor setting a final exam.
+You are an expert university professor setting an exam.
 Course: {course_name}
 Topic: {topic if topic else 'General'}
 
@@ -117,7 +117,7 @@ Ensure the questions vary in difficulty from basic facts to complex problem-solv
 OUTPUT FORMAT:
 Return ONLY a raw JSON list of dictionaries. Do NOT use Markdown code blocks.
 Each dictionary must have these keys:
-- \"question\": complex scenario or problem statement
+- \"question\": follow the instructions provided and introduce at least one complex scenario or problem statement question where needed and relevant to context without making the question too long
 - \"options\": A list of strings (e.g., [\"Option A\", \"Option B\", \"Option C\", \"Option D\"])
 - \"answer\": The exact string of the correct option
 - \"explanation\": A short explanation of why it is correct
