@@ -188,10 +188,10 @@ const ExamSimulatorPage = () => {
         setLoading(true);
         try {
             const accessToken = AuthService.getAccessToken();
-            // No Authorization header needed for guest generation, but keep it for logged-in users if backend requires it for logging purposes
+            // No Authorization header needed for guest generation, but keep it for logged-in users if backend requires it for logging/permissions.
             const headers = accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
 
-            const payload: any = {
+            const payload: any = { // Use 'any' or a more specific type for flexibility
                 course_name: courseName,
                 num_questions: numQuestions,
                 duration_mins: durationMins,
@@ -257,8 +257,9 @@ const ExamSimulatorPage = () => {
             formData.append('grade', grade);
             formData.append('course_name', courseName);
             // Dynamically set 'topic' or indicate notes were used for logging/filename
+            // Use fileName if notes were used, otherwise use topic
             if (selectedSource === 'notes' && fileName) {
-                 formData.append('topic', `Notes from ${fileName}`);
+                 formData.append('topic', `Notes from ${fileName}`); // Use file name as context
             } else {
                 formData.append('topic', topic || ''); // Use original topic if selected
             }
@@ -273,9 +274,9 @@ const ExamSimulatorPage = () => {
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            // Ensure filename is sanitized and unique
+            // Ensure filename is sanitized and unique using timestamp
             const sanitizedCourseName = courseName.replace(/[^a-z0-9_]/gi, '_').toLowerCase();
-            const fileName = `${sanitizedCourseName}_Exam_Results_${Date.now()}.docx`; // Use timestamp for unique filename
+            const fileName = `${sanitizedCourseName}_Exam_Results_${Date.now()}.docx`; 
             a.download = fileName;
             document.body.appendChild(a);
             a.click();
