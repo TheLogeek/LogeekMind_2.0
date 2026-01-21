@@ -393,7 +393,7 @@ const ExamSimulatorPage = () => {
                     {/* Conditional Rendering for Topic Input or Notes File Upload */}
                     {selectedSource === 'topic' && (
                         <div className={styles.formGroup}>
-                            <label htmlFor="topic">Specific Topic (Optional):</label>
+                            <label htmlFor="topic">Specific Topic (Enter "general" for general questions on the course):</label>
                             <input type="text" id="topic" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="e.g., Algorithms" />
                         </div>
                     )}
