@@ -98,6 +98,8 @@ async def generate_exam_route(
         raise e
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/submit-results", response_model=ExamResultsResponse)
 async def submit_exam_results_route(
     request: ExamSubmitRequest,
     current_user: Dict[str, Any] = Depends(get_current_user_from_supabase_jwt), # Requires login to submit/log results
@@ -117,7 +119,8 @@ async def submit_exam_results_route(
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=response["message"])
         return ExamResultsResponse(**response)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        print(f"Error during exam results submission: {e}") # Log the error for backend debugging
+        raise HTTPException(status_code=500, detail=f"An unexpected error occurred during exam results submission: {e}")
 
 @router.post("/download-results-docx")
 async def download_exam_results_docx(
@@ -153,7 +156,9 @@ async def download_exam_results_docx(
             media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
             headers={"Content-Disposition": f"attachment; filename={file_name}"}
         )
-    except json.JSONDecodeError:
-        raise HTTPException(status_code=400, detail="Invalid JSON format for exam data or user answers.")
+    except json.JSONDecodeError as e:
+        print(f"JSONDecodeError in download_exam_results_docx: {e}") # Log for debugging
+        raise HTTPException(status_code=400, detail=f"Invalid JSON format for exam data or user answers: {e}")
     except Exception as e:
+        print(f"Error during DOCX creation in download_exam_results_docx: {e}") # Log for debugging
         raise HTTPException(status_code=500, detail=f"An error occurred during DOCX creation: {e}")

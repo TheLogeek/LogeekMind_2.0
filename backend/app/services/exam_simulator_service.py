@@ -88,8 +88,8 @@ async def generate_exam_questions(
     # Construct prompt dynamically
     if lecture_notes_content:
         prompt = f"""
-You are a strict university professor. Generate {num_questions} HARD, examination-standard multiple-choice questions
-based on the provided lecture notes. The questions should require critical thinking or application of concepts from the notes.
+You are a strict university professor. Generate {num_questions} examination-standard multiple-choice questions
+based on the provided lecture notes. The questions should be a mix of requiring critical thinking or application of concepts from the notes and definitions, types, examples and other concepts from the notes.
 Ensure questions are relevant ONLY to the content within the provided notes.
 
 Course: {course_name}
@@ -112,9 +112,8 @@ You are a strict university professor setting a final exam.
 Course: {course_name}
 Topic: {topic if topic else 'General'}
 
-Generate {num_questions} HARD, examination-standard multiple-choice questions.
-These should not be simple definitions. They should require critical thinking or application of concepts.
-
+Generate {num_questions} examination-standard multiple-choice questions.
+The questions should be a mix of requiring critical thinking or application of concepts from the notes and definitions, types, examples and other concepts relevant to the subject and topic if any
 OUTPUT FORMAT:
 Return ONLY a raw JSON list of dictionaries. Do NOT use Markdown code blocks.
 Each dictionary must have these keys:
