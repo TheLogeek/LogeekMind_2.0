@@ -262,9 +262,10 @@ const ExamSimulatorPage = () => {
             formData.append('course_name', courseName);
             
             // Dynamically set 'topic' or indicate notes were used for logging/filename
-            let topicForApi = '';
+            let topicForApi = ''; // Explicitly declare and initialize
             if (selectedSource === 'notes') {
-                if (fileName && fileName.length > 0) { // Explicitly check for non-empty fileName
+                // Explicitly check for non-empty string fileName
+                if (typeof fileName === 'string' && fileName.length > 0) { 
                     topicForApi = `Notes from ${fileName}`;
                 } else {
                     // Fallback if selectedSource is 'notes' but fileName is missing (should not happen if validation is right)
