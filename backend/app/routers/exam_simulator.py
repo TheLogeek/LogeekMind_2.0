@@ -25,6 +25,8 @@ class ExamSetupRequest(BaseModel):
     topic: Optional[str] = None
     num_questions: int
     duration_mins: int = 30
+    lecture_notes_content: Optional[str] = None # New field for lecture notes
+    file_name: Optional[str] = None # New field for the name of the uploaded file
 
 class ExamQuestion(BaseModel):
     question: str
@@ -70,27 +72,32 @@ async def generate_exam_route(
         username = "Guest"
 
     try:
+        # Pass lecture_notes_content and file_name if provided, otherwise pass topic
         response = await exam_simulator_service.generate_exam_questions(
             supabase=supabase,
             user_id=user_id,
             username=username,
             course_name=request.course_name,
-            topic=request.topic,
-            num_questions=request.num_questions
+            topic=request.topic, # Pass topic
+            num_questions=request.num_questions,
+            lecture_notes_content=request.lecture_notes_content, # Pass notes content
+            file_name=request.file_name # Pass file name for logging
         )
         if not response["success"]:
             if "Rate Limit Hit" in response.get("message", ""):
                 raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail=response["message"])
             if "feature is currently unavailable" in response.get("message", ""):
                 raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=response["message"])
+            # Handle case where text extraction failed for notes
+            if "Error processing file" in response.get("message", ""):
+                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=response["message"])
+            
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=response["message"])
         return ExamGenerateResponse(success=True, exam_data=response["exam_data"])
     except HTTPException as e:
         raise e
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
-@router.post("/submit-results", response_model=ExamResultsResponse)
 async def submit_exam_results_route(
     request: ExamSubmitRequest,
     current_user: Dict[str, Any] = Depends(get_current_user_from_supabase_jwt), # Requires login to submit/log results

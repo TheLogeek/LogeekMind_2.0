@@ -32,6 +32,12 @@ const ExamSimulatorPage = () => {
     const [topic, setTopic] = useState('');
     const [numQuestions, setNumQuestions] = useState(20);
 
+    // New state for question source selection
+    const [selectedSource, setSelectedSource] = useState('topic'); // 'topic' or 'notes'
+    const [lectureNotesContent, setLectureNotesContent] = useState('');
+    const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+    const [fileName, setFileName] = useState('');
+
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
@@ -48,6 +54,8 @@ const ExamSimulatorPage = () => {
         setLoading(true);
         try {
             const accessToken = AuthService.getAccessToken();
+            // Guest users don't submit results to backend for grading.
+            // Their score is calculated client-side for immediate feedback.
             if (!currentUser || !accessToken) {
                 const score = examData.reduce((acc, q, idx) => acc + (userAnswers[idx] === q.answer ? 1 : 0), 0);
                 const [finalGrade, finalRemark] = calculateGradeFrontend(score, examData.length);
@@ -55,6 +63,7 @@ const ExamSimulatorPage = () => {
                 setGrade(finalGrade);
                 setRemark(finalRemark);
                 setExamStage("finished");
+                sessionStorage.setItem('exam_simulator_results', JSON.stringify({ examData, userAnswers, examScore: score, grade: finalGrade, remark: finalRemark, courseName, topic: selectedSource === 'notes' ? fileName : topic }));
                 return;
             }
 
@@ -62,7 +71,7 @@ const ExamSimulatorPage = () => {
                 exam_data: examData,
                 user_answers: userAnswers,
                 course_name: courseName,
-                topic: topic || null,
+                topic: selectedSource === 'topic' ? topic : null, // Send topic if selected, else null
             }, { headers: { Authorization: `Bearer ${accessToken}` } });
 
             if (response.data.success) {
@@ -71,7 +80,7 @@ const ExamSimulatorPage = () => {
                 setRemark(response.data.remark);
                 setExamStage("finished");
                 sessionStorage.setItem('exam_simulator_results', JSON.stringify({
-                    examData, userAnswers, examScore: response.data.score, grade: response.data.grade, remark: response.data.remark
+                    examData, userAnswers, examScore: response.data.score, grade: response.data.grade, remark: response.data.remark, courseName, topic: selectedSource === 'topic' ? topic : fileName
                 }));
             } else {
                 setError(response.data.message || 'Failed to submit exam results.');
@@ -88,20 +97,26 @@ const ExamSimulatorPage = () => {
         setCurrentUser(AuthService.getCurrentUser());
         const savedInputs = sessionStorage.getItem('exam_simulator_inputs');
         if (savedInputs) {
-            const { courseName, topic, numQuestions, durationMins } = JSON.parse(savedInputs);
+            const { courseName, topic, numQuestions, durationMins, selectedSource, lectureNotesContent, fileName } = JSON.parse(savedInputs);
             setCourseName(courseName || '');
             setTopic(topic || '');
             setNumQuestions(numQuestions || 20);
             setDurationMins(durationMins || 10);
+            setSelectedSource(selectedSource || 'topic');
+            setLectureNotesContent(lectureNotesContent || '');
+            setFileName(fileName || '');
+            // If lecture notes were used, we can't fully restore the File object, but we have the content and name
         }
         const savedResults = sessionStorage.getItem('exam_simulator_results');
         if (savedResults) {
-            const { examData, userAnswers, examScore, grade, remark } = JSON.parse(savedResults);
+            const { examData, userAnswers, examScore, grade, remark, courseName, topic } = JSON.parse(savedResults);
             setExamData(examData || []);
             setUserAnswers(userAnswers || {});
             setExamScore(examScore || 0);
             setGrade(grade || '');
             setRemark(remark || '');
+            setCourseName(courseName || ''); // Restore course name and topic/filename for results display
+            setTopic(topic || ''); // This topic might be the original topic or the fileName if notes were used
             setExamStage("finished");
         }
     }, []);
@@ -159,19 +174,37 @@ const ExamSimulatorPage = () => {
             setError("Please enter a Course Name.");
             return;
         }
+        // Validate source input
+        if (selectedSource === 'topic' && !topic?.trim()) {
+             setError("Please enter a Topic.");
+             return;
+        }
+        if (selectedSource === 'notes' && !lectureNotesContent.trim()) {
+             setError("Please upload valid Lecture Notes.");
+             return;
+        }
         if (!checkGuestLimit()) return;
 
         setLoading(true);
         try {
             const accessToken = AuthService.getAccessToken();
+            // No Authorization header needed for guest generation, but keep it for logged-in users if backend requires it for logging purposes
             const headers = accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
 
-            const response = await axios.post(`${API_BASE_URL}/exam-simulator/generate`, {
+            const payload: any = {
                 course_name: courseName,
-                topic: topic || null,
                 num_questions: numQuestions,
                 duration_mins: durationMins,
-            }, { headers });
+            };
+
+            if (selectedSource === 'topic') {
+                payload.topic = topic || null;
+            } else { // selectedSource === 'notes'
+                payload.lecture_notes_content = lectureNotesContent;
+                payload.file_name = fileName; // Send file name for logging
+            }
+            
+            const response = await axios.post(`${API_BASE_URL}/exam-simulator/generate`, payload, { headers });
 
             if (response.data.success && response.data.exam_data) {
                 setExamData(response.data.exam_data);
@@ -179,7 +212,8 @@ const ExamSimulatorPage = () => {
                 setRemainingSeconds(durationMins * 60);
                 setExamStage("active");
                 incrementGuestUsage();
-                sessionStorage.setItem('exam_simulator_inputs', JSON.stringify({ courseName, topic, numQuestions, durationMins }));
+                // Save inputs, including source selection and notes content/filename
+                sessionStorage.setItem('exam_simulator_inputs', JSON.stringify({ courseName, topic: selectedSource === 'topic' ? topic : '', numQuestions, durationMins, selectedSource, lectureNotesContent, fileName }));
             } else {
                 setError(response.data.message || 'Failed to generate exam.');
             }
@@ -203,6 +237,7 @@ const ExamSimulatorPage = () => {
     
     const handleDownloadResultsDocx = async () => {
         setError('');
+        // Ensure data exists, user is logged in, and exam is finished
         if (!examData.length || examStage !== "finished" || !currentUser) {
             setError('Please log in to download exam results.');
             return;
@@ -211,6 +246,7 @@ const ExamSimulatorPage = () => {
         setLoading(true);
         try {
             const accessToken = AuthService.getAccessToken();
+            // Auth header is needed for download if it's tied to user's premium/account status
             const headers = accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
 
             const formData = new FormData();
@@ -220,7 +256,13 @@ const ExamSimulatorPage = () => {
             formData.append('total_questions', examData.length.toString());
             formData.append('grade', grade);
             formData.append('course_name', courseName);
-            formData.append('topic', topic || '');
+            // Dynamically set 'topic' or indicate notes were used for logging/filename
+            if (selectedSource === 'notes' && fileName) {
+                 formData.append('topic', `Notes from ${fileName}`);
+            } else {
+                formData.append('topic', topic || ''); // Use original topic if selected
+            }
+            
 
             const response = await axios.post(`${API_BASE_URL}/exam-simulator/download-results-docx`, formData, {
                 headers,
@@ -231,7 +273,9 @@ const ExamSimulatorPage = () => {
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            const fileName = `${courseName.replace(/\s/g, '_')}_Exam_Results.docx`;
+            // Ensure filename is sanitized and unique
+            const sanitizedCourseName = courseName.replace(/[^a-z0-9_]/gi, '_').toLowerCase();
+            const fileName = `${sanitizedCourseName}_Exam_Results_${Date.now()}.docx`; // Use timestamp for unique filename
             a.download = fileName;
             document.body.appendChild(a);
             a.click();
@@ -255,8 +299,10 @@ const ExamSimulatorPage = () => {
         setExamScore(0);
         setGrade("");
         setRemark("");
-        // Do not clear courseName, topic etc. to allow for easy re-take
+        // Clear results, but keep inputs for easier re-take
         sessionStorage.removeItem('exam_simulator_results');
+        // Also clear the inputs related to the last generation for a clean start
+        sessionStorage.removeItem('exam_simulator_inputs');
     };
 
     const formatTime = (totalSeconds: number) => {
@@ -274,17 +320,45 @@ const ExamSimulatorPage = () => {
             
             {examStage === "setup" && (
                 <form onSubmit={handleGenerateExam} className={styles.examSetupForm}>
-                    {/* Form elements remain the same, just no ApiKeyInput */}
-                    <div className={styles.examSetupGrid}>
-                        <div className={styles.formGroup}>
-                            <label htmlFor="courseName">Course Name:</label>
-                            <input type="text" id="courseName" value={courseName} onChange={(e) => setCourseName(e.target.value)} placeholder="e.g., Introduction to Computer Science" required />
-                        </div>
+                    <div className={styles.formGroup}>
+                        <label htmlFor="courseName">Course Name:</label>
+                        <input type="text" id="courseName" value={courseName} onChange={(e) => setCourseName(e.target.value)} placeholder="e.g., Introduction to Computer Science" required />
+                    </div>
+
+                    {/* Source Selection Dropdown */}
+                    <div className={styles.formGroup}>
+                        <label htmlFor="sourceSelection">Question Source:</label>
+                        <select id="sourceSelection" value={selectedSource} onChange={(e) => {
+                            const newSource = e.target.value;
+                            setSelectedSource(newSource);
+                            // Reset inputs when source changes to avoid confusion
+                            setTopic(''); 
+                            setLectureNotesContent('');
+                            setFileName('');
+                            setUploadedFile(null);
+                            setError(''); // Clear previous errors
+                        }}>
+                            <option value="topic">AI Generated (Topic)</option>
+                            <option value="notes">Upload Lecture Notes</option>
+                        </select>
+                    </div>
+
+                    {/* Conditional Rendering for Topic Input or Notes File Upload */}
+                    {selectedSource === 'topic' && (
                         <div className={styles.formGroup}>
                             <label htmlFor="topic">Specific Topic (Optional):</label>
                             <input type="text" id="topic" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="e.g., Algorithms" />
                         </div>
-                    </div>
+                    )}
+
+                    {selectedSource === 'notes' && (
+                        <div className={styles.formGroup}>
+                            <label htmlFor="lectureNotesFile">Upload Lecture Notes:</label>
+                            <input type="file" id="lectureNotesFile" accept=".pdf,.txt,.docx" onChange={handleFileChange} />
+                            {fileName && <p>Selected file: {fileName}</p>}
+                        </div>
+                    )}
+                    
                     <div className={styles.examSetupGrid}>
                         <div className={styles.formGroup}>
                             <label htmlFor="duration">Exam Duration:</label>
@@ -298,7 +372,7 @@ const ExamSimulatorPage = () => {
                             <span>{numQuestions} Questions</span>
                         </div>
                     </div>
-                    <button type="submit" disabled={loading || !courseName.trim() || (!currentUser && guestUsageCount >= GUEST_EXAM_LIMIT)} className={styles.startButton}>
+                    <button type="submit" disabled={loading || !courseName.trim() || (selectedSource === 'topic' && !topic?.trim()) || (selectedSource === 'notes' && !lectureNotesContent.trim()) || (!currentUser && guestUsageCount >= GUEST_EXAM_LIMIT)} className={styles.startButton}>
                         {loading ? 'Preparing Exam...' : 'Start Exam'}
                     </button>
                     {!currentUser && (
