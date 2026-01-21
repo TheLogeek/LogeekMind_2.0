@@ -113,7 +113,7 @@ Course: {course_name}
 Topic: {topic if topic else 'General'}
 
 Generate {num_questions} examination-standard multiple-choice questions.
-The questions should be a mix of requiring critical thinking or application of concepts from the notes and definitions, types, examples and other concepts relevant to the subject and topic if any
+Ensure the questions vary in difficulty from basic facts to complex problem-solving. Include multiple-choice questions with four distinct options where only one is correct. Create distractors that represent common mistakes students make. Use formal and clear language suitable for a high-level academic exam.
 OUTPUT FORMAT:
 Return ONLY a raw JSON list of dictionaries. Do NOT use Markdown code blocks.
 Each dictionary must have these keys:
