@@ -61,10 +61,10 @@ async def summarize_text_content(text_content: str, user_id: str) -> Tuple[str, 
         error_message = str(e)
         if "429" in error_message or "RESOURCE_EXHAUSTED" in error_message.upper():
             print(f"Gemini API rate limit exceeded during summarization: {e}")
-            return "", "Gemini API rate limit exceeded. Please try again in a moment."
+            return {"success": False, "message": "AI is currently experiencing high traffic. Please try again shortly."}
         elif "503" in error_message:
             print(f"AI is currently eperiencing high traffic. Try again shortly.")
-            return "", "AI is currently eperiencing high traffic. Please try again shortly."
+            return {"success": False, "message": "AI is currently experiencing high traffic. Please try again shortly."}
         else:
             print(f"An API error occurred: {e}")
             return "", f"An API error occurred: {e}"
