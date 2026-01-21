@@ -188,7 +188,8 @@ const ExamSimulatorPage = () => {
         setLoading(true);
         try {
             const accessToken = AuthService.getAccessToken();
-            // No Authorization header needed for guest generation, but keep it for logged-in users if backend requires it for logging/permissions.
+            // No Authorization header needed for guest generation.
+            // For logged-in users, it might be useful for backend logging/rate limiting, but not essential for generation itself.
             const headers = accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
 
             const payload: any = { // Use 'any' or a more specific type for flexibility
@@ -204,7 +205,10 @@ const ExamSimulatorPage = () => {
                 payload.file_name = fileName; // Send file name for logging
             }
             
-            const response = await axios.post(`${API_BASE_URL}/exam-simulator/generate`, payload, { headers });
+            // Removed Authorization header for guest generation consistency with backend adjustment.
+            const requestHeaders = accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
+
+            const response = await axios.post(`${API_BASE_URL}/exam-simulator/generate`, payload, { headers: requestHeaders });
 
             if (response.data.success && response.data.exam_data) {
                 setExamData(response.data.exam_data);
@@ -246,7 +250,7 @@ const ExamSimulatorPage = () => {
         setLoading(true);
         try {
             const accessToken = AuthService.getAccessToken();
-            // Auth header is needed for download if it's tied to user's premium/account status
+            // Auth header is needed for download if it's tied to user's premium/account status, but not strictly for downloading generated results. Let's keep it for now if current_user check passes.
             const headers = accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
 
             const formData = new FormData();
@@ -256,14 +260,20 @@ const ExamSimulatorPage = () => {
             formData.append('total_questions', examData.length.toString());
             formData.append('grade', grade);
             formData.append('course_name', courseName);
-            // Dynamically set 'topic' or indicate notes were used for logging/filename
-            // Use fileName if notes were used, otherwise use topic
-            if (selectedSource === 'notes' && fileName) {
-                 formData.append('topic', `Notes from ${fileName}`); // Use file name as context
-            } else {
-                formData.append('topic', topic || ''); // Use original topic if selected
-            }
             
+            // Dynamically set 'topic' or indicate notes were used for logging/filename
+            let topicForApi = '';
+            if (selectedSource === 'notes') {
+                if (fileName && fileName.length > 0) { // Explicitly check for non-empty fileName
+                    topicForApi = `Notes from ${fileName}`;
+                } else {
+                    // Fallback if selectedSource is 'notes' but fileName is missing (should not happen if validation is right)
+                    topicForApi = 'Notes Uploaded (Details Missing)';
+                }
+            } else { // selectedSource === 'topic'
+                topicForApi = topic || '';
+            }
+            formData.append('topic', topicForApi); // Append the determined topic value
 
             const response = await axios.post(`${API_BASE_URL}/exam-simulator/download-results-docx`, formData, {
                 headers,
@@ -276,8 +286,8 @@ const ExamSimulatorPage = () => {
             a.href = url;
             // Ensure filename is sanitized and unique using timestamp
             const sanitizedCourseName = courseName.replace(/[^a-z0-9_]/gi, '_').toLowerCase();
-            const fileName = `${sanitizedCourseName}_Exam_Results_${Date.now()}.docx`; 
-            a.download = fileName;
+            const fileNameForDownload = `${sanitizedCourseName}_Exam_Results_${Date.now()}.docx`;
+            a.download = fileNameForDownload;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
