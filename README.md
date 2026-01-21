@@ -60,6 +60,7 @@ To run this project locally, you need to set up and run both the frontend and ba
 -   Python 3.10+ and pip
 -   A Supabase account (for database and auth)
 -   A Google Gemini API Key
+-   Ffmpeg
 
 ### Installation & Setup
 
