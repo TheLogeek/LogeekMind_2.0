@@ -49,6 +49,41 @@ const ExamSimulatorPage = () => {
         return typeof window !== 'undefined' ? parseInt(localStorage.getItem(GUEST_USAGE_KEY) || '0', 10) : 0;
     });
 
+    // Function to handle file changes for lecture notes upload
+    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (file) {
+            setUploadedFile(file);
+            setFileName(file.name);
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                if (e.target?.result && typeof e.target.result === 'string') {
+                    setLectureNotesContent(e.target.result);
+                } else {
+                    setError("Could not read file content.");
+                    setLectureNotesContent('');
+                    setFileName('');
+                }
+            };
+            reader.onerror = () => {
+                setError("Error reading file.");
+                setLectureNotesContent('');
+                setFileName('');
+            };
+            // Read as text for TXT, PDF, DOCX content extraction handled by backend.
+            // For PDF/DOCX, backend might need specific parsers. For now, assuming text extraction is primary.
+            // If PDF/DOCX extraction on frontend is needed, FileReader needs to handle binary data appropriately.
+            // For simplicity, let's assume reading as text is sufficient for now or backend handles binary.
+            // If backend needs binary, the payload needs to change to FormData for file uploads.
+            // Given backend expects string for lecture_notes_content, readAsText is appropriate.
+            reader.readAsText(file); 
+        } else {
+            setUploadedFile(null);
+            setFileName('');
+            setLectureNotesContent('');
+        }
+    };
+
     const handleSubmitExam = async () => {
         setError('');
         setLoading(true);
