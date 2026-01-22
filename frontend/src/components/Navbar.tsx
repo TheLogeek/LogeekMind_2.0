@@ -21,8 +21,8 @@ const Navbar: React.FC<NavbarProps> = ({ toggleSidebar, isSidebarOpen }) => {
     const [isNavOpen, setIsNavOpen] = useState(false);
     const { currentUser, setCurrentUser } = useUser(); // Use the global user context
 
-    // Access username safely with fallback
-    const username = currentUser?.username ?? "Guest"; // Use nullish coalescing for clarity
+    // Access username more robustly with explicit check for currentUser and fallback
+    const username = currentUser ? (currentUser.username ?? "Guest") : "Guest";
 
     const handleLogout = () => {
         AuthService.logout();
