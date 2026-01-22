@@ -21,7 +21,21 @@ const CreateLessonPage = () => {
 
     // State for component-specific configurations
     const [outlineConfig, setOutlineConfig] = useState({ detailLevel: 'medium' });
-    const [notesConfig, setNotesConfig] = useState({ source: 'topic', topic: '', file: null, fileName: '' });
+    
+    // Define explicit type for notesConfig to allow File | null
+    interface NotesConfig {
+        source: string;
+        topic: string;
+        file: File | null; // Allows File object or null
+        fileName: string;
+    }
+
+    const [notesConfig, setNotesConfig] = useState<NotesConfig>({ // Apply the explicit type
+        source: 'topic', 
+        topic: '', 
+        file: null, 
+        fileName: '' 
+    });
     const [quizConfig, setQuizConfig] = useState({ topic: '', numQuestions: 10, difficulty: 3 });
     const [examConfig, setExamConfig] = useState({ topic: '', numQuestions: 20, durationMins: 30 });
 
@@ -49,7 +63,7 @@ const CreateLessonPage = () => {
     };
 
     const handleNotesConfigChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-        const target = e.target as HTMLInputElement | HTMLSelectElement; // Explicitly type target
+        const target = e.target as HTMLInputElement | HTMLSelectElement; // Explicitly type target for clarity
         const { name, value } = target;
 
         if (name === 'file') { // Specific handling for file input
@@ -58,7 +72,7 @@ const CreateLessonPage = () => {
             const file = inputElement.files?.[0];
             setNotesConfig(prev => ({
                 ...prev,
-                file: file || null,
+                file: file || null, // This correctly assigns File object or null
                 fileName: file ? file.name : ''
             }));
         } else { // Handling for select elements or other text inputs
