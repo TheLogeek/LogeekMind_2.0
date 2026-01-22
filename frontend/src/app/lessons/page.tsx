@@ -105,6 +105,7 @@ const PublicLessonsPage = () => {
 
   return (
     <div className={`page-container ${styles.lessonsPageContainer}`}>
+      <h2>This Feature is still under development</h2>
       <h2>Public Lessons</h2>
 
       <button
