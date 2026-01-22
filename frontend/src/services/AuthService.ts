@@ -55,39 +55,49 @@ const getStoredCredentials = (): { email: string | null; password: string | null
 
 
 const register = async (email: string, password: string, username: string, terms_accepted: boolean): Promise<AuthResponse> => {
-    const response = await axios.post<AuthResponse>(`${API_BASE_URL}/auth/signup`, {
-        email,
-        password,
-        username,
-        terms_accepted,
-    });
-    return response.data;
+    try { // Added try-catch for register
+        const response = await axios.post<AuthResponse>(`${API_BASE_URL}/auth/signup`, {
+            email,
+            password,
+            username,
+            terms_accepted,
+        });
+        return response.data;
+    } catch (error) {
+        console.error("Registration API error:", error);
+        return { success: false, message: "Registration failed due to an API error." };
+    }
 };
 
 const login = async (email: string, password: string, rememberMe: boolean = false): Promise<AuthResponse> => {
-    const response = await axios.post<AuthResponse>(`${API_BASE_URL}/auth/signin`, {
-        email,
-        password,
-    });
-    if (response.data.success && response.data.session && response.data.session.access_token) {
-        const storage = getTargetStorage(rememberMe); // Use helper to determine storage
+    try { // Added try-catch for login
+        const response = await axios.post<AuthResponse>(`${API_BASE_URL}/auth/signin`, {
+            email,
+            password,
+        });
+        if (response.data.success && response.data.session && response.data.session.access_token) {
+            const storage = getTargetStorage(rememberMe); // Use helper to determine storage
 
-        if (storage) {
-            storage.setItem("user", JSON.stringify(response.data.user));
-            storage.setItem("profile", JSON.stringify(response.data.profile)); 
-            storage.setItem("accessToken", response.data.session.access_token);
-            // Store rememberMe preference in localStorage (always), and credentials if rememberMe is true
-            localStorage.setItem("rememberMe", String(rememberMe)); 
-            if (rememberMe) {
-                localStorage.setItem("rememberedEmail", email);
-                localStorage.setItem("rememberedPassword", password); // Storing password for re-login (SECURITY RISK)
-            } else {
-                localStorage.removeItem("rememberedEmail");
-                localStorage.removeItem("rememberedPassword");
+            if (storage) {
+                storage.setItem("user", JSON.stringify(response.data.user));
+                storage.setItem("profile", JSON.stringify(response.data.profile)); 
+                storage.setItem("accessToken", response.data.session.access_token);
+                // Store rememberMe preference in localStorage (always), and credentials if rememberMe is true
+                localStorage.setItem("rememberMe", String(rememberMe)); 
+                if (rememberMe) {
+                    localStorage.setItem("rememberedEmail", email);
+                    localStorage.setItem("rememberedPassword", password); // Storing password for re-login (SECURITY RISK)
+                } else {
+                    localStorage.removeItem("rememberedEmail");
+                    localStorage.removeItem("rememberedPassword");
+                }
             }
         }
+        return response.data;
+    } catch (error) {
+        console.error("Login API error:", error);
+        return { success: false, message: "Login failed due to an API error." };
     }
-    return response.data;
 };
 
 // New silentLogin function for re-authentication
@@ -108,7 +118,8 @@ const silentLogin = async (email: string, password: string): Promise<AuthRespons
         }
     } catch (error) {
         console.error("Silent login API error:", error);
-        return { success: false, message: "Silent login failed due to API error." };
+        // Return a structured error response
+        return { success: false, message: "Silent login failed due to an API error." };
     }
 };
 
@@ -138,25 +149,32 @@ const getCurrentUser = async (): Promise<(User & { username?: string, profile?: 
     let storedUserRaw: string | null = null;
     let storedProfileRaw: string | null = null;
 
-    if (rememberMe && email && password) {
-        // Attempt silent re-login if remembered credentials exist
-        const silentLoginResponse = await silentLogin(email, password);
-        if (silentLoginResponse.success && silentLoginResponse.user && silentLoginResponse.profile) {
-            user = { ...silentLoginResponse.user, username: silentLoginResponse.profile.username, profile: silentLoginResponse.profile };
+    try { // Added try-catch for potential JSON.parse errors or storage access issues
+        if (rememberMe && email && password) {
+            // Attempt silent re-login if remembered credentials exist
+            const silentLoginResponse = await silentLogin(email, password); // silentLogin now has its own try-catch
+            if (silentLoginResponse.success && silentLoginResponse.user && silentLoginResponse.profile) {
+                user = { ...silentLoginResponse.user, username: silentLoginResponse.profile.username, profile: silentLoginResponse.profile };
+            } else {
+                // Silent login failed, clear remembered credentials
+                logout(); // This clears all, including remembered info
+            }
         } else {
-            // Silent login failed, clear remembered credentials
-            logout(); // This clears all, including remembered info
-        }
-    } else {
-        // For non-remembered sessions, or if silent login failed
-        storedUserRaw = activeStorage?.getItem("user") || null;
-        storedProfileRaw = activeStorage?.getItem("profile") || null;
+            // For non-remembered sessions, or if silent login failed
+            storedUserRaw = activeStorage?.getItem("user") || null;
+            storedProfileRaw = activeStorage?.getItem("profile") || null;
 
-        if (storedUserRaw && storedProfileRaw) {
-            const storedUser: User = JSON.parse(storedUserRaw);
-            const storedProfile: UserProfile = JSON.parse(storedProfileRaw);
-            user = { ...storedUser, username: storedProfile.username, profile: storedProfile };
+            if (storedUserRaw && storedProfileRaw) {
+                const storedUser: User = JSON.parse(storedUserRaw); // JSON.parse can throw
+                const storedProfile: UserProfile = JSON.parse(storedProfileRaw); // JSON.parse can throw
+                user = { ...storedUser, username: storedProfile.username, profile: storedProfile };
+            }
         }
+    } catch (error) {
+        console.error("Error during getCurrentUser session retrieval:", error);
+        // Clear potentially corrupted stored data if an error occurs
+        logout();
+        return null; // Indicate failure
     }
     
     return user;

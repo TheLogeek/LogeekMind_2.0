@@ -51,14 +51,19 @@ const PublicLessonsPage = () => {
         // Check login status when component mounts
         const checkLogin = async () => {
             setIsLoadingAuth(true);
-            // Using getCurrentUser to properly check auth status, which might involve token refresh.
-            const user = await AuthService.getCurrentUser();
-            if (user) {
-                setIsLoggedIn(true);
-            } else {
-                setIsLoggedIn(false);
+            try { // Added try-catch for robustness
+                const user = await AuthService.getCurrentUser();
+                if (user) {
+                    setIsLoggedIn(true);
+                } else {
+                    setIsLoggedIn(false);
+                }
+            } catch (error) {
+                console.error("Error checking login status:", error);
+                setIsLoggedIn(false); // Assume not logged in if an error occurs
+            } finally {
+                setIsLoadingAuth(false);
             }
-            setIsLoadingAuth(false);
         };
         checkLogin();
     }, []);
