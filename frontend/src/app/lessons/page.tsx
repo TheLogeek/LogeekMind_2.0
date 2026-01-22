@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 import styles from './LessonsPage.module.css';
 import AuthService from '../../services/AuthService'; // Import AuthService
 
@@ -90,19 +90,23 @@ const PublicLessonsPage = () => {
                     ))}
                 </div>
             ) : (
-                // Updated message for no lessons found
+                // Updated message for no lessons found, with a styled button for creation
                 <div className={styles.noLessonsMessage}>
-                    <p>No lessons for your search. <a onClick={() => router.push('/create-lesson')} className={styles.createLessonLink}>Create your own lessons</a></p>
+                    <p>No lessons for your search.</p>
+                    {/* Use the styled button for creating lessons */}
+                    {isLoggedIn && (
+                        <button onClick={() => router.push('/create-lesson')} className={styles.createLessonButton}>
+                            Create New Lesson
+                        </button>
+                    )}
                 </div>
             )}
 
-            {/* Conditionally render the "Create Lesson" button if the user is logged in */}
-            {isLoggedIn && (
-                <div className={styles.createLessonButtonContainer}>
-                    <button onClick={() => router.push('/create-lesson')} className={styles.createLessonButton}>
-                        Create New Lesson
-                    </button>
-                </div>
+            {/* Conditionally render a message if user is not logged in and no lessons are found */}
+            {!isLoggedIn && lessons.length === 0 && (
+                 <div className={styles.noLessonsMessage}>
+                    <p>No lessons found. Please log in to create your first lesson!</p>
+                 </div>
             )}
         </div>
     );

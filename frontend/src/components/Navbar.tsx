@@ -2,8 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation'
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation'; // Import useRouter here
 import AuthService from '../services/AuthService';
 import styles from './Navbar.module.css';
 import { useUser } from '../app/layout'; // Import the useUser hook
@@ -22,8 +21,8 @@ const Navbar: React.FC<NavbarProps> = ({ toggleSidebar, isSidebarOpen }) => {
     const [isNavOpen, setIsNavOpen] = useState(false);
     const { currentUser, setCurrentUser } = useUser(); // Use the global user context
 
-    // Access username directly from currentUser
-    const username = currentUser?.username || "Guest";
+    // Access username safely with fallback
+    const username = currentUser?.username ?? "Guest"; // Use nullish coalescing for clarity
 
     const handleLogout = () => {
         AuthService.logout();
@@ -155,7 +154,8 @@ const AdminLink: React.FC<{ onNavLinkClick: () => void }> = ({ onNavLinkClick })
                                 Authorization: `Bearer ${accessToken}`, // Corrected Authorization header
                             },
                         });
-                        setIsAdmin(response.data.is_admin);
+                        // Safely access is_admin, default to false if response.data or is_admin is undefined/null
+                        setIsAdmin(response.data?.is_admin ?? false); 
                     } else {
                         setIsAdmin(false);
                     }
@@ -168,7 +168,6 @@ const AdminLink: React.FC<{ onNavLinkClick: () => void }> = ({ onNavLinkClick })
             }
         };
         // Check admin status whenever currentUser changes
-        // This check is now always triggered when currentUser changes, not just if nav is open
         checkAdminStatus();
     }, [currentUser]);
 
