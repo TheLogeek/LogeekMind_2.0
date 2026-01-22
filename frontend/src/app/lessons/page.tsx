@@ -135,7 +135,8 @@ const PublicLessonsPage = () => {
                     {lessons.map(lesson => (
                         <div key={lesson.id} className={styles.lessonCard} onClick={() => router.push(`/lesson/${lesson.id}`)}>
                             <h3>{lesson.title}</h3>
-                            <p>by {lesson.creator.username}</p>
+                            {/* Safely access creator.username to prevent errors if creator is null or undefined */}
+                            <p>by {lesson.creator?.username ?? 'Unknown Creator'}</p>
                             <span>{new Date(lesson.created_at).toLocaleDateString()}</span>
                         </div>
                     ))}
