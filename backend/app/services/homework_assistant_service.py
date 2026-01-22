@@ -65,7 +65,7 @@ async def generate_homework_solution(
     full_prompt = f"""
     You are a rigorous academic solver. Based on the image and the user's instructions (if any),
     provide a complete and accurate solution. The output must be in a clean, professional, and easily 
-    readable **Markdown format**.
+    readable **Markdown format**. DO NOT USE LaTex COMMANDS
 
     Instructions:
     {context if context else "The user provided no instructions"}
