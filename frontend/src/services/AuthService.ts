@@ -167,13 +167,46 @@ const getCurrentUser = async (): Promise<(User & { username?: string, profile?: 
 
             // Check if data exists and is not an empty string before parsing
             if (storedUserRaw && storedUserRaw.trim() !== "" && storedProfileRaw && storedProfileRaw.trim() !== "") {
-                const storedUser: User = JSON.parse(storedUserRaw); // JSON.parse can throw
-                const storedProfile: UserProfile = JSON.parse(storedProfileRaw); // JSON.parse can throw
-                user = { ...storedUser, username: storedProfile.username, profile: storedProfile };
+                let parsedUser: User | null = null;
+                let parsedProfile: UserProfile | null = null;
+
+                try {
+                    parsedUser = JSON.parse(storedUserRaw);
+                } catch (e) {
+                    console.error("Failed to parse user data from storage:", e);
+                    // Clear potentially corrupted user data
+                    if (activeStorage) activeStorage.removeItem("user");
+                    return null; // Indicate failure
+                }
+
+                try {
+                    parsedProfile = JSON.parse(storedProfileRaw);
+                } catch (e) {
+                    console.error("Failed to parse profile data from storage:", e);
+                    // Clear potentially corrupted profile data
+                    if (activeStorage) activeStorage.removeItem("profile");
+                    return null; // Indicate failure
+                }
+
+                // Ensure essential properties exist and provide defaults
+                if (parsedUser && parsedUser.id && parsedUser.email && parsedProfile) {
+                    user = {
+                        id: parsedUser.id,
+                        email: parsedUser.email,
+                        profile: {
+                            username: parsedProfile.username || 'Anonymous User', // Provide default username
+                            // Add other profile properties if they exist in the interface, with defaults
+                        },
+                        username: parsedProfile.username || 'Anonymous User', // Direct access for convenience
+                    };
+                } else {
+                    console.error("User or profile data incomplete or invalid after parsing.");
+                    logout(); // Clean up storage as data is inconsistent
+                    return null;
+                }
             } else {
                 // If data is missing or empty, clear potentially stale tokens/preferences
-                // This might happen if only rememberMe is true but user/profile data got cleared
-                if (rememberMe) { // Only clear if rememberMe was true, to avoid clearing session tokens unexpectedly
+                if (rememberMe) { // Only clear if rememberMe was true
                    localStorage.removeItem("rememberedEmail");
                    localStorage.removeItem("rememberedPassword");
                    localStorage.removeItem("rememberMe");
@@ -188,8 +221,7 @@ const getCurrentUser = async (): Promise<(User & { username?: string, profile?: 
         }
     } catch (error) {
         console.error("Error during getCurrentUser session retrieval:", error);
-        // Clear potentially corrupted stored data if an error occurs
-        logout();
+        logout(); // Ensure cleanup on any error
         return null; // Indicate failure
     }
     
