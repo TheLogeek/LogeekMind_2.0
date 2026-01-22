@@ -152,6 +152,7 @@ const CreateLessonPage = () => {
 
     return (
         <div className={`page-container ${styles.createLessonPageContainer}`}>
+            <h2>This Feature is still under development</h2>
             <h2>Create New Lesson</h2>
             <p>Set up your lesson structure and choose which AI tools to include.</p>
 
