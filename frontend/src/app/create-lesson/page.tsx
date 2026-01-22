@@ -161,6 +161,15 @@ const CreateLessonPage = () => {
         }
     };
 
+if (isLoadingAuth) {
+    return (
+        <div className={`page-container ${styles.createLessonPageContainer}`}>
+            <p>Checking authentication...</p>
+        </div>
+    );
+}
+
+
     return (
         <div className={`page-container ${styles.createLessonPageContainer}`}>
             <h2>Create New Lesson</h2>
