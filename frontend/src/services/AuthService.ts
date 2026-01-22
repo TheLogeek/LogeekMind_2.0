@@ -161,13 +161,28 @@ const getCurrentUser = async (): Promise<(User & { username?: string, profile?: 
             }
         } else {
             // For non-remembered sessions, or if silent login failed
-            storedUserRaw = activeStorage?.getItem("user") || null;
-            storedProfileRaw = activeStorage?.getItem("profile") || null;
+            storedUserRaw = activeStorage?.getItem("user");
+            storedProfileRaw = activeStorage?.getItem("profile");
 
-            if (storedUserRaw && storedProfileRaw) {
+            // Check if data exists and is not an empty string before parsing
+            if (storedUserRaw && storedUserRaw.trim() !== "" && storedProfileRaw && storedProfileRaw.trim() !== "") {
                 const storedUser: User = JSON.parse(storedUserRaw); // JSON.parse can throw
                 const storedProfile: UserProfile = JSON.parse(storedProfileRaw); // JSON.parse can throw
                 user = { ...storedUser, username: storedProfile.username, profile: storedProfile };
+            } else {
+                // If data is missing or empty, clear potentially stale tokens/preferences
+                // This might happen if only rememberMe is true but user/profile data got cleared
+                if (rememberMe) { // Only clear if rememberMe was true, to avoid clearing session tokens unexpectedly
+                   localStorage.removeItem("rememberedEmail");
+                   localStorage.removeItem("rememberedPassword");
+                   localStorage.removeItem("rememberMe");
+                }
+                // Also clear session storage if it was the active one
+                if (activeStorage === sessionStorage) {
+                    sessionStorage.removeItem("user");
+                    sessionStorage.removeItem("profile");
+                    sessionStorage.removeItem("accessToken");
+                }
             }
         }
     } catch (error) {
