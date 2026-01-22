@@ -21,6 +21,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     const pathname = usePathname();
 
     useEffect(() => {
+        let isMounted = true; // Flag to track if component is still mounted
+
         const checkAdminStatus = async () => {
             if (currentUser) {
                 try {
@@ -31,20 +33,35 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                                 Authorization: `Bearer ${accessToken}`,
                             },
                         });
-                        setIsAdmin(response.data.is_admin);
+                        // Only update state if the component is still mounted
+                        if (isMounted) {
+                            // Safely access is_admin, default to false if undefined/null
+                            setIsAdmin(response.data?.is_admin ?? false); 
+                        }
                     } else {
-                        setIsAdmin(false);
+                        if (isMounted) {
+                            setIsAdmin(false);
+                        }
                     }
                 } catch (error) {
                     console.error('Error checking admin status:', error);
-                    setIsAdmin(false);
+                    if (isMounted) {
+                        setIsAdmin(false);
+                    }
                 }
             } else {
-                setIsAdmin(false);
+                if (isMounted) {
+                    setIsAdmin(false);
+                }
             }
         };
 
         checkAdminStatus();
+
+        // Cleanup function: runs when component unmounts or before effect re-runs
+        return () => {
+            isMounted = false;
+        };
     }, [currentUser]); // Re-run when currentUser from context changes
 
     const getNavLinkClass = (path: string) => {
@@ -95,3 +112,4 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
 };
 
 export default Sidebar;
+

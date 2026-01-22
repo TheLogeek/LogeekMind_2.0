@@ -144,6 +144,8 @@ const AdminLink: React.FC<{ onNavLinkClick: () => void }> = ({ onNavLinkClick })
     const router = useRouter(); // Use useRouter in AdminLink
 
     useEffect(() => {
+        let isMounted = true; // Flag to track if component is still mounted
+
         const checkAdminStatus = async () => {
             if (currentUser) {
                 try {
@@ -154,22 +156,36 @@ const AdminLink: React.FC<{ onNavLinkClick: () => void }> = ({ onNavLinkClick })
                                 Authorization: `Bearer ${accessToken}`, // Corrected Authorization header
                             },
                         });
-                        // Safely access is_admin, default to false if response.data or is_admin is undefined/null
-                        setIsAdmin(response.data?.is_admin ?? false); 
+                        // Only update state if the component is still mounted
+                        if (isMounted) {
+                            // Safely access is_admin, default to false if response.data or is_admin is undefined/null
+                            setIsAdmin(response.data?.is_admin ?? false); 
+                        }
                     } else {
-                        setIsAdmin(false);
+                        if (isMounted) {
+                            setIsAdmin(false);
+                        }
                     }
                 } catch (error) {
                     console.error('Error checking admin status:', error);
-                    setIsAdmin(false);
+                    if (isMounted) {
+                        setIsAdmin(false);
+                    }
                 }
             } else {
-                setIsAdmin(false);
+                if (isMounted) {
+                    setIsAdmin(false);
+                }
             }
         };
-        // Check admin status whenever currentUser changes
+
         checkAdminStatus();
-    }, [currentUser]);
+
+        // Cleanup function: runs when component unmounts or before effect re-runs
+        return () => {
+            isMounted = false;
+        };
+    }, [currentUser]); // Re-run when currentUser from context changes
 
     if (isAdmin && currentUser) {
         return (
