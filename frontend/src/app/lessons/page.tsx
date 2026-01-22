@@ -1,4 +1,3 @@
-```tsx
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -170,4 +169,3 @@ const PublicLessonsPage = () => {
 };
 
 export default PublicLessonsPage;
-```
