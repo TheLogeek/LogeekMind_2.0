@@ -42,12 +42,23 @@ const CreateLessonPage = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
+    const [isLoadingAuth, setIsLoadingAuth] = useState(true);
     useEffect(() => {
-        // Redirect if not logged in, as lesson creation requires a creator_id
-        if (!AuthService.getCurrentUser()) {
+    const checkAuth = async () => {
+        try {
+            const user = await AuthService.getCurrentUser();
+            if (!user) {
+                router.push('/login?redirect=/create-lesson');
+            }
+        } catch {
             router.push('/login?redirect=/create-lesson');
+        } finally {
+            setIsLoadingAuth(false);
         }
-    }, [router]);
+    };
+    checkAuth();
+}, [router]);
+
 
     const handleComponentChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const { name, checked } = event.target;
