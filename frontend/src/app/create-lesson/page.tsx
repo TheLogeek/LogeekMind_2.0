@@ -21,7 +21,7 @@ const CreateLessonPage = () => {
 
     // State for component-specific configurations
     const [outlineConfig, setOutlineConfig] = useState({ detailLevel: 'medium' });
-
+    
     // Define explicit type for notesConfig to allow File | null
     interface NotesConfig {
         source: string;
@@ -40,25 +40,14 @@ const CreateLessonPage = () => {
     const [examConfig, setExamConfig] = useState({ topic: '', numQuestions: 20, durationMins: 30 });
 
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    const [error, setError] = useState('');
 
-    const [isLoadingAuth, setIsLoadingAuth] = useState(true);
     useEffect(() => {
-    const checkAuth = async () => {
-        try {
-            const user = await AuthService.getCurrentUser();
-            if (!user) {
-                router.push('/login?redirect=/create-lesson');
-            }
-        } catch {
+        // Redirect if not logged in, as lesson creation requires a creator_id
+        if (!AuthService.getCurrentUser()) {
             router.push('/login?redirect=/create-lesson');
-        } finally {
-            setIsLoadingAuth(false);
         }
-    };
-    checkAuth();
-}, [router]);
-
+    }, [router]);
 
     const handleComponentChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const { name, checked } = event.target;
@@ -110,7 +99,7 @@ const CreateLessonPage = () => {
             setError("Lesson title cannot be empty.");
             return;
         }
-
+        
         setLoading(true);
         try {
             const accessToken = AuthService.getAccessToken();
@@ -151,27 +140,15 @@ const CreateLessonPage = () => {
             } else {
                 setError(createLessonResponse.data.message || 'Failed to create lesson.');
             }
-        } catch (error: any) {
-    console.error("Error creating lesson:", error.response?.data);
-    setError(
-        error.response?.data?.detail?.[0]?.msg ||
-        "Failed to create lesson"
-    );
-}
-
+        } catch (err: unknown) {
+            const axiosError = err as AxiosError<any>;
+            console.error('Error creating lesson:', axiosError.response?.data || axiosError);
+            // Provide a more user-friendly error message, falling back to a generic one
+            setError(axiosError.response?.data?.detail || axiosError.message || 'An unexpected error occurred while creating the lesson.');
         } finally {
             setLoading(false);
         }
     };
-
-if (isLoadingAuth) {
-    return (
-        <div className={`page-container ${styles.createLessonPageContainer}`}>
-            <p>Checking authentication...</p>
-        </div>
-    );
-}
-
 
     return (
         <div className={`page-container ${styles.createLessonPageContainer}`}>
