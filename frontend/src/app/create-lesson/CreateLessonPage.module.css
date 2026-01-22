@@ -1,0 +1,93 @@
+.createLessonPageContainer {
+    padding: 2rem;
+    max-width: 700px;
+    margin: 2rem auto;
+    background-color: #fff;
+    border-radius: 12px;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.05);
+}
+
+.createLessonForm h2 {
+    text-align: center;
+    color: #333;
+    margin-bottom: 0.5rem;
+}
+
+.createLessonForm p {
+    text-align: center;
+    color: #666;
+    margin-bottom: 2rem;
+}
+
+.formGroup {
+    margin-bottom: 1.5rem;
+}
+
+.formGroup label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: bold;
+    color: #555;
+}
+
+.formGroup input[type="text"],
+.formGroup select {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    font-size: 1rem;
+    box-sizing: border-box; /* Important for padding and border */
+}
+
+.formGroup input[type="checkbox"] {
+    margin-right: 0.5rem;
+    transform: scale(1.1); /* Slightly larger checkbox */
+    cursor: pointer;
+}
+
+.componentCheckboxes label {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.75rem;
+    font-weight: normal;
+    color: #333;
+    cursor: pointer;
+}
+
+.submitButton {
+    width: 100%;
+    padding: 1rem;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.submitButton:disabled {
+    background-color: #a0a0a0;
+    cursor: not-allowed;
+}
+
+.submitButton:hover:not(:disabled) {
+    background-color: #0056b3;
+}
+
+.errorText {
+    color: red;
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    text-align: center;
+}
+
+small {
+    font-size: 0.85rem;
+    color: #777;
+    margin-left: 0.5rem;
+}

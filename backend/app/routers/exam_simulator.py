@@ -5,6 +5,7 @@ from typing import Dict, Any, List, Optional, Tuple
 from starlette.responses import StreamingResponse
 import json
 import time # For unique filename
+import uuid # For generating share IDs
 
 from app.core.database import get_supabase_client
 from app.core.security import try_get_current_user_from_supabase_jwt, get_current_user_from_supabase_jwt
@@ -27,6 +28,7 @@ class ExamSetupRequest(BaseModel):
     duration_mins: int = 30
     lecture_notes_content: Optional[str] = None # New field for lecture notes
     file_name: Optional[str] = None # New field for the name of the uploaded file
+    is_sharable: bool = False # Add flag for sharable exams
 
 class ExamQuestion(BaseModel):
     question: str
@@ -38,6 +40,7 @@ class ExamGenerateResponse(BaseModel):
     success: bool
     exam_data: Optional[List[ExamQuestion]] = None
     message: Optional[str] = None
+    share_id: Optional[str] = None # Add share_id to response
 
 class ExamSubmitRequest(BaseModel):
     exam_data: List[ExamQuestion]
@@ -72,7 +75,7 @@ async def generate_exam_route(
         username = "Guest"
 
     try:
-        # Pass lecture_notes_content and file_name if provided, otherwise pass topic
+        # Pass is_sharable flag to the service
         response = await exam_simulator_service.generate_exam_questions(
             supabase=supabase,
             user_id=user_id,
@@ -81,7 +84,8 @@ async def generate_exam_route(
             topic=request.topic, # Pass topic
             num_questions=request.num_questions,
             lecture_notes_content=request.lecture_notes_content, # Pass notes content
-            file_name=request.file_name # Pass file name for logging
+            file_name=request.file_name, # Pass file name for logging
+            is_sharable=request.is_sharable # Pass the sharing flag
         )
         if not response["success"]:
             if "Rate Limit Hit" in response.get("message", ""):
@@ -93,7 +97,9 @@ async def generate_exam_route(
                  raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=response["message"])
             
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=response["message"])
-        return ExamGenerateResponse(success=True, exam_data=response["exam_data"])
+        
+        # Include share_id in the response if available
+        return ExamGenerateResponse(success=True, exam_data=response["exam_data"], share_id=response.get("share_id"))
     except HTTPException as e:
         raise e
     except Exception as e:
@@ -162,3 +168,49 @@ async def download_exam_results_docx(
     except Exception as e:
         print(f"Error during DOCX creation in download_exam_results_docx: {e}") # Log for debugging
         raise HTTPException(status_code=500, detail=f"An error occurred during DOCX creation: {e}")
+
+# --- New endpoints for shared exams ---
+
+@router.get("/shared-exams/{share_id}")
+async def get_shared_exam_route(
+    share_id: str,
+    supabase: Client = Depends(get_supabase_client)
+):
+    """Fetches a specific shared exam by its share_id."""
+    response = await exam_simulator_service.get_shared_exam(supabase, share_id=share_id)
+    if not response["success"]:
+        if response["message"] == "Exam not found.":
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=response["message"])
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=response["message"])
+    
+    # Return exam data and creator username for display.
+    return {
+        "success": True,
+        "exam_data": response["exam_data"],
+        "creator_username": response.get("creator_username")
+    }
+
+@router.post("/shared-exams/{share_id}/submit")
+async def submit_shared_exam_route(
+    share_id: str,
+    user_answers: Dict[str, str] = Body(...), # Expecting user answers in the request body
+    supabase: Client = Depends(get_supabase_client)
+):
+    """Submits answers for a shared exam."""
+    response = await exam_simulator_service.submit_shared_exam_results(
+        supabase=supabase,
+        share_id=share_id,
+        user_answers=user_answers
+    )
+    if not response["success"]:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=response["message"])
+    
+    # Return submission results
+    return {
+        "success": True,
+        "submission_id": response.get("submission_id"),
+        "score": response.get("score"),
+        "total_questions": response.get("total_questions"),
+        "grade": response.get("grade"),
+        "remark": response.get("remark")
+    }

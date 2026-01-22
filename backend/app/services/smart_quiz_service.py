@@ -1,4 +1,4 @@
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Tuple
 from app.services.gemini_service import get_gemini_client
 from app.services.usage_service import log_usage, log_performance
 from supabase import Client
@@ -9,6 +9,8 @@ from docx.shared import Pt
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 import io
 import re # Import re for regex operations
+import uuid # For generating shareable IDs
+import datetime # For timestamping submissions
 
 # Helper function to clean markdown text for docx
 def _clean_markdown_text_for_docx(text_content: str) -> str:
@@ -27,7 +29,7 @@ def _clean_markdown_text_for_docx(text_content: str) -> str:
     text_content = re.sub(r'`([^`]+)`', r'\1', text_content)
 
     # More aggressive cleanup for math environments for simpler display if not rendering
-    text_content = re.sub(r'\[a-zA-Z]+\{.*?\}', '', text_content) # Remove LaTeX commands like \frac{..., \sqrt{...}
+    text_content = re.sub(r'\[a-zA-Z]+\{.*?\}', '', text_content) # Remove LaTeX commands like \frac{..., \sqrt{...
     text_content = re.sub(r'\[a-zA-Z]+', '', text_content) # Remove LaTeX commands like \frac, \sqrt
     text_content = re.sub(r'\{.*?\}', '', text_content) # Remove content in curly braces after LaTeX commands
     text_content = text_content.replace('$', '') # Catch any remaining lone $
@@ -52,7 +54,8 @@ async def generate_quiz_service(
     quiz_topic: str,
     num_questions: int,
     quiz_type: str,
-    difficulty: int
+    difficulty: int,
+    is_sharable: bool = False # New parameter added
 ) -> Dict[str, Any]:
     
     if not quiz_topic:
@@ -63,7 +66,7 @@ async def generate_quiz_service(
         return {"success": False, "message": error_message}
     
     quiz_prompt = f"""
-    You are an expert quiz creator. Create a {quiz_type} quiz on the topic: "{quiz_topic}".
+    You are an expert quiz creator. Create a {quiz_type} quiz on the topic: \"{quiz_topic}\".
     Difficulty: {DIFFICULTY_MAP[difficulty]}.
     Number of Questions: {num_questions}.
 
@@ -76,14 +79,40 @@ async def generate_quiz_service(
     - \"explanation\": A short explanation of why it is correct
     """
 
+    generated_quiz_data = None
+    share_id = None # Initialize share_id to None
+
     try:
         response = client.models.generate_content(
             model="gemini-2.5-flash",
             contents=[quiz_prompt]
         )
         
+        if not response.text:
+            print("Gemini API returned an empty response.")
+            return {"success": False, "message": "Gemini API returned an empty response. Please try again."}
+
         cleaned_text = response.text.replace("```json", "").replace("```", "").strip()
-        quiz_data = json.loads(cleaned_text)
+        generated_quiz_data = json.loads(cleaned_text)
+
+        # Save to shared_quizzes if sharable
+        if is_sharable:
+            share_id = str(uuid.uuid4()) # Generate a unique share ID
+            try:
+                insert_response = await supabase.table("shared_quizzes").insert({
+                    "id": share_id,
+                    "creator_id": user_id,
+                    "title": f"{quiz_topic} Quiz ({num_questions} Qs)", # Basic title for shared quiz
+                    "quiz_data": generated_quiz_data
+                }).execute()
+                if insert_response.error:
+                    logger.error(f"Supabase error saving shared quiz: {insert_response.error.message}")
+                    print(f"Failed to save shared quiz to Supabase: {insert_response.error.message}")
+                    share_id = None # Ensure share_id is None if saving failed
+            except Exception as db_e:
+                logger.error(f"Exception during Supabase insertion for shared quiz: {db_e}", exc_info=True)
+                print(f"Exception during Supabase insertion for shared quiz: {db_e}")
+                share_id = None # Ensure share_id is None if DB operation fails
 
         await log_usage(
             supabase=supabase,
@@ -91,27 +120,34 @@ async def generate_quiz_service(
             user_name=username,
             feature_name="Quiz Generator",
             action="generated",
-            metadata={"topic": quiz_topic, "num_questions": num_questions}
+            metadata={"topic": quiz_topic, "num_questions": num_questions, "is_sharable": is_sharable}
         )
 
-        return {"success": True, "quiz_data": quiz_data}
+        # Return share_id only if it was successfully generated and saved
+        return {"success": True, "quiz_data": generated_quiz_data, "share_id": share_id}
 
+    except genai.types.BlockedPromptException:
+        print("BlockedPromptException during Gemini quiz generation.")
+        return {"success": False, "message": "Your request was blocked due to content safety concerns. Please revise your input."}
     except genai.errors.APIError as e:
         error_message = str(e)
         if "429" in error_message or "RESOURCE_EXHAUSTED" in error_message.upper():
-            print(f"Gemini API rate limit exceeded during summarization: {e}")
-            return {"success": False, "message": "AI is currently experiencing high traffic. Please try again shortly."}
+            print(f"Gemini API rate limit exceeded during quiz generation: {e}")
+            return {"success": False, "message": "Gemini API rate limit exceeded. Please try again in a moment."}
         elif "503" in error_message:
-            print(f"AI is currently eperiencing high traffic. Try again shortly.")
+            print(f"AI is currently experiencing high traffic. Try again shortly.")
             return {"success": False, "message": "AI is currently experiencing high traffic. Please try again shortly."}
         else:
             print(f"An API error occurred: {e}")
-            return "", f"An API error occurred: {e}"
+            return {"success": False, "message": f"A Gemini API error occurred: {e}"}
     except json.JSONDecodeError:
-        return {"success": False, "message": "The AI generated an invalid quiz format. Please try generating again or try a different topic."}
+        print(f"JSON Decode Error: {response.text if response.text else 'No response text'}")
+        return {"success": False, "message": "The AI generated an invalid quiz format. Please try generating again or check your input."}
     except Exception as e:
-        print(f"Error during quiz generation: {e}")
-        return {"success": False, "message": "An unexpected error occurred while generating the quiz."}
+        # This catches errors during the generate_content call itself, Supabase insertion, or other unexpected issues.
+        print(f"Error during quiz generation or saving: {e}")
+        logger.error(f"Error during quiz generation or saving: {e}", exc_info=True)
+        return {"success": False, "message": "An unexpected error occurred while generating or saving the quiz."}
 
 async def log_quiz_performance_service(
     supabase: Client,
@@ -162,3 +198,54 @@ async def create_docx_from_quiz_results(
     doc.save(doc_io)
     doc_io.seek(0)
     return doc_io
+
+# --- New functions for shared quizzes ---
+
+async def get_shared_quiz(supabase: Client, share_id: str) -> Dict[str, Any]:
+    """Fetches a specific shared quiz by its share_id."""
+    try:
+        response = await supabase.table("shared_quizzes").select("*").eq("id", share_id).single().execute()
+        if response.data:
+            # Fetch creator username for display. This assumes 'profiles' table and 'username' column.
+            creator_username = None
+            if response.data.get("creator_id"):
+                profile_response = await supabase.table("profiles").select("username").eq("id", response.data["creator_id"]).single().execute()
+                if profile_response.data:
+                    creator_username = profile_response.data.get("username")
+            
+            return {"success": True, "quiz_data": response.data["quiz_data"], "creator_username": creator_username}
+        else:
+            return {"success": False, "message": "Quiz not found."}
+    except Exception as e:
+        logger.error(f"Error fetching shared quiz {share_id}: {e}", exc_info=True)
+        return {"success": False, "message": "A server error occurred while fetching the quiz."}
+
+async def save_shared_quiz_submission(
+    supabase: Client,
+    shared_quiz_id: str,
+    student_id: Optional[str], # Can be null for anonymous submissions
+    user_answers: Dict[str, str],
+    score: int,
+    total_questions: int
+) -> Dict[str, Any]:
+    """Saves a student's submission for a shared quiz."""
+    try:
+        submission_data = {
+            "shared_quiz_id": shared_quiz_id,
+            "student_id": student_id, # This will be NULL for anonymous submissions
+            "score": score,
+            "total_questions": total_questions,
+            "user_answers": user_answers,
+            "submitted_at": datetime.datetime.utcnow().isoformat() + "Z" # Use ISO format with Z for UTC
+        }
+        response = await supabase.table("shared_quiz_submissions").insert(submission_data).execute()
+        
+        if response.data:
+            return {"success": True, "submission": response.data[0]}
+        else:
+            logger.error(f"Supabase error submitting shared quiz score: {response.error.message if response.error else 'Unknown error'}")
+            return {"success": False, "message": "Failed to save submission."}
+
+    except Exception as e:
+        logger.error(f"Error submitting shared quiz score for quiz {shared_quiz_id}: {e}", exc_info=True)
+        return {"success": False, "message": "A server error occurred while submitting your score."}

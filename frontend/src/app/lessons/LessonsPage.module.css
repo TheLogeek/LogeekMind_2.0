@@ -1,0 +1,77 @@
+.lessonsPageContainer {
+    padding: 2rem;
+}
+
+.searchForm {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.searchInput {
+    flex-grow: 1;
+    padding: 0.75rem 1rem;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    font-size: 1rem;
+}
+
+.searchButton {
+    padding: 0.75rem 1.5rem;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background-color 0.2s;
+}
+
+.searchButton:disabled {
+    background-color: #a0a0a0;
+    cursor: not-allowed;
+}
+
+.searchButton:hover:not(:disabled) {
+    background-color: #0056b3;
+}
+
+.errorText {
+    color: red;
+    margin: 1rem 0;
+}
+
+.lessonsGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
+}
+
+.lessonCard {
+    background-color: #fff;
+    padding: 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.lessonCard:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.12);
+}
+
+.lessonCard h3 {
+    margin-top: 0;
+    color: #333;
+}
+
+.lessonCard p {
+    color: #666;
+    margin: 0.5rem 0;
+}
+
+.lessonCard span {
+    font-size: 0.9rem;
+    color: #999;
+}
