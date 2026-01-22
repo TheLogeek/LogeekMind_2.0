@@ -72,7 +72,23 @@ async def get_public_lessons(supabase: Client, search_query: Optional[str] = Non
         response = query.execute()
         
         if response.data:
-            return {"success": True, "lessons": response.data}
+            lessons_transformed = []
+            for lesson_data in response.data:
+                # Extract profile data, handling cases where profiles might be null
+                creator_username = lesson_data.get("profiles", {}).get("username")
+
+                # Create the 'creator' object as expected by the frontend
+                creator_info = {"username": creator_username} if creator_username else {"username": "Unknown"}
+
+                transformed_lesson = {
+                    "id": lesson_data["id"],
+                    "title": lesson_data["title"],
+                    "created_at": lesson_data["created_at"],
+                    "creator": creator_info
+                }
+                lessons_transformed.append(transformed_lesson)
+
+            return {"success": True, "lessons": lessons_transformed}
         else:
             return {"success": True, "lessons": []} # Return empty list if no public lessons found
             
