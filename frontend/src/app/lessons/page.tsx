@@ -24,8 +24,9 @@ const PublicLessonsPage = () => {
     const [error, setError] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
 
-    // State to check if user is logged in, to conditionally show create button
+    // State to check if user is logged in
     const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const [isLoadingAuth, setIsLoadingAuth] = useState(true); // To manage initial auth check loading state
 
     const fetchPublicLessons = useCallback(async () => {
         setLoading(true);
@@ -48,7 +49,46 @@ const PublicLessonsPage = () => {
 
     useEffect(() => {
         // Check login status when component mounts
-        setIsLoggedIn(AuthService.getAccessToken() !== null);
+        const checkLogin = async () => {
+            setIsLoadingAuth(true);
+            // Using getCurrentUser to properly check auth status, which might involve token refresh.
+            const user = await AuthService.getCurrentUser();
+            if (user) {
+                setIsLoggedIn(true);
+            } else {
+                setIsLoggedIn(false);
+            }
+            setIsLoadingAuth(false);
+        };
+        checkLogin();
+    }, []);
+
+    // Handle initial loading state for auth check
+    if (isLoadingAuth) {
+        return (
+            <div className={`page-container ${styles.lessonsPageContainer}`}>
+                <h2>Public Lessons</h2>
+                <p>Loading authentication status...</p>
+            </div>
+        );
+    }
+
+    // If not logged in, show login prompt and button
+    if (!isLoggedIn) {
+        return (
+            <div className={`page-container ${styles.lessonsPageContainer}`}>
+                <h2>Public Lessons</h2>
+                <p>You need to be logged in to view lessons.</p>
+                {/* Added a specific class for the login prompt button, falling back to createLessonButton if not found */}
+                <button onClick={() => router.push('/login')} className={styles.loginPromptButton || styles.createLessonButton}>
+                    Log In
+                </button>
+            </div>
+        );
+    }
+
+    // If logged in, proceed to render the page
+    useEffect(() => {
         fetchPublicLessons();
     }, [fetchPublicLessons]);
 
@@ -60,8 +100,14 @@ const PublicLessonsPage = () => {
     return (
         <div className={`page-container ${styles.lessonsPageContainer}`}>
             <h2>Public Lessons</h2>
+            {/* Create New Lesson button visible to logged-in users at all times */}
+            {isLoggedIn && (
+                <button onClick={() => router.push('/create-lesson')} className={styles.createLessonButton}>
+                    Create New Lesson
+                </button>
+            )}
             <p>Explore lessons created by other LogeekMind users.</p>
-            
+
             <form onSubmit={handleSearch} className={styles.searchForm}>
                 <input
                     type="text"
@@ -90,23 +136,10 @@ const PublicLessonsPage = () => {
                     ))}
                 </div>
             ) : (
-                // Updated message for no lessons found, with a styled button for creation
+                // This block is now only reached if isLoggedIn is true AND lessons.length is 0
                 <div className={styles.noLessonsMessage}>
-                    <p>No lessons for your search.</p>
-                    {/* Use the styled button for creating lessons */}
-                    {isLoggedIn && (
-                        <button onClick={() => router.push('/create-lesson')} className={styles.createLessonButton}>
-                            Create New Lesson
-                        </button>
-                    )}
+                    <p>No lessons found for your search.</p>
                 </div>
-            )}
-
-            {/* Conditionally render a message if user is not logged in and no lessons are found */}
-            {!isLoggedIn && lessons.length === 0 && (
-                 <div className={styles.noLessonsMessage}>
-                    <p>No lessons found. Please log in to create your first lesson!</p>
-                 </div>
             )}
         </div>
     );
