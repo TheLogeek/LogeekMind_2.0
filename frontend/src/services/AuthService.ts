@@ -161,8 +161,9 @@ const getCurrentUser = async (): Promise<(User & { username?: string, profile?: 
             }
         } else {
             // For non-remembered sessions, or if silent login failed
-            storedUserRaw = activeStorage?.getItem("user");
-            storedProfileRaw = activeStorage?.getItem("profile");
+            // Explicitly ensure the result is string | null by using '|| null'
+            storedUserRaw = activeStorage?.getItem("user") || null;
+            storedProfileRaw = activeStorage?.getItem("profile") || null;
 
             // Check if data exists and is not an empty string before parsing
             if (storedUserRaw && storedUserRaw.trim() !== "" && storedProfileRaw && storedProfileRaw.trim() !== "") {
