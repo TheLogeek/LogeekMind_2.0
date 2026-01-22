@@ -40,7 +40,7 @@ const CreateLessonPage = () => {
     const [examConfig, setExamConfig] = useState({ topic: '', numQuestions: 20, durationMins: 30 });
 
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState('');
+    const [error, setError] = useState<string | null>(null);
 
     const [isLoadingAuth, setIsLoadingAuth] = useState(true);
     useEffect(() => {
@@ -151,11 +151,14 @@ const CreateLessonPage = () => {
             } else {
                 setError(createLessonResponse.data.message || 'Failed to create lesson.');
             }
-        } catch (err: unknown) {
-            const axiosError = err as AxiosError<any>;
-            console.error('Error creating lesson:', axiosError.response?.data || axiosError);
-            // Provide a more user-friendly error message, falling back to a generic one
-            setError(axiosError.response?.data?.detail || axiosError.message || 'An unexpected error occurred while creating the lesson.');
+        } catch (error: any) {
+    console.error("Error creating lesson:", error.response?.data);
+    setError(
+        error.response?.data?.detail?.[0]?.msg ||
+        "Failed to create lesson"
+    );
+}
+
         } finally {
             setLoading(false);
         }
