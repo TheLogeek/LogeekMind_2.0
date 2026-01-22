@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import axios from 'axios';
 import axios, { AxiosError } from 'axios';
 import styles from './CreateLessonPage.module.css';
 import AuthService from '../../services/AuthService';
