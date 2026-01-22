@@ -49,19 +49,23 @@ const CreateLessonPage = () => {
     };
 
     const handleNotesConfigChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-        const { name, value, files } = e.target;
-        if (name === 'file') {
-            const file = files?.[0];
+        const target = e.target as HTMLInputElement | HTMLSelectElement; // Explicitly type target
+        const { name, value } = target;
+
+        if (name === 'file') { // Specific handling for file input
+            // Use a type assertion to safely access 'files' property on HTMLInputElement
+            const inputElement = target as HTMLInputElement;
+            const file = inputElement.files?.[0];
             setNotesConfig(prev => ({
                 ...prev,
                 file: file || null,
                 fileName: file ? file.name : ''
             }));
-            // Handle file reading if necessary, for now just store the file object and name
-        } else {
+        } else { // Handling for select elements or other text inputs
             setNotesConfig(prev => ({ ...prev, [name]: value }));
         }
     };
+
 
     const handleQuizConfigChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
@@ -96,7 +100,6 @@ const CreateLessonPage = () => {
                 title: title,
                 is_public: isPublic,
                 content_config: {
-                    ...selectedComponents,
                     outline: selectedComponents.has_outline ? outlineConfig : undefined,
                     notes: selectedComponents.has_notes ? notesConfig : undefined,
                     quiz: selectedComponents.has_quiz ? quizConfig : undefined,
@@ -108,6 +111,11 @@ const CreateLessonPage = () => {
             Object.keys(payload.content_config).forEach(key =>
                 payload.content_config[key] === undefined && delete payload.content_config[key]
             );
+            // If content_config is empty after cleanup, remove it entirely
+            if (Object.keys(payload.content_config).length === 0) {
+                delete payload.content_config;
+            }
+
 
             const createLessonResponse = await axios.post(`${API_BASE_URL}/lessons/create`, payload, {
                 headers: { Authorization: `Bearer ${accessToken}` }
