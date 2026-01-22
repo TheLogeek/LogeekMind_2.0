@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import styles from './LessonsPage.module.css';
+import AuthService from '../../services/AuthService'; // Import AuthService
 
 interface Lesson {
     id: string;
@@ -22,6 +23,9 @@ const PublicLessonsPage = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
+
+    // State to check if user is logged in, to conditionally show create button
+    const [isLoggedIn, setIsLoggedIn] = useState(false);
 
     const fetchPublicLessons = useCallback(async () => {
         setLoading(true);
@@ -43,6 +47,8 @@ const PublicLessonsPage = () => {
     }, [searchTerm]);
 
     useEffect(() => {
+        // Check login status when component mounts
+        setIsLoggedIn(AuthService.getAccessToken() !== null);
         fetchPublicLessons();
     }, [fetchPublicLessons]);
 
@@ -84,7 +90,19 @@ const PublicLessonsPage = () => {
                     ))}
                 </div>
             ) : (
-                <p>No public lessons found. Be the first to create one!</p>
+                // Updated message for no lessons found
+                <div className={styles.noLessonsMessage}>
+                    <p>No lessons for your search. <a onClick={() => router.push('/create-lesson')} className={styles.createLessonLink}>Create your own lessons</a></p>
+                </div>
+            )}
+
+            {/* Conditionally render the "Create Lesson" button if the user is logged in */}
+            {isLoggedIn && (
+                <div className={styles.createLessonButtonContainer}>
+                    <button onClick={() => router.push('/create-lesson')} className={styles.createLessonButton}>
+                        Create New Lesson
+                    </button>
+                </div>
             )}
         </div>
     );
