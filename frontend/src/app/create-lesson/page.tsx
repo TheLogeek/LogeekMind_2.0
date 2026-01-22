@@ -110,26 +110,25 @@ const CreateLessonPage = () => {
             }
 
             // Prepare the payload with dynamic configurations
+            // Ensure content_config is always an object, even if empty
             const payload: any = {
                 title: title,
                 is_public: isPublic,
-                content_config: {
-                    outline: selectedComponents.has_outline ? outlineConfig : undefined,
-                    notes: selectedComponents.has_notes ? notesConfig : undefined,
-                    quiz: selectedComponents.has_quiz ? quizConfig : undefined,
-                    exam: selectedComponents.has_exam ? examConfig : undefined,
-                },
+                content_config: {}, // Initialize as an empty object
             };
 
-            // Remove undefined configurations to keep payload clean
-            Object.keys(payload.content_config).forEach(key =>
-                payload.content_config[key] === undefined && delete payload.content_config[key]
-            );
-            // If content_config is empty after cleanup, remove it entirely
-            if (Object.keys(payload.content_config).length === 0) {
-                delete payload.content_config;
+            if (selectedComponents.has_outline) {
+                payload.content_config.outline = outlineConfig;
             }
-
+            if (selectedComponents.has_notes) {
+                payload.content_config.notes = notesConfig;
+            }
+            if (selectedComponents.has_quiz) {
+                payload.content_config.quiz = quizConfig;
+            }
+            if (selectedComponents.has_exam) {
+                payload.content_config.exam = examConfig;
+            }
 
             const createLessonResponse = await axios.post(`${API_BASE_URL}/lessons/create`, payload, {
                 headers: { Authorization: `Bearer ${accessToken}` }
@@ -144,7 +143,8 @@ const CreateLessonPage = () => {
         } catch (err: unknown) {
             const axiosError = err as AxiosError<any>;
             console.error('Error creating lesson:', axiosError.response?.data || axiosError);
-            setError(axiosError.response?.data?.detail || 'An unexpected error occurred while creating the lesson.');
+            // Provide a more user-friendly error message, falling back to a generic one
+            setError(axiosError.response?.data?.detail || axiosError.message || 'An unexpected error occurred while creating the lesson.');
         } finally {
             setLoading(false);
         }
