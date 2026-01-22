@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation'
 import { usePathname } from 'next/navigation';
 import AuthService from '../services/AuthService';
 import styles from './Navbar.module.css';
