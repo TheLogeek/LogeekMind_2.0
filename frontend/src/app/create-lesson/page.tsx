@@ -103,59 +103,59 @@ const CreateLessonPage = () => {
 
                 <div className={styles.formGroup}>
                     <label htmlFor="publicAccess">Publicly Visible:</label>
-                    <input
-                        type="checkbox"
-                        id="publicAccess"
-                        checked={isPublic}
-                        onChange={(e) => setIsPublic(e.target.checked)}
-                    />
-                    <small>If checked, other users can view this lesson.</small>
-                </div>
-
-                <div className={styles.formGroup}>
-                    <label>Lesson Components:</label>
-                    <div className={styles.componentCheckboxes}>
-                        <label>
-                            <input
-                                type="checkbox"
-                                name="has_outline"
-                                checked={selectedComponents.has_outline}
-                                onChange={handleComponentChange}
-                            /> Course Outline
-                        </label>
-                        <label>
-                            <input
-                                type="checkbox"
-                                name="has_notes"
-                                checked={selectedComponents.has_notes}
-                                onChange={handleComponentChange}
-                            /> Lesson Notes (AI Teacher)
-                        </label>
-                        <label>
-                            <input
-                                type="checkbox"
-                                name="has_quiz"
-                                checked={selectedComponents.has_quiz}
-                                onChange={handleComponentChange}
-                            /> Quiz
-                        </label>
-                        <label>
-                            <input
-                                type="checkbox"
-                                name="has_exam"
-                                checked={selectedComponents.has_exam}
-                                onChange={handleComponentChange}
-                            /> Exam
-                        </label>
+                                <input
+                                    type="checkbox"
+                                    id="publicAccess"
+                                    checked={isPublic}
+                                    onChange={(e) => setIsPublic(e.target.checked)}
+                                />
+                                <small className={styles.helperText}>If checked, other users can view this lesson.</small>
+                            </div>
+                    
+                            <div className={styles.formGroup}>
+                                <label>Lesson Components:</label>
+                                <div className={styles.componentCheckboxes}>
+                                    <label>
+                                        <input
+                                            type="checkbox"
+                                            name="has_outline"
+                                            checked={selectedComponents.has_outline}
+                                            onChange={handleComponentChange}
+                                        /> Course Outline
+                                    </label>
+                                    <label>
+                                        <input
+                                            type="checkbox"
+                                            name="has_notes"
+                                            checked={selectedComponents.has_notes}
+                                            onChange={handleComponentChange}
+                                        /> Lesson Notes (AI Teacher)
+                                    </label>
+                                    <label>
+                                        <input
+                                            type="checkbox"
+                                            name="has_quiz"
+                                            checked={selectedComponents.has_quiz}
+                                            onChange={handleComponentChange}
+                                        /> Quiz
+                                    </label>
+                                    <label>
+                                        <input
+                                            type="checkbox"
+                                            name="has_exam"
+                                            checked={selectedComponents.has_exam}
+                                            onChange={handleComponentChange}
+                                        /> Exam
+                                    </label>
+                                </div>
+                            </div>
+                    
+                            <button type="submit" disabled={loading || !title.trim()} className={styles.submitButton}>
+                                {loading ? 'Creating Lesson...' : 'Create Lesson Structure'}
+                            </button>
+                        </form>
                     </div>
-                </div>
-
-                <button type="submit" disabled={loading || !title.trim()} className={styles.submitButton}>
-                    {loading ? 'Creating Lesson...' : 'Create Lesson Structure'}
-                </button>
-            </form>
-        </div>
-    );
-};
-
-export default CreateLessonPage;
+                    );
+                    };
+                    
+                    export default CreateLessonPage;
