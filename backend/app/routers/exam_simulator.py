@@ -85,7 +85,7 @@ async def generate_exam_route(
             num_questions=request.num_questions,
             lecture_notes_content=request.lecture_notes_content, # Pass notes content
             file_name=request.file_name, # Pass file name for logging
-            is_sharable=request.is_sharable # Pass the sharing flag
+            #is_sharable=request.is_sharable # Pass the sharing flag
         )
         if not response["success"]:
             if "Rate Limit Hit" in response.get("message", ""):
@@ -170,7 +170,7 @@ async def download_exam_results_docx(
         raise HTTPException(status_code=500, detail=f"An error occurred during DOCX creation: {e}")
 
 # --- New endpoints for shared exams ---
-
+'''
 @router.get("/shared-exams/{share_id}")
 async def get_shared_exam_route(
     share_id: str,
@@ -214,3 +214,4 @@ async def submit_shared_exam_route(
         "grade": response.get("grade"),
         "remark": response.get("remark")
     }
+'''
