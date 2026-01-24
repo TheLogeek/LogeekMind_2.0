@@ -65,7 +65,7 @@ const register = async (email: string, password: string, username: string, terms
         return response.data;
     } catch (error) {
         console.error("Registration API error:", error);
-        return { success: false, message: "Registration failed due to an API error." };
+        return { success: false, message: "Registration failed." };
     }
 };
 
@@ -86,7 +86,7 @@ const login = async (email: string, password: string, rememberMe: boolean = fals
                 localStorage.setItem("rememberMe", String(rememberMe)); 
                 if (rememberMe) {
                     localStorage.setItem("rememberedEmail", email);
-                    localStorage.setItem("rememberedPassword", password); // Storing password for re-login (SECURITY RISK)
+                    localStorage.setItem("rememberedPassword", password);
                 } else {
                     localStorage.removeItem("rememberedEmail");
                     localStorage.removeItem("rememberedPassword");
@@ -96,7 +96,7 @@ const login = async (email: string, password: string, rememberMe: boolean = fals
         return response.data;
     } catch (error) {
         console.error("Login API error:", error);
-        return { success: false, message: "Login failed due to an API error." };
+        return { success: false, message: "Login failed due to invalid credentials"};
     }
 };
 
