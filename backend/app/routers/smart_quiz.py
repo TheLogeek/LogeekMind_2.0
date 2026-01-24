@@ -29,7 +29,7 @@ class QuizGenerateRequest(BaseModel):
     num_questions: int
     quiz_type: str
     difficulty: int
-    is_sharable: bool = True
+    is_sharable: bool = False
 
 class QuizGenerateResponse(BaseModel):
     success: bool
