@@ -105,9 +105,6 @@ const Navbar: React.FC<NavbarProps> = ({ toggleSidebar, isSidebarOpen }) => {
                     <Link href="/dashboard" className={styles.navLink} onClick={handleNavLinkClick}>Dashboard</Link>
                     <Link href="/contact" className={styles.navLink} onClick={handleNavLinkClick}>Contact</Link>
                     
-                    {/* Lessons Link for Mobile */}
-                    <Link href="/lessons" className={styles.navLink} onClick={handleNavLinkClick}>Lessons</Link>
-
                     {/* Feature Links for Mobile */}
                     <hr className={styles.linkSeparator}/>
                     <h4 className={styles.categoryTitle}>AI Tools</h4>

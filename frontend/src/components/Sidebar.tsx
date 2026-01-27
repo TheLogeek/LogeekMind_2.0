@@ -96,8 +96,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                 <Link href="/notes-to-audio" className={getNavLinkClass('/notes-to-audio')} onClick={onClose}>Notes to Audio</Link>
                 <hr className={styles.linkSeparator}/>
                 <h4 className={styles.categoryTitle}>Community</h4>
-                {/* Added Lessons link here */}
-                <Link href="/lessons" className={getNavLinkClass('/lessons')} onClick={onClose}>Lessons</Link>
+                
                 <Link href="/community-chat" className={getNavLinkClass('/community-chat')} onClick={onClose}>Community Chat</Link>
                 {isAdmin && currentUser && ( // Ensure user is logged in to show admin link
                     <>
