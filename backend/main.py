@@ -7,7 +7,7 @@ from app.routers import (
     auth, summarizer, ai_teacher, course_outline, gpa_calculator,
     homework_assistant, audio_to_text, notes_to_audio, smart_quiz,
     study_scheduler, user_dashboard, admin_dashboard, community_chat,
-    exam_simulator, lessons # Import lessons router
+    exam_simulator
 )
 
 logging.basicConfig(level=logging.INFO)
@@ -42,7 +42,6 @@ app.include_router(user_dashboard.router)
 app.include_router(admin_dashboard.router)
 app.include_router(community_chat.router)
 app.include_router(exam_simulator.router)
-app.include_router(lessons.router) # Include lessons router
 
 @app.get("/")
 async def root():
