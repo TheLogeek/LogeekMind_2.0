@@ -1,72 +1,54 @@
 .aiTeacherPageContainer {
-  margin: var(--spacing-lg) auto;
-  padding: var(--spacing-md);
-  border: 1px solid var(--border-light);
-  border-radius: 10px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+  margin: var(--spacing-xl) auto;
+  padding: var(--spacing-xl);
+  max-width: 900px;
+  background-color: var(--bg-light);
+  border-radius: 12px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
   display: flex;
   flex-direction: column;
-  /* Removed fixed height: height: 85vh; */
-  min-height: 80vh; /* Ensure a reasonable minimum height on desktop */
+  min-height: 80vh;
 }
 
 .aiTeacherPageContainer h2 {
   text-align: center;
   color: var(--text-dark);
-  margin-bottom: 15px;
+  margin-bottom: var(--spacing-md);
+  font-size: var(--font-size-h2);
+  font-weight: 700;
 }
 
 .aiTeacherPageContainer > p {
   text-align: center;
   color: var(--text-medium);
-  margin-bottom: var(--spacing-md);
-}
-
-.geminiApiKeyInputContainer {
-  margin-bottom: 15px;
-  padding: var(--spacing-sm);
-  border: 1px solid var(--border-dark);
-  border-radius: 5px;
-  background-color: var(--bg-light);
-}
-
-.geminiApiKeyInputContainer label {
-  display: block;
-  margin-bottom: 5px;
-  font-weight: bold;
-}
-
-.geminiApiKeyInputContainer input {
-  width: 100%;
-  padding: 8px;
-  box-sizing: border-box;
-}
-
-.geminiApiKeyInputContainer p {
-  font-size: 0.8em;
-  color: var(--text-medium);
-  margin-top: 5px;
-  text-align: left; /* Override parent center alignment */
+  margin-bottom: var(--spacing-xxl);
+  font-size: var(--font-size-lg);
+  max-width: 700px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .chatWindow {
   flex-grow: 1;
   overflow-y: auto;
-  border: 1px solid var(--border-medium);
-  border-radius: 8px;
-  padding: var(--spacing-md); /* Increased padding */
-  margin-bottom: 15px;
+  border-radius: 10px;
+  padding: var(--spacing-lg);
+  margin-bottom: var(--spacing-xl);
   background-color: var(--bg-white);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  border: 1px solid var(--border-light);
 }
 
-.chatWindow p {
+.chatWindow p { /* Placeholder message styling */
   text-align: center;
   color: var(--text-light);
+  font-style: italic;
 }
 
 .chatMessage {
-  margin-bottom: var(--spacing-sm);
-  display: flex; /* Use flex to align messages */
+  margin-bottom: var(--spacing-md);
+  display: flex;
+  align-items: flex-start; /* Align items to the top */
 }
 
 .userMessage {
@@ -77,162 +59,215 @@
   justify-content: flex-start; /* Align model messages to the left */
 }
 
-.userMessage span {
+.userMessage span { /* Message bubble for user */
   display: inline-block;
-  padding: 8px 12px;
-  border-radius: 15px;
-  background-color: var(--button-primary);
+  padding: 12px 18px; /* Increased padding */
+  border-radius: 20px 20px 20px 5px; /* More rounded, distinct tail */
+  background: linear-gradient(90deg, var(--primary-gradient-start) 0%, var(--primary-gradient-end) 100%);
   color: white;
-  max-width: 70%;
+  max-width: 75%; /* Slightly larger max-width */
   word-wrap: break-word;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
 }
 
-.modelMessage div { /* MarkdownRenderer will be inside a div */
+.modelMessage div { /* Message bubble for model */
   display: inline-block;
-  padding: 8px 12px;
-  border-radius: 15px;
-  background-color: #e2e6ea; /* Light gray */
+  padding: 12px 18px; /* Increased padding */
+  border-radius: 20px 20px 5px 20px; /* More rounded, distinct tail */
+  background-color: var(--bg-white); /* White background */
   color: var(--text-dark);
-  max-width: 70%;
+  max-width: 75%; /* Slightly larger max-width */
   word-wrap: break-word;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+  border: 1px solid var(--border-light);
 }
 
 .errorText {
   color: var(--button-danger);
-  margin-bottom: 15px;
+  background-color: var(--bg-danger-light);
+  border: 1px solid var(--button-danger);
+  border-radius: 8px;
+  padding: var(--spacing-md);
+  margin-bottom: var(--spacing-xl);
   text-align: center;
+  font-weight: 500;
 }
 
 .chatForm {
   display: flex;
   gap: var(--spacing-sm);
-  margin-bottom: var(--spacing-sm);
+  margin-bottom: var(--spacing-xl);
 }
 
 .chatInput {
   flex-grow: 1;
-  padding: var(--spacing-sm);
-  border: 1px solid var(--border-dark);
-  border-radius: 5px;
+  padding: 12px 15px;
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  font-size: var(--font-size-md);
+  color: var(--text-dark);
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.chatInput:focus {
+  outline: none;
+  border-color: var(--primary-gradient-start);
+  box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.2);
 }
 
 .sendButton {
-  padding: 10px 20px;
-  background-color: var(--button-success);
+  padding: 12px 25px;
+  background: linear-gradient(90deg, var(--primary-gradient-start) 0%, var(--primary-gradient-end) 100%);
   color: white;
   border: none;
-  border-radius: 5px;
+  border-radius: 8px;
+  font-size: var(--font-size-lg);
+  font-weight: 700;
   cursor: pointer;
-  opacity: 1;
-  transition: opacity 0.3s ease;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.3s ease;
+}
+
+.sendButton:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
 }
 
 .sendButton:disabled {
-  opacity: 0.7;
+  opacity: 0.6;
   cursor: not-allowed;
+  background: var(--button-disabled-bg);
+  box-shadow: none;
+}
+
+.loading { /* Styling for the loading indicator */
+  font-style: italic;
+  color: var(--text-light);
+  opacity: 0.7;
+}
+
+.sessionActions {
+  display: flex;
+  justify-content: center; /* Center actions */
+  gap: var(--spacing-md);
+  margin-top: var(--spacing-xl);
+}
+
+.downloadNotesButton, .newSessionButton {
+  padding: 12px 25px;
+  border: none;
+  border-radius: 8px;
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.3s ease;
+}
+
+.downloadNotesButton {
+  background-color: var(--button-success);
+  color: white;
+}
+
+.downloadNotesButton:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.downloadNotesButton:disabled {
+  background-color: var(--button-disabled-bg);
+  opacity: 0.6;
+  cursor: not-allowed;
+  box-shadow: none;
 }
 
 .newSessionButton {
-  width: 100%;
-  padding: 10px;
-  background-color: var(--button-secondary);
-  color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  margin-top: var(--spacing-sm);
+  background-color: var(--bg-white);
+  color: var(--primary-gradient-start);
+  border: 1px solid var(--primary-gradient-start);
+}
+
+.newSessionButton:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  background-color: var(--bg-hover);
 }
 
 .guestMessage {
-  margin-top: 15px;
+  margin-top: var(--spacing-xl);
+  padding: var(--spacing-md);
+  background-color: var(--bg-info-light);
+  border: 1px solid var(--border-info);
+  border-radius: 8px;
   text-align: center;
-  color: var(--button-primary);
+  color: var(--text-dark);
+  font-size: var(--font-size-md);
 }
 
 .guestMessage a {
   color: var(--button-primary);
-  text-decoration: none;
+  text-decoration: underline;
+  font-weight: 600;
 }
 
 .guestMessage a:hover {
-  text-decoration: underline;
+  text-decoration: none;
 }
 
 /* Media Queries for Mobile */
 @media (max-width: 768px) {
   .aiTeacherPageContainer {
-    margin: var(--spacing-md) auto;
-    padding: var(--spacing-sm);
-    height: auto; /* Allow height to adjust on mobile */
-    min-height: 50vh; /* Reduced min-height for mobile if needed */
+    margin: var(--spacing-lg) auto;
+    padding: var(--spacing-lg);
+    min-height: auto; /* Allow height to adjust on mobile */
   }
 
-  .geminiApiKeyInputContainer {
-    margin-bottom: var(--spacing-md);
+  .aiTeacherPageContainer h2 {
+    font-size: var(--font-size-h3);
+  }
+
+  .aiTeacherPageContainer > p {
+    font-size: var(--font-size-md);
+    margin-bottom: var(--spacing-xl);
   }
 
   .chatWindow {
-    padding: var(--spacing-sm); /* Adjusted padding for mobile */
+    padding: var(--spacing-md);
+    margin-bottom: var(--spacing-lg);
+  }
+
+  .chatMessage {
+    margin-bottom: var(--spacing-md);
   }
 
   .userMessage span,
   .modelMessage div {
-    max-width: 90%; /* Allow messages to take more width on smaller screens */
+    max-width: 90%;
+    padding: 10px 15px; /* Slightly less padding on mobile */
   }
 
   .chatForm {
     flex-direction: column;
-    gap: var(--spacing-xs);
+    gap: var(--spacing-sm);
+  }
+
+  .chatInput {
+    width: 100%;
+    padding: 10px 12px;
   }
 
   .sendButton {
-    width: 100%; /* Full width button on mobile */
+    width: 100%;
     padding: 10px;
   }
-}
-/* Styles for new download button and session actions */
-.sessionActions {
-  display: flex;
-  justify-content: space-between;
-  gap: var(--spacing-md);
-  margin-top: var(--spacing-md);
-}
 
-.downloadNotesButton {
-  padding: 10px 15px;
-  background-color: var(--button-success); /* Use a success color for download */
-  color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: var(--font-size-md);
-  transition: opacity 0.3s ease;
-  flex-grow: 1; /* Allow it to grow in flex container */
-}
-
-.downloadNotesButton:hover:not(:disabled) {
-  opacity: 0.9;
-}
-
-.downloadNotesButton:disabled {
-  background-color: var(--button-success); /* Keep green */
-  color: white; /* Keep white */
-  cursor: not-allowed;
-  opacity: 0.5; /* Reduce opacity to indicate disabled state */
-}
-
-/* Media Query for mobile responsiveness for new buttons */
-@media (max-width: 768px) {
   .sessionActions {
     flex-direction: column;
     gap: var(--spacing-sm);
   }
 
-  .downloadNotesButton {
+  .downloadNotesButton, .newSessionButton {
     width: 100%;
+    padding: 10px;
   }
-}
-
-.modelMessage div {
-  color: black !important;
 }
