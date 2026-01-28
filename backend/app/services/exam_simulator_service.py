@@ -322,7 +322,7 @@ async def get_shared_exam(supabase: Client, share_id: str) -> Dict[str, Any]:
         creator_username = "A user"
         if response.data.get("creator_id"):
             try:
-                profile_response = await supabase.table("profiles").select("username").eq("id", response.data["creator_id"]).single().execute()
+                profile_response = supabase.table("profiles").select("username").eq("id", response.data["creator_id"]).single().execute()
                 if profile_response.data:
                     creator_username = profile_response.data.get("username", "A user")
             except APIError:
@@ -347,7 +347,7 @@ async def submit_shared_exam_results(
     """Grades and saves a submission for a shared exam."""
     try:
         # 1. Fetch the shared exam to get the correct answers
-        exam_response = await get_shared_exam(supabase, share_id)
+        exam_response = get_shared_exam(supabase, share_id)
         if not exam_response["success"]:
             return exam_response # Return the error message ("Exam not found." or server error)
 
@@ -376,7 +376,7 @@ async def submit_shared_exam_results(
         
         try:
             # Updated for Supabase v2: wrap in try/except
-            insert_response = await supabase.table("shared_exam_submissions").insert(submission_data).execute()
+            insert_response = supabase.table("shared_exam_submissions").insert(submission_data).execute()
             
             # If successful, return the result
             return {
