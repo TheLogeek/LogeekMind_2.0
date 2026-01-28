@@ -519,11 +519,14 @@ const ExamSimulatorPage = () => {
                     })}
                     <div className={styles.resultsActions}>
                         {sharedExamLink && (
-                            <div className={styles.shareLinkContainer}>
-                                <p className={styles.shareMessageText}>{shareMessage}</p>
-                                <input type="text" value={sharedExamLink} readOnly className={styles.shareLinkInput} />
-                                <button onClick={handleCopyLink} className={styles.copyLinkButton}>Copy Message & Link</button>
-                            </div>
+                            <div className={styles.shareLinkContainer} style={{ border: '1px solid #e0e0e0', borderRadius: '8px', padding: '20px', backgroundColor: '#f8f9fa', marginTop: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+    <p className={styles.shareMessageText}>{shareMessage}</p>
+    <input type="text" value={sharedExamLink} readOnly className={styles.shareLinkInput} style={{ width: '100%', padding: '10px', marginBottom: '15px', borderRadius: '4px', border: '1px solid #ccc' }} />
+    <button onClick={handleCopyLink} className={styles.copyLinkButton} style={{ backgroundColor: '#003366', color: 'white', padding: '10px 20px', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' }}>
+        Copy Message & Link
+    </button>
+</div>
+
                         )}
                         <button onClick={handleDownloadResultsDocx} className={styles.downloadButton} disabled={!currentUser} title={!currentUser ? "Login to download" : "Download Results as DOCX"}>
                             Download Results as DOCX
