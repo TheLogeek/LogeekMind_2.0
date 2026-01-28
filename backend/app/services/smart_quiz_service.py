@@ -2,25 +2,29 @@ from typing import Dict, Any, List, Optional, Tuple
 from app.services.gemini_service import get_gemini_client
 from app.services.usage_service import log_usage, log_performance
 from supabase import Client
+from postgrest.exceptions import APIError  # Added for Supabase v2 error handling
 from google import genai
 import json
 from docx import Document
 from docx.shared import Pt
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 import io
-import re # Import re for regex operations
-import uuid # For generating shareable IDs
-import datetime # For timestamping submissions
+import re  # Import re for regex operations
+import uuid  # For generating shareable IDs
+import datetime  # For timestamping submissions
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Helper function to clean markdown text for docx
 def _clean_markdown_text_for_docx(text_content: str) -> str:
     # Replace HTML <br> with newline
     text_content = text_content.replace('<br>', '\n')
-    
+
     # Remove bold, italic, and strikethrough markers
-    text_content = re.sub(r'(\*\*|__)(.*?)\1', r'\2', text_content) # **bold** or __bold__
-    text_content = re.sub(r'(\*|_)(.*?)\1', r'\2', text_content)   # *italic* or _italic_
-    text_content = re.sub(r'~~(.*?)~~', r'\1', text_content)       # ~~strikethrough~~
+    text_content = re.sub(r'(\*\*|__)(.*?)\1', r'\2', text_content)  # **bold** or __bold__
+    text_content = re.sub(r'(\*|_)(.*?)\1', r'\2', text_content)    # *italic* or _italic_
+    text_content = re.sub(r'~~(.*?)~~', r'\1', text_content)        # ~~strikethrough~~
 
     # Remove links [text](url) -> text
     text_content = re.sub(r'\[(.*?)\]\(.*?\)', r'\1', text_content)
@@ -29,16 +33,16 @@ def _clean_markdown_text_for_docx(text_content: str) -> str:
     text_content = re.sub(r'`([^`]+)`', r'\1', text_content)
 
     # More aggressive cleanup for math environments for simpler display if not rendering
-    text_content = re.sub(r'\[a-zA-Z]+\{.*?\}', '', text_content) # Remove LaTeX commands like \frac{..., \sqrt{...
-    text_content = re.sub(r'\[a-zA-Z]+', '', text_content) # Remove LaTeX commands like \frac, \sqrt
-    text_content = re.sub(r'\{.*?\}', '', text_content) # Remove content in curly braces after LaTeX commands
-    text_content = text_content.replace('$', '') # Catch any remaining lone $
+    text_content = re.sub(r'\[a-zA-Z]+\{.*?\}', '', text_content)  # Remove LaTeX commands like \frac{..., \sqrt{...
+    text_content = re.sub(r'\[a-zA-Z]+', '', text_content)  # Remove LaTeX commands like \frac, \sqrt
+    text_content = re.sub(r'\{.*?\}', '', text_content)  # Remove content in curly braces after LaTeX commands
+    text_content = text_content.replace('$', '')  # Catch any remaining lone $
 
     # Handle Markdown tables: simply strip pipes and header separators
     # This will turn tables into continuous lines of text, which is a compromise for simplicity
-    text_content = re.sub(r'\|.*\|', lambda m: m.group(0).replace('|', ' '), text_content) # Replace pipes with spaces
-    text_content = re.sub(r'[-=]+\s*[-=]+\s*[-=]+', '', text_content) # Remove table header separators (---)
-    
+    text_content = re.sub(r'\|.*\|', lambda m: m.group(0).replace('|', ' '), text_content)  # Replace pipes with spaces
+    text_content = re.sub(r'[-=]+\s*[-=]+\s*[-=]+', '', text_content)  # Remove table header separators (---)
+
     # Remove block code fences ```
     text_content = text_content.replace('```', '')
 
@@ -55,9 +59,9 @@ async def generate_quiz_service(
     num_questions: int,
     quiz_type: str,
     difficulty: int,
-    is_sharable: bool = False # New parameter added
+    is_sharable: bool = False  # New parameter added
 ) -> Dict[str, Any]:
-    
+
     if not quiz_topic:
         return {"success": False, "message": "Quiz topic is required."}
 
@@ -67,7 +71,7 @@ async def generate_quiz_service(
     client, error_message = await get_gemini_client(user_id=user_id)
     if error_message:
         return {"success": False, "message": error_message}
-    
+
     quiz_prompt = f"""
     You are an expert quiz creator. Create a {quiz_type} quiz on the topic: \"{quiz_topic}\".
     Difficulty: {DIFFICULTY_MAP[difficulty]}.
@@ -83,14 +87,14 @@ async def generate_quiz_service(
     """
 
     generated_quiz_data = None
-    share_id = None # Initialize share_id to None
+    share_id = None  # Initialize share_id to None
 
     try:
         response = client.models.generate_content(
             model="gemini-2.5-flash",
             contents=[quiz_prompt]
         )
-        
+
         if not response.text:
             print("Gemini API returned an empty response.")
             return {"success": False, "message": "Gemini API returned an empty response. Please try again."}
@@ -100,22 +104,24 @@ async def generate_quiz_service(
 
         # Save to shared_quizzes if sharable
         if is_sharable:
-            share_id = str(uuid.uuid4()) # Generate a unique share ID
+            share_id = str(uuid.uuid4())  # Generate a unique share ID
             try:
-                insert_response = supabase.table("shared_quizzes").insert({
+                # Updated for Supabase v2: wrapped in try/except APIError
+                supabase.table("shared_quizzes").insert({
                     "id": share_id,
                     "creator_id": user_id,
-                    "title": f"{quiz_topic} Quiz ({num_questions} Qs)", # Basic title for shared quiz
+                    "title": f"{quiz_topic} Quiz ({num_questions} Qs)",  # Basic title for shared quiz
                     "quiz_data": generated_quiz_data
                 }).execute()
-                if insert_response.error:
-                    logger.error(f"Supabase error saving shared quiz: {insert_response.error.message}")
-                    print(f"Failed to save shared quiz to Supabase: {insert_response.error.message}")
-                    share_id = None # Ensure share_id is None if saving failed
+                
+            except APIError as db_e:
+                logger.error(f"Supabase error saving shared quiz: {db_e.message}")
+                print(f"Failed to save shared quiz to Supabase: {db_e.message}")
+                share_id = None  # Ensure share_id is None if saving failed
             except Exception as db_e:
                 logger.error(f"Exception during Supabase insertion for shared quiz: {db_e}", exc_info=True)
                 print(f"Exception during Supabase insertion for shared quiz: {db_e}")
-                share_id = None # Ensure share_id is None if DB operation fails
+                share_id = None  # Ensure share_id is None if DB operation fails
 
         await log_usage(
             supabase=supabase,
@@ -178,15 +184,15 @@ async def create_docx_from_quiz_results(
         # Process Question
         question_text = q['question']
         doc.add_heading(f"Q{idx + 1}: {_clean_markdown_text_for_docx(question_text)}", level=2)
-        
+
         # Process Options
         doc.add_paragraph("Options:")
         for option in q['options']:
             doc.add_paragraph(_clean_markdown_text_for_docx(option), style='List Bullet')
-        
+
         # Process Correct Answer
         doc.add_paragraph(f"Correct Answer: {_clean_markdown_text_for_docx(q['answer'])}")
-        
+
         # Process Explanation
         doc.add_paragraph("Explanation:")
         explanation_text = q['explanation']
@@ -204,13 +210,10 @@ async def create_docx_from_quiz_results(
 
 # --- New functions for shared quizzes ---
 
-import logging
-logger = logging.getLogger(__name__)
-
 def calculate_grade(score: int, total: int) -> Tuple[str, str]:
     if total == 0:
         return "N/A", "No questions graded."
-    
+
     percentage = (score / total) * 100
     if percentage >= 70:
         return "A", "Excellent! Distinction level."
@@ -228,21 +231,26 @@ def calculate_grade(score: int, total: int) -> Tuple[str, str]:
 async def get_shared_quiz(supabase: Client, share_id: str) -> Dict[str, Any]:
     """Fetches a specific shared quiz by its share_id."""
     try:
+        # Updated for Supabase v2: wrap in try/except for APIError
+        # .single() raises an exception if 0 or >1 rows found
         response = supabase.table("shared_quizzes").select("*, profiles(username)").eq("id", share_id).single().execute()
-        if response.data:
-            creator = response.data.get("profiles")
-            creator_username = creator.get("username") if creator else "A user"
+        
+        # If we reach here, response.data exists
+        creator = response.data.get("profiles")
+        creator_username = creator.get("username") if creator else "A user"
+
+        return {
+            "success": True, 
+            "quiz_data": response.data["quiz_data"], 
+            "creator_username": creator_username,
+            "title": response.data.get("title"),
+            "creator_id": response.data.get("creator_id"),
+            "created_at": response.data.get("created_at")
+        }
             
-            return {
-                "success": True, 
-                "quiz_data": response.data["quiz_data"], 
-                "creator_username": creator_username,
-                "title": response.data.get("title"),
-                "creator_id": response.data.get("creator_id"),
-                "created_at": response.data.get("created_at")
-            }
-        else:
-            return {"success": False, "message": "Quiz not found."}
+    except APIError as e:
+        logger.error(f"Supabase APIError fetching shared quiz {share_id}: {e.message}")
+        return {"success": False, "message": "Quiz not found or unavailable."}
     except Exception as e:
         logger.error(f"Error fetching shared quiz {share_id}: {e}", exc_info=True)
         return {"success": False, "message": "A server error occurred while fetching the quiz."}
@@ -262,12 +270,12 @@ async def save_shared_quiz_submission(
 
         quiz_data = quiz_fetch_response["quiz_data"]
         total_questions = len(quiz_data)
-        
+
         score = 0
         for idx, q in enumerate(quiz_data):
             if user_answers.get(str(idx)) == q.get('answer'):
                 score += 1
-        
+
         grade, remark = calculate_grade(score, total_questions)
 
         submission_data = {
@@ -278,9 +286,12 @@ async def save_shared_quiz_submission(
             "score": score,
             "total_questions": total_questions
         }
-        response = await supabase.table("shared_quiz_submissions").insert(submission_data).execute()
         
-        if response.data:
+        try:
+            # Updated for Supabase v2: wrap in try/except
+            # Ensure we await the execute call to avoid 'coroutine not subscriptable' error
+            response = await supabase.table("shared_quiz_submissions").insert(submission_data).execute()
+
             return {
                 "success": True, 
                 "submission_id": response.data[0]['id'],
@@ -289,8 +300,8 @@ async def save_shared_quiz_submission(
                 "grade": grade,
                 "remark": remark
             }
-        else:
-            logger.error(f"Supabase error submitting shared quiz score: {response.error.message if response.error else 'Unknown error'}")
+        except APIError as db_e:
+            logger.error(f"Supabase APIError submitting shared quiz score: {db_e.message}")
             return {"success": False, "message": "Failed to save submission."}
 
     except Exception as e:
