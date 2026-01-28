@@ -1,109 +1,166 @@
 .notesToAudioPageContainer {
   max-width: 900px;
-  margin: var(--spacing-lg) auto;
-  padding: var(--spacing-md);
-  border: 1px solid var(--border-light);
-  border-radius: 10px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+  margin: var(--spacing-xl) auto;
+  padding: var(--spacing-xl);
+  background-color: var(--bg-light);
+  border-radius: 12px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
 }
 
 .notesToAudioPageContainer h2 {
   text-align: center;
   color: var(--text-dark);
-  margin-bottom: 15px;
+  margin-bottom: var(--spacing-md);
+  font-size: var(--font-size-h2);
+  font-weight: 700;
 }
 
 .notesToAudioPageContainer > p {
   text-align: center;
   color: var(--text-medium);
-  margin-bottom: var(--spacing-md);
+  margin-bottom: var(--spacing-xxl);
+  font-size: var(--font-size-lg);
+  max-width: 700px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .inputModeToggle {
-  margin-bottom: var(--spacing-md);
+  margin-bottom: var(--spacing-xl);
   display: flex;
   justify-content: center;
-  gap: var(--spacing-sm);
+  gap: var(--spacing-md);
 }
 
 .inputModeToggle button {
-  padding: 10px 20px;
-  border: 1px solid var(--button-primary);
-  border-radius: 5px;
-  background-color: white;
-  color: var(--button-primary);
+  padding: 12px 25px;
+  border: 1px solid var(--primary-gradient-start);
+  border-radius: 8px;
+  background-color: var(--bg-white);
+  color: var(--primary-gradient-start);
+  font-size: var(--font-size-lg);
+  font-weight: 700;
   cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.inputModeToggle button:hover:not(.active) {
+  background-color: var(--bg-hover-light);
 }
 
 .inputModeToggle button.active {
-  background-color: var(--button-primary);
+  background: linear-gradient(90deg, var(--primary-gradient-start) 0%, var(--primary-gradient-end) 100%);
   color: white;
+  border-color: transparent;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
 }
 
 .inputSection {
-  margin-bottom: var(--spacing-md);
-  border: 1px dashed var(--border-medium);
-  padding: var(--spacing-md);
-  border-radius: 5px;
+  margin-bottom: var(--spacing-xl);
+  padding: var(--spacing-xl);
+  background-color: var(--bg-white);
+  border-radius: 10px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  border: 1px solid var(--border-light);
+  text-align: center;
 }
 
 .inputSection label {
   display: block;
   margin-bottom: var(--spacing-sm);
-  font-size: var(--font-size-lg);
-  font-weight: bold;
-}
-
-.inputSection textarea {
-  width: 100%;
-  padding: 10px;
-  border: 1px solid var(--border-dark);
-  border-radius: 5px;
-  box-sizing: border-box;
-  resize: vertical;
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  color: var(--text-dark);
 }
 
 .inputSection input[type="file"] {
-  display: block;
-  margin: 0 auto;
+  width: 100%;
+  padding: 12px 15px;
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  box-sizing: border-box;
+  font-size: var(--font-size-md);
+  color: var(--text-dark);
+  background-color: var(--bg-white);
+  cursor: pointer;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.inputSection input[type="file"]:focus {
+  outline: none;
+  border-color: var(--primary-gradient-start);
+  box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.2);
+}
+
+.inputSection p {
+  margin-top: var(--spacing-sm);
+  color: var(--text-medium);
+}
+
+.inputSection audio {
+  width: 100%;
+  margin-top: var(--spacing-lg);
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  padding: 10px;
+  background-color: var(--bg-white);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
 }
 
 .generateButton {
   width: 100%;
-  padding: 12px 20px;
-  background-color: var(--button-primary);
+  padding: 15px 25px;
+  background: linear-gradient(90deg, var(--primary-gradient-start) 0%, var(--primary-gradient-end) 100%);
   color: white;
   border: none;
-  border-radius: 5px;
+  border-radius: 8px;
   font-size: var(--font-size-lg);
+  font-weight: 700;
   cursor: pointer;
-  opacity: 1;
-  transition: opacity 0.3s ease;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.3s ease;
+}
+
+.generateButton:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
 }
 
 .generateButton:disabled {
-  opacity: 0.7;
+  opacity: 0.6;
   cursor: not-allowed;
+  background: var(--button-disabled-bg);
+  box-shadow: none;
 }
 
 .errorText {
   color: var(--button-danger);
-  margin-top: 15px;
+  background-color: var(--bg-danger-light);
+  border: 1px solid var(--button-danger);
+  border-radius: 8px;
+  padding: var(--spacing-md);
+  margin-top: var(--spacing-xl);
+  margin-bottom: var(--spacing-md);
   text-align: center;
+  font-weight: 500;
 }
 
 .audioOutput {
-  margin-top: var(--spacing-xl);
-  padding: var(--spacing-md);
-  border: 1px solid var(--border-dark);
-  border-radius: 8px;
-  background-color: #f9f9f9;
-  text-align: center;
+  margin-top: var(--spacing-xxl);
+  padding: var(--spacing-xl);
+  background-color: var(--bg-white);
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.07);
+  border: 1px solid var(--border-light);
 }
 
 .audioOutput h3 {
-  color: var(--text-dark);
-  margin-bottom: 15px;
+  color: var(--primary-gradient-start);
+  margin-bottom: var(--spacing-lg);
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+  text-align: center;
 }
 
 .audioOutput audio {
@@ -112,62 +169,77 @@
 
 .audioActions {
   display: flex;
-  justify-content: space-around;
-  margin-top: var(--spacing-md);
+  justify-content: center;
+  gap: var(--spacing-md);
+  margin-top: var(--spacing-xxl);
+}
+
+.downloadButton, .newTranscriptionButton {
+  padding: 12px 25px;
+  border: none;
+  border-radius: 8px;
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.3s ease;
 }
 
 .downloadButton {
-  padding: 12px 20px; /* Increased padding */
   background-color: var(--button-success);
   color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  font-weight: bold; /* Made bold */
-  font-size: var(--font-size-lg); /* Larger font size */
-  transition: opacity 0.3s ease;
 }
 
 .downloadButton:hover:not(:disabled) {
-  opacity: 0.9;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .downloadButton:disabled {
-  background-color: var(--button-success); /* Keep green */
-  color: white; /* Keep white */
+  background-color: var(--button-disabled-bg);
+  opacity: 0.6;
   cursor: not-allowed;
-  opacity: 0.5; /* Reduce opacity to indicate disabled state */
+  box-shadow: none;
 }
 
-.newLectureButton {
-  padding: 10px 15px;
-  background-color: var(--button-secondary);
-  color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
+.newTranscriptionButton {
+  background-color: var(--bg-white);
+  color: var(--primary-gradient-start);
+  border: 1px solid var(--primary-gradient-start);
+}
+
+.newTranscriptionButton:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  background-color: var(--bg-hover);
 }
 
 .guestMessage {
-  margin-top: 15px;
+  margin-top: var(--spacing-xl);
+  padding: var(--spacing-md);
+  background-color: var(--bg-info-light);
+  border: 1px solid var(--border-info);
+  border-radius: 8px;
   text-align: center;
-  color: var(--button-primary);
+  color: var(--text-dark);
+  font-size: var(--font-size-md);
 }
 
 .guestMessage a {
   color: var(--button-primary);
-  text-decoration: none;
+  text-decoration: underline;
+  font-weight: 600;
 }
 
 .guestMessage a:hover {
-  text-decoration: underline;
+  text-decoration: none;
 }
 
 /* Mobile Responsiveness */
 @media (max-width: 768px) {
   .notesToAudioPageContainer {
-    margin: var(--spacing-md) auto;
-    padding: var(--spacing-sm);
+    margin: var(--spacing-lg) auto;
+    padding: var(--spacing-lg);
   }
 
   .notesToAudioPageContainer h2 {
@@ -176,19 +248,33 @@
 
   .notesToAudioPageContainer > p {
     font-size: var(--font-size-md);
+    margin-bottom: var(--spacing-xl);
   }
 
   .inputModeToggle {
     flex-direction: column;
     gap: var(--spacing-xs);
   }
+  .inputModeToggle button {
+      width: 100%;
+      padding: 10px;
+  }
 
-  .audioActions {
+  .inputSection {
+    padding: var(--spacing-lg);
+  }
+
+  .audioOutput {
+    padding: var(--spacing-lg);
+  }
+
+  .transcriptionActions {
     flex-direction: column;
     gap: var(--spacing-sm);
   }
 
-  .downloadButton, .newLectureButton {
+  .downloadButton, .newTranscriptionButton {
     width: 100%;
+    padding: 10px;
   }
 }
