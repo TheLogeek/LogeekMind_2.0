@@ -123,7 +123,7 @@ const HomePage = () => {
             <footer className={styles.footer}>
                 <div className={styles.footerLinks}>
                     <Link href="/privacy-policy" className={styles.footerLink}>Privacy Policy</Link>
-                    <Link href="/terms-of-service" className={styles.footerLink}>Terms of Service</Link>
+                    <Link href="/terms" className={styles.footerLink}>Terms of Service</Link>
                 </div>
                 <p className={styles.footerInfo}>©️ 2026 <strong><a href="https://www.linkedin.com/in/solomon-adenuga-6251a5316" target="_blank" rel="noopener noreferrer"> LogeekMind </a></strong>.</p>
                 <p className={styles.footerContact}>Contact: logeekmind@gmail.com | WhatsApp: +2348023710562</p>

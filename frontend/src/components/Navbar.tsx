@@ -60,8 +60,7 @@ const Navbar: React.FC<NavbarProps> = ({ toggleSidebar, isSidebarOpen }) => {
                 <Link href="/" className={styles.navLink}>Home</Link>
                 <Link href="/dashboard" className={styles.navLink}>Dashboard</Link>
                 <Link href="/contact" className={styles.navLink}>Contact</Link>
-                {/* Add Lessons link for desktop */}
-                <Link href="/lessons" className={styles.navLink}>Lessons</Link>
+                
             </div>
 
             {/* Desktop Auth Buttons */}
