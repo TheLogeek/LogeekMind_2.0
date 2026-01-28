@@ -54,6 +54,7 @@ class SharedQuizData(BaseModel):
 
 class SharedQuizSubmissionRequest(BaseModel):
     user_answers: Dict[str, str]
+    student_identifier: Optional[str] = None
 
 class SharedQuizSubmissionResponse(BaseModel):
     success: bool
@@ -112,7 +113,7 @@ async def generate_quiz_route(
         logger.error(f"An unexpected error occurred during quiz generation: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="An unexpected error occurred during quiz generation.")
 
-@router.get("/shared-quizzes/{share_id}")
+@router.get("/shared-quizzes/{share_id}", response_model=SharedQuizData)
 async def get_shared_quiz_route(
     share_id: str,
     supabase: Client = Depends(get_supabase_client)
@@ -126,7 +127,13 @@ async def get_shared_quiz_route(
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=response["message"])
         
         # Return only necessary data for the taker
-        return SharedQuizResponse(success=True, quiz_data=response["quiz_data"], creator_username=response.get("creator_username"))
+        return SharedQuizData(
+            id=share_id,
+            creator_id=response.get("creator_id"),
+            title=response.get("title"),
+            quiz_data=response["quiz_data"],
+            created_at=response.get("created_at")
+        )
         
     except HTTPException as e:
         raise e
@@ -134,67 +141,30 @@ async def get_shared_quiz_route(
         logger.error(f"An unexpected error occurred fetching shared quiz {share_id}: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="An unexpected error occurred while fetching the shared quiz.")
 
-@router.post("/shared-quizzes/{share_id}/submit")
+@router.post("/shared-quizzes/{share_id}/submit", response_model=SharedQuizSubmissionResponse)
 async def submit_shared_quiz_route(
     share_id: str,
     request: SharedQuizSubmissionRequest,
-    supabase: Client = Depends(get_supabase_client)
+    supabase: Client = Depends(get_supabase_client),
+    current_user: Optional[Dict[str, Any]] = Depends(try_get_current_user_from_supabase_jwt)
 ):
     """Submits answers for a shared quiz and returns the score."""
     try:
-        # Fetch the quiz data first to grade correctly
-        quiz_fetch_response = await smart_quiz_service.get_shared_quiz(supabase, share_id=share_id)
-        if not quiz_fetch_response["success"]:
-            if quiz_fetch_response["message"] == "Quiz not found.":
-                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=quiz_fetch_response["message"])
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=quiz_fetch_response["message"])
-        
-        quiz_data = quiz_fetch_response["quiz_data"]
-        
-        # Grade the quiz
-        score = 0
-        total_questions = len(quiz_data)
-        for idx, q in enumerate(quiz_data):
-            if request.user_answers.get(str(idx)) == q.get('answer'):
-                score += 1
-        
-        # Use the helper function from the service for grading logic
-        grade, remark = smart_quiz_service.calculate_grade(score, total_questions) 
-
-        # Save submission (allow anonymous if student_id is null)
-        submission_payload = {
-            "shared_quiz_id": share_id,
-            "score": score,
-            "total_questions": total_questions,
-            "user_answers": request.user_answers,
-            "submitted_at": datetime.datetime.utcnow().isoformat() + "Z" # Use ISO format with Z for UTC
-        }
-        # Note: Currently, shared quizzes are intended for anonymous taking via link.
-        # If a logged-in user takes it, their ID could be appended. For now, it will be null.
+        student_id = current_user["id"] if current_user else None
 
         submission_response = await smart_quiz_service.save_shared_quiz_submission(
             supabase=supabase,
             shared_quiz_id=share_id,
-            student_id=None, # Anonymous submission for now
+            student_id=student_id,
             user_answers=request.user_answers,
-            score=score,
-            total_questions=total_questions
+            student_identifier=request.student_identifier if not student_id else None
         )
 
         if not submission_response["success"]:
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=submission_response["message"])
         
-        return SharedQuizSubmissionResponse(
-            success=True,
-            submission_id=submission_response["submission"]["id"],
-            score=score,
-            total_questions=total_questions,
-            grade=grade,
-            remark=remark
-        )
+        return SharedQuizSubmissionResponse(**submission_response)
 
-    except json.JSONDecodeError:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid JSON format for user answers.")
     except HTTPException as e:
         raise e
     except Exception as e:

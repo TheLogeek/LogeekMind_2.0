@@ -25,6 +25,9 @@ const SmartQuizPage = () => {
     const [quizScore, setQuizScore] = useState(0);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [isSharable, setIsSharable] = useState(false); // New state for sharable quiz
+    const [sharedQuizLink, setSharedQuizLink] = useState(''); // New state for shared link
+    const [shareMessage, setShareMessage] = useState("Just aced this quiz on LogeekMind! Think you can beat my score? Give it a try!"); // New state for share message
     
     const [currentUser, setCurrentUser] = useState<any>(null);
 
@@ -102,11 +105,18 @@ const SmartQuizPage = () => {
                 num_questions: numQuestions,
                 quiz_type: quizType,
                 difficulty: difficulty,
+                is_sharable: isSharable, // Pass the is_sharable flag
             }, { headers });
 
             if (response.data.success && response.data.quiz_data) {
                 setQuizData(response.data.quiz_data);
                 incrementGuestUsage();
+                // If a share_id is returned, construct the shareable link
+                if (response.data.share_id) {
+                    setSharedQuizLink(`${window.location.origin}/smart-quiz/shared/${response.data.share_id}`);
+                } else {
+                    setSharedQuizLink('');
+                }
                 sessionStorage.setItem('smart_quiz_data', JSON.stringify(response.data.quiz_data));
                 sessionStorage.setItem('smart_quiz_inputs', JSON.stringify({ quizTopic, numQuestions, quizType, difficulty }));
             } else {
@@ -194,11 +204,36 @@ const SmartQuizPage = () => {
         setQuizScore(0);
         setUserAnswers({});
         setError('');
+        setIsSharable(false); // Reset sharable state
+        setSharedQuizLink(''); // Clear shared link
         sessionStorage.removeItem('smart_quiz_data');
         sessionStorage.removeItem('smart_quiz_inputs');
         sessionStorage.removeItem('smart_quiz_userAnswers');
         sessionStorage.removeItem('smart_quiz_score');
         sessionStorage.removeItem('smart_quiz_submitted');
+    };
+
+    const handleCopyLink = () => {
+        if (sharedQuizLink && shareMessage) {
+            const textToCopy = `${shareMessage}\n${sharedQuizLink}`;
+            navigator.clipboard.writeText(textToCopy)
+                .then(() => {
+                    alert('Message and link copied to clipboard!');
+                })
+                .catch(err => {
+                    console.error('Failed to copy text: ', err);
+                    alert('Failed to copy text.');
+                });
+        } else if (sharedQuizLink) {
+            navigator.clipboard.writeText(sharedQuizLink)
+                .then(() => {
+                    alert('Link copied to clipboard!');
+                })
+                .catch(err => {
+                    console.error('Failed to copy link: ', err);
+                    alert('Failed to copy link.');
+                });
+        }
     };
 
     return (
@@ -227,6 +262,14 @@ const SmartQuizPage = () => {
                     <label htmlFor="difficulty">Difficulty Level: {DIFFICULTY_MAP_FRONTEND[difficulty]}</label>
                     <input type="range" id="difficulty" min="1" max="5" value={difficulty} onChange={(e) => setDifficulty(parseInt(e.target.value))} />
                 </div>
+                {currentUser && ( // Only show sharable option to logged-in users
+                    <div className={styles.formGroup}>
+                        <label className={styles.checkboxLabel}>
+                            <input type="checkbox" checked={isSharable} onChange={(e) => setIsSharable(e.target.checked)} />
+                            Make Sharable (Publicly accessible via link)
+                        </label>
+                    </div>
+                )}
                 <button type="submit" disabled={loading || !quizTopic.trim() || (!currentUser && guestUsageCount >= GUEST_QUIZ_LIMIT)} className={styles.generateButton}>
                     {loading ? 'Generating Quiz...' : 'Generate Quiz'}
                 </button>
@@ -273,6 +316,13 @@ const SmartQuizPage = () => {
                         </div>
                     ))}
                     <div className={styles.quizActions}>
+                        {sharedQuizLink && (
+                            <div className={styles.shareLinkContainer}>
+                                <p className={styles.shareMessageText}>{shareMessage}</p>
+                                <input type="text" value={sharedQuizLink} readOnly className={styles.shareLinkInput} />
+                                <button onClick={handleCopyLink} className={styles.copyLinkButton}>Copy Message & Link</button>
+                            </div>
+                        )}
                         <button 
                             type="button"
                             onClick={handleDownloadResultsDocx} 

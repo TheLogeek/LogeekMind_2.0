@@ -56,6 +56,10 @@ class ExamResultsResponse(BaseModel):
     remark: Optional[str] = None
     message: Optional[str] = None
 
+class SharedExamSubmissionRequest(BaseModel):
+    user_answers: Dict[str, str]
+    student_identifier: Optional[str] = None
+
 @router.post("/generate", response_model=ExamGenerateResponse)
 async def generate_exam_route(
     request: ExamSetupRequest,
@@ -85,7 +89,7 @@ async def generate_exam_route(
             num_questions=request.num_questions,
             lecture_notes_content=request.lecture_notes_content, # Pass notes content
             file_name=request.file_name, # Pass file name for logging
-            #is_sharable=request.is_sharable # Pass the sharing flag
+            is_sharable=request.is_sharable # Pass the sharing flag
         )
         if not response["success"]:
             if "Rate Limit Hit" in response.get("message", ""):
@@ -170,7 +174,6 @@ async def download_exam_results_docx(
         raise HTTPException(status_code=500, detail=f"An error occurred during DOCX creation: {e}")
 
 # --- New endpoints for shared exams ---
-'''
 @router.get("/shared-exams/{share_id}")
 async def get_shared_exam_route(
     share_id: str,
@@ -193,14 +196,19 @@ async def get_shared_exam_route(
 @router.post("/shared-exams/{share_id}/submit")
 async def submit_shared_exam_route(
     share_id: str,
-    user_answers: Dict[str, str] = Body(...), # Expecting user answers in the request body
-    supabase: Client = Depends(get_supabase_client)
+    request: SharedExamSubmissionRequest, # Use the new request model
+    supabase: Client = Depends(get_supabase_client),
+    current_user: Optional[Dict[str, Any]] = Depends(try_get_current_user_from_supabase_jwt) # Optional user
 ):
     """Submits answers for a shared exam."""
+    student_id = current_user["id"] if current_user else None
+    
     response = await exam_simulator_service.submit_shared_exam_results(
         supabase=supabase,
         share_id=share_id,
-        user_answers=user_answers
+        user_answers=request.user_answers,
+        student_id=student_id, # Pass optional student_id
+        student_identifier=request.student_identifier if not student_id else None # Pass identifier only if anonymous
     )
     if not response["success"]:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=response["message"])
@@ -214,4 +222,3 @@ async def submit_shared_exam_route(
         "grade": response.get("grade"),
         "remark": response.get("remark")
     }
-'''

@@ -31,6 +31,9 @@ const ExamSimulatorPage = () => {
     const [courseName, setCourseName] = useState('');
     const [topic, setTopic] = useState('');
     const [numQuestions, setNumQuestions] = useState(20);
+    const [isSharable, setIsSharable] = useState(false); // New state for sharable exam
+    const [sharedExamLink, setSharedExamLink] = useState(''); // New state for shared link
+    const [shareMessage, setShareMessage] = useState("Think you're ready for a challenge? I just took this exam on LogeekMind. Give it a try!"); // New state for share message
 
     // New state for question source selection
     const [selectedSource, setSelectedSource] = useState('topic'); // 'topic' or 'notes'
@@ -239,6 +242,7 @@ const ExamSimulatorPage = () => {
                 payload.lecture_notes_content = lectureNotesContent;
                 payload.file_name = fileName; // Send file name for logging
             }
+            payload.is_sharable = isSharable; // Pass the is_sharable flag
             
             // Removed Authorization header for guest generation consistency with backend adjustment.
             const requestHeaders = accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
@@ -251,6 +255,12 @@ const ExamSimulatorPage = () => {
                 setRemainingSeconds(durationMins * 60);
                 setExamStage("active");
                 incrementGuestUsage();
+                // If a share_id is returned, construct the shareable link
+                if (response.data.share_id) {
+                    setSharedExamLink(`${window.location.origin}/exam-simulator/shared/${response.data.share_id}`);
+                } else {
+                    setSharedExamLink('');
+                }
                 // Save inputs, including source selection and notes content/filename
                 sessionStorage.setItem('exam_simulator_inputs', JSON.stringify({ courseName, topic: selectedSource === 'topic' ? topic : '', numQuestions, durationMins, selectedSource, lectureNotesContent, fileName }));
             } else {
@@ -346,6 +356,8 @@ const ExamSimulatorPage = () => {
         setExamScore(0);
         setGrade("");
         setRemark("");
+        setIsSharable(false); // Reset sharable state
+        setSharedExamLink(''); // Clear shared link
         // Clear results, but keep inputs for easier re-take
         sessionStorage.removeItem('exam_simulator_results');
         // Also clear the inputs related to the last generation for a clean start
@@ -356,6 +368,29 @@ const ExamSimulatorPage = () => {
         const minutes = Math.floor(totalSeconds / 60);
         const seconds = totalSeconds % 60;
         return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    };
+
+    const handleCopyLink = () => {
+        if (sharedExamLink && shareMessage) {
+            const textToCopy = `${shareMessage}\n${sharedExamLink}`;
+            navigator.clipboard.writeText(textToCopy)
+                .then(() => {
+                    alert('Message and link copied to clipboard!');
+                })
+                .catch(err => {
+                    console.error('Failed to copy text: ', err);
+                    alert('Failed to copy text.');
+                });
+        } else if (sharedExamLink) {
+            navigator.clipboard.writeText(sharedExamLink)
+                .then(() => {
+                    alert('Link copied to clipboard!');
+                })
+                .catch(err => {
+                    console.error('Failed to copy link: ', err);
+                    alert('Failed to copy link.');
+                });
+        }
     };
 
     return (
@@ -419,6 +454,14 @@ const ExamSimulatorPage = () => {
                             <span>{numQuestions} Questions</span>
                         </div>
                     </div>
+                    {currentUser && ( // Only show sharable option to logged-in users
+                        <div className={styles.formGroup}>
+                            <label className={styles.checkboxLabel}>
+                                <input type="checkbox" checked={isSharable} onChange={(e) => setIsSharable(e.target.checked)} />
+                                Make Sharable (Publicly accessible via link)
+                            </label>
+                        </div>
+                    )}
                     <button type="submit" disabled={loading || !courseName.trim() || (selectedSource === 'topic' && !topic?.trim()) || (selectedSource === 'notes' && !lectureNotesContent.trim()) || (!currentUser && guestUsageCount >= GUEST_EXAM_LIMIT)} className={styles.startButton}>
                         {loading ? 'Preparing Exam...' : 'Start Exam'}
                     </button>
@@ -475,6 +518,13 @@ const ExamSimulatorPage = () => {
                         );
                     })}
                     <div className={styles.resultsActions}>
+                        {sharedExamLink && (
+                            <div className={styles.shareLinkContainer}>
+                                <p className={styles.shareMessageText}>{shareMessage}</p>
+                                <input type="text" value={sharedExamLink} readOnly className={styles.shareLinkInput} />
+                                <button onClick={handleCopyLink} className={styles.copyLinkButton}>Copy Message & Link</button>
+                            </div>
+                        )}
                         <button onClick={handleDownloadResultsDocx} className={styles.downloadButton} disabled={!currentUser} title={!currentUser ? "Login to download" : "Download Results as DOCX"}>
                             Download Results as DOCX
                         </button>

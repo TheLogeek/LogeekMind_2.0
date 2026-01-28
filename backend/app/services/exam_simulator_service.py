@@ -8,6 +8,14 @@ from docx import Document
 import io
 import time # For timestamp in DOCX filename
 import re # Import re for regex operations
+import uuid # For generating shareable IDs
+import datetime # For timestamping submissions
+import logging # Import logging
+from io import BytesIO
+from PyPDF2 import PdfReader
+
+
+logger = logging.getLogger(__name__)
 
 # Helper function to extract text from file content
 async def _extract_text_from_file_content(file_content: bytes, file_name: str) -> Optional[str]:
@@ -69,10 +77,11 @@ async def generate_exam_questions(
     user_id: str,
     username: str,
     course_name: str,
-    num_questions: int, # num_questions moved up for clarity
-    topic: Optional[str] = None, # Make topic optional
-    lecture_notes_content: Optional[str] = None, # New parameter for notes
-    file_name: Optional[str] = None # For logging if notes are provided
+    num_questions: int,
+    topic: Optional[str] = None,
+    lecture_notes_content: Optional[str] = None,
+    file_name: Optional[str] = None,
+    is_sharable: bool = False  # Add is_sharable flag
 ) -> Dict[str, Any]:
     
     if not course_name:
@@ -80,6 +89,9 @@ async def generate_exam_questions(
     
     if not topic and not lecture_notes_content:
         return {"success": False, "message": "Either a topic or lecture notes must be provided."}
+
+    if is_sharable and user_id.startswith("guest_"):
+        return {"success": False, "message": "Guest users cannot create sharable exams. Please log in to use this feature."}
 
     client, error_message = await get_gemini_client(user_id=user_id)
     if error_message:
@@ -123,6 +135,9 @@ Each dictionary must have these keys:
 - \"explanation\": A short explanation of why it is correct
         """
     
+    generated_exam_data = None
+    share_id = None
+
     try:
         response = client.models.generate_content(
             model="gemini-2.5-flash",
@@ -131,11 +146,28 @@ Each dictionary must have these keys:
         
         # Handle potential empty or malformed response text
         if not response.text:
-            print("Gemini API returned an empty response.")
+            logger.error("Gemini API returned an empty response.")
             return {"success": False, "message": "Gemini API returned an empty response. Please try again."}
 
         cleaned_text = response.text.replace("```json", "").replace("```", "").strip()
-        exam_data = json.loads(cleaned_text)
+        generated_exam_data = json.loads(cleaned_text)
+
+        # Save to shared_exams if sharable
+        if is_sharable:
+            share_id = str(uuid.uuid4())
+            try:
+                insert_response = await supabase.table("shared_exams").insert({
+                    "id": share_id,
+                    "creator_id": user_id,
+                    "title": f"{course_name} Exam ({num_questions} Qs)",
+                    "exam_data": generated_exam_data
+                }).execute()
+                if insert_response.error:
+                    logger.error(f"Supabase error saving shared exam: {insert_response.error.message}")
+                    share_id = None
+            except Exception as db_e:
+                logger.error(f"Exception during Supabase insertion for shared exam: {db_e}", exc_info=True)
+                share_id = None
 
         await log_usage(
             supabase=supabase,
@@ -143,27 +175,27 @@ Each dictionary must have these keys:
             user_name=username,
             feature_name="Exam Simulator",
             action="generated_exam",
-            metadata={"course": course_name, "topic": topic if topic else "notes", "num_questions": num_questions, "source_file": file_name}
+            metadata={"course": course_name, "topic": topic if topic else "notes", "num_questions": num_questions, "is_sharable": is_sharable, "source_file": file_name}
         )
 
-        return {"success": True, "exam_data": exam_data}
+        return {"success": True, "exam_data": generated_exam_data, "share_id": share_id}
 
     except json.JSONDecodeError:
-        print(f"JSON Decode Error: {response.text if response.text else 'No response text'}")
-        return {"success": False, "message": "The AI generated an invalid quiz format. Please try generating again or check your input."}
+        logger.error(f"JSON Decode Error: {response.text if response.text else 'No response text'}")
+        return {"success": False, "message": "The AI generated an invalid exam format. Please try generating again or check your input."}
     except genai.errors.APIError as e:
         error_message = str(e)
         if "429" in error_message or "RESOURCE_EXHAUSTED" in error_message.upper():
-            print(f"Gemini API rate limit exceeded during exam generation: {e}")
+            logger.warning(f"Gemini API rate limit exceeded during exam generation: {e}")
             return {"success": False, "message": "AI is currently experiencing high traffic. Please try again shortly."}
         elif "503" in error_message:
-            print(f"AI is currently experiencing high traffic. Try again shortly.")
-            return {"success": False, "message": "AI is currently experiencing high traffic. Please try again shortly."}
+            logger.warning(f"AI service unavailable during exam generation: {e}")
+            return {"success": False, "message": "AI service is currently unavailable. Please try again shortly."}
         else:
-            print(f"An API error occurred: {e}")
+            logger.error(f"A Gemini API error occurred during exam generation: {e}")
             return {"success": False, "message": f"A Gemini API error occurred: {e}"}
     except Exception as e:
-        print(f"Error during exam generation: {e}")
+        logger.error(f"Error during exam generation: {e}", exc_info=True)
         return {"success": False, "message": "An unexpected error occurred while generating the exam."}
 
 async def grade_exam_and_log_performance(
@@ -276,3 +308,77 @@ async def create_docx_from_exam_results(
     doc.save(doc_io)
     doc_io.seek(0)
     return doc_io
+
+async def get_shared_exam(supabase: Client, share_id: str) -> Dict[str, Any]:
+    """Fetches a shared exam and its creator's username."""
+    try:
+        response = await supabase.table("shared_exams").select("*").eq("id", share_id).single().execute()
+        if response.data:
+            creator_username = "A user"
+            if response.data.get("creator_id"):
+                profile_response = await supabase.table("profiles").select("username").eq("id", response.data["creator_id"]).single().execute()
+                if profile_response.data:
+                    creator_username = profile_response.data.get("username", "A user")
+            
+            return {"success": True, "exam_data": response.data["exam_data"], "creator_username": creator_username}
+        else:
+            return {"success": False, "message": "Exam not found."}
+    except Exception as e:
+        logger.error(f"Error fetching shared exam {share_id}: {e}", exc_info=True)
+        return {"success": False, "message": "A server error occurred while fetching the exam."}
+
+async def submit_shared_exam_results(
+    supabase: Client,
+    share_id: str,
+    user_answers: Dict[str, str],
+    student_id: Optional[str] = None, # Optional student_id for logged-in users
+    student_identifier: Optional[str] = None # Optional identifier for anonymous users
+) -> Dict[str, Any]:
+    """Grades and saves a submission for a shared exam."""
+    try:
+        # 1. Fetch the shared exam to get the correct answers
+        exam_response = await get_shared_exam(supabase, share_id)
+        if not exam_response["success"]:
+            return exam_response # Return the error message ("Exam not found." or server error)
+
+        exam_data = exam_response["exam_data"]
+        total_questions = len(exam_data)
+        
+        # 2. Grade the submission
+        score = 0
+        for idx, q in enumerate(exam_data):
+            # Ensure consistent key access, defaulting to None if not found
+            if user_answers.get(str(idx)) == q.get('answer'):
+                score += 1
+        
+        grade, remark = calculate_grade(score, total_questions)
+
+        # 3. Save the submission results
+        submission_data = {
+            "shared_exam_id": share_id,
+            "student_id": student_id, # Can be null for anonymous users
+            "student_identifier": student_identifier, # Add the identifier
+            "user_answers": user_answers,
+            "score": score,
+            "total_questions": total_questions,
+            "submitted_at": datetime.datetime.utcnow().isoformat() + "Z"
+        }
+        
+        insert_response = await supabase.table("shared_exam_submissions").insert(submission_data).execute()
+
+        if insert_response.data:
+            return {
+                "success": True, 
+                "submission_id": insert_response.data[0]['id'],
+                "score": score,
+                "total_questions": total_questions,
+                "grade": grade,
+                "remark": remark
+            }
+        else:
+            logger.error(f"Supabase error submitting shared exam score: {insert_response.error.message if insert_response.error else 'Unknown error'}")
+            return {"success": False, "message": "Failed to save submission."}
+
+    except Exception as e:
+        logger.error(f"Error submitting shared exam score for exam {share_id}: {e}", exc_info=True)
+        return {"success": False, "message": "A server error occurred while submitting your score."}

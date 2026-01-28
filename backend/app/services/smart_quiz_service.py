@@ -61,6 +61,9 @@ async def generate_quiz_service(
     if not quiz_topic:
         return {"success": False, "message": "Quiz topic is required."}
 
+    if is_sharable and user_id.startswith("guest_"):
+        return {"success": False, "message": "Guest users cannot create sharable quizzes. Please log in to use this feature."}
+
     client, error_message = await get_gemini_client(user_id=user_id)
     if error_message:
         return {"success": False, "message": error_message}
@@ -201,19 +204,43 @@ async def create_docx_from_quiz_results(
 
 # --- New functions for shared quizzes ---
 
+import logging
+logger = logging.getLogger(__name__)
+
+def calculate_grade(score: int, total: int) -> Tuple[str, str]:
+    if total == 0:
+        return "N/A", "No questions graded."
+    
+    percentage = (score / total) * 100
+    if percentage >= 70:
+        return "A", "Excellent! Distinction level."
+    elif percentage >= 60:
+        return "B", "Very Good. Keep it up."
+    elif percentage >= 50:
+        return "C", "Credit. You passed, but barely."
+    elif percentage >= 45:
+        return "D", "Pass. You need to study more."
+    elif percentage >= 40:
+        return "E", "Weak Pass. Dangerous territory."
+    else:
+        return "F", "Fail. You are not ready for this exam."
+
 async def get_shared_quiz(supabase: Client, share_id: str) -> Dict[str, Any]:
     """Fetches a specific shared quiz by its share_id."""
     try:
-        response = await supabase.table("shared_quizzes").select("*").eq("id", share_id).single().execute()
+        response = await supabase.table("shared_quizzes").select("*, profiles(username)").eq("id", share_id).single().execute()
         if response.data:
-            # Fetch creator username for display. This assumes 'profiles' table and 'username' column.
-            creator_username = None
-            if response.data.get("creator_id"):
-                profile_response = await supabase.table("profiles").select("username").eq("id", response.data["creator_id"]).single().execute()
-                if profile_response.data:
-                    creator_username = profile_response.data.get("username")
+            creator = response.data.get("profiles")
+            creator_username = creator.get("username") if creator else "A user"
             
-            return {"success": True, "quiz_data": response.data["quiz_data"], "creator_username": creator_username}
+            return {
+                "success": True, 
+                "quiz_data": response.data["quiz_data"], 
+                "creator_username": creator_username,
+                "title": response.data.get("title"),
+                "creator_id": response.data.get("creator_id"),
+                "created_at": response.data.get("created_at")
+            }
         else:
             return {"success": False, "message": "Quiz not found."}
     except Exception as e:
@@ -223,25 +250,45 @@ async def get_shared_quiz(supabase: Client, share_id: str) -> Dict[str, Any]:
 async def save_shared_quiz_submission(
     supabase: Client,
     shared_quiz_id: str,
-    student_id: Optional[str], # Can be null for anonymous submissions
     user_answers: Dict[str, str],
-    score: int,
-    total_questions: int
+    student_id: Optional[str],
+    student_identifier: Optional[str] = None
 ) -> Dict[str, Any]:
     """Saves a student's submission for a shared quiz."""
     try:
+        quiz_fetch_response = await get_shared_quiz(supabase, shared_quiz_id)
+        if not quiz_fetch_response["success"]:
+            return quiz_fetch_response
+
+        quiz_data = quiz_fetch_response["quiz_data"]
+        total_questions = len(quiz_data)
+        
+        score = 0
+        for idx, q in enumerate(quiz_data):
+            if user_answers.get(str(idx)) == q.get('answer'):
+                score += 1
+        
+        grade, remark = calculate_grade(score, total_questions)
+
         submission_data = {
             "shared_quiz_id": shared_quiz_id,
-            "student_id": student_id, # This will be NULL for anonymous submissions
-            "score": score,
-            "total_questions": total_questions,
+            "student_id": student_id,
+            "student_identifier": student_identifier,
             "user_answers": user_answers,
-            "submitted_at": datetime.datetime.utcnow().isoformat() + "Z" # Use ISO format with Z for UTC
+            "score": score,
+            "total_questions": total_questions
         }
         response = await supabase.table("shared_quiz_submissions").insert(submission_data).execute()
         
         if response.data:
-            return {"success": True, "submission": response.data[0]}
+            return {
+                "success": True, 
+                "submission_id": response.data[0]['id'],
+                "score": score,
+                "total_questions": total_questions,
+                "grade": grade,
+                "remark": remark
+            }
         else:
             logger.error(f"Supabase error submitting shared quiz score: {response.error.message if response.error else 'Unknown error'}")
             return {"success": False, "message": "Failed to save submission."}
