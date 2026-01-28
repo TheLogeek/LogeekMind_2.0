@@ -85,6 +85,7 @@
   font-size: var(--font-size-md);
   color: var(--text-dark);
   resize: vertical;
+}
   min-gpaCalculatorPageContainer {
   max-width: 900px;
   margin: var(--spacing-xl) auto;
