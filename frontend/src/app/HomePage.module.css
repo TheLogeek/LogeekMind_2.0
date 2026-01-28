@@ -178,25 +178,14 @@
   margin: 0;
 }
 
-.footerContact {
-  font-size: var(--font-size-sm);
-  opacity: 0.7;
-  margin: 5px 0 0 0;
-}
-
-.footerSocial {
-  margin-top: 15px;
+.footerInfo {
   font-size: var(--font-size-md);
+  margin: 0;
 }
 
-.footerSocial span {
-  margin: 0 var(--spacing-sm);
-}
-
-.footerVersion {
-  font-size: 0.7em;
-  opacity: 0.5;
-  margin-top: var(--spacing-md);
+.footerCopyrightBrand {
+  font-weight: bold;
+  color: var(--primary-light); /* Or any other color that fits the theme */
 }
 
 /* Mobile Responsiveness */
