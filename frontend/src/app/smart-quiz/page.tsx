@@ -317,7 +317,6 @@ const SmartQuizPage = () => {
                     ))}
                     <div className={styles.quizActions}>
                         {sharedQuizLink && (
-                            {sharedQuizLink && (
     <div 
         className={styles.shareLinkContainer} 
         style={{
@@ -362,7 +361,6 @@ const SmartQuizPage = () => {
             Copy Message & Link
         </button>
     </div>
-)}
 
                         )}
                         <button 
