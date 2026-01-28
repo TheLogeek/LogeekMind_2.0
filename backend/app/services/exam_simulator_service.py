@@ -3,17 +3,17 @@ from app.services.gemini_service import get_gemini_client
 from app.services.usage_service import log_usage, log_performance
 from google import genai
 from supabase import Client
+from postgrest.exceptions import APIError  # Added for Supabase v2 error handling
 import json
 from docx import Document
 import io
-import time # For timestamp in DOCX filename
-import re # Import re for regex operations
-import uuid # For generating shareable IDs
-import datetime # For timestamping submissions
-import logging # Import logging
+import time  # For timestamp in DOCX filename
+import re  # Import re for regex operations
+import uuid  # For generating shareable IDs
+import datetime  # For timestamping submissions
+import logging  # Import logging
 from io import BytesIO
 from PyPDF2 import PdfReader
-
 
 logger = logging.getLogger(__name__)
 
@@ -26,9 +26,9 @@ async def _extract_text_from_file_content(file_content: bytes, file_name: str) -
             text = ""
             for page in pdf_reader.pages:
                 page_text = page.extract_text()
-                if page_text: # Ensure text is not None
+                if page_text:  # Ensure text is not None
                     text += page_text + "\n"
-            if not text.strip(): # Check if extraction yielded any text
+            if not text.strip():  # Check if extraction yielded any text
                 return "Error: Could not extract text from PDF. The file might be image-based or corrupted."
             return text
 
@@ -44,13 +44,13 @@ async def _extract_text_from_file_content(file_content: bytes, file_name: str) -
         elif file_name.lower().endswith('.txt'):
             return file_content.decode("utf-8")
         else:
-            return None # Unsupported file type
+            return None  # Unsupported file type
     except Exception as e:
         print(f"Error extracting text from file {file_name}: {e}")
         return f"Error processing file {file_name}: {e}"
 
 
-GRADE_POINTS = { # Used in GPA Calculator, but good for reference
+GRADE_POINTS = {  # Used in GPA Calculator, but good for reference
     "A": 5.0, "B": 4.0, "C": 3.0, "D": 2.0, "E": 1.0, "F": 0.0
 }
 
@@ -118,7 +118,7 @@ Each dictionary must have these keys:
 - \"answer\": The exact string of the correct option
 - \"explanation\": A short explanation of why it is correct, referencing the notes where applicable.
         """
-    else: # Use topic if no lecture notes are provided
+    else:  # Use topic if no lecture notes are provided
         prompt = f"""
 You are an expert university professor setting an exam.
 Course: {course_name}
@@ -156,15 +156,17 @@ Each dictionary must have these keys:
         if is_sharable:
             share_id = str(uuid.uuid4())
             try:
-                insert_response = supabase.table("shared_exams").insert({
+                # Updated for Supabase v2: wrap in try/except, remove .error check
+                supabase.table("shared_exams").insert({
                     "id": share_id,
                     "creator_id": user_id,
                     "title": f"{course_name} Exam ({num_questions} Qs)",
                     "exam_data": generated_exam_data
                 }).execute()
-                if insert_response.error:
-                    logger.error(f"Supabase error saving shared exam: {insert_response.error.message}")
-                    share_id = None
+                
+            except APIError as db_e:
+                logger.error(f"Supabase error saving shared exam: {db_e.message}")
+                share_id = None
             except Exception as db_e:
                 logger.error(f"Exception during Supabase insertion for shared exam: {db_e}", exc_info=True)
                 share_id = None
@@ -312,17 +314,25 @@ async def create_docx_from_exam_results(
 async def get_shared_exam(supabase: Client, share_id: str) -> Dict[str, Any]:
     """Fetches a shared exam and its creator's username."""
     try:
+        # Updated for Supabase v2: wrap in try/except for APIError
+        # .single() raises an exception if 0 or >1 rows found
         response = await supabase.table("shared_exams").select("*").eq("id", share_id).single().execute()
-        if response.data:
-            creator_username = "A user"
-            if response.data.get("creator_id"):
+        
+        # If we reach here, response.data exists
+        creator_username = "A user"
+        if response.data.get("creator_id"):
+            try:
                 profile_response = await supabase.table("profiles").select("username").eq("id", response.data["creator_id"]).single().execute()
                 if profile_response.data:
                     creator_username = profile_response.data.get("username", "A user")
+            except APIError:
+                pass # Fallback to default username if profile fetch fails
+        
+        return {"success": True, "exam_data": response.data["exam_data"], "creator_username": creator_username}
             
-            return {"success": True, "exam_data": response.data["exam_data"], "creator_username": creator_username}
-        else:
-            return {"success": False, "message": "Exam not found."}
+    except APIError as e:
+        logger.error(f"Supabase APIError fetching shared exam {share_id}: {e.message}")
+        return {"success": False, "message": "Exam not found or unavailable."}
     except Exception as e:
         logger.error(f"Error fetching shared exam {share_id}: {e}", exc_info=True)
         return {"success": False, "message": "A server error occurred while fetching the exam."}
@@ -364,9 +374,11 @@ async def submit_shared_exam_results(
             "submitted_at": datetime.datetime.utcnow().isoformat() + "Z"
         }
         
-        insert_response = await supabase.table("shared_exam_submissions").insert(submission_data).execute()
-
-        if insert_response.data:
+        try:
+            # Updated for Supabase v2: wrap in try/except
+            insert_response = await supabase.table("shared_exam_submissions").insert(submission_data).execute()
+            
+            # If successful, return the result
             return {
                 "success": True, 
                 "submission_id": insert_response.data[0]['id'],
@@ -375,8 +387,8 @@ async def submit_shared_exam_results(
                 "grade": grade,
                 "remark": remark
             }
-        else:
-            logger.error(f"Supabase error submitting shared exam score: {insert_response.error.message if insert_response.error else 'Unknown error'}")
+        except APIError as db_e:
+            logger.error(f"Supabase APIError submitting score: {db_e.message}")
             return {"success": False, "message": "Failed to save submission."}
 
     except Exception as e:
