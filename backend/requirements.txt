@@ -24,3 +24,4 @@ sumy
 psycopg2-binary
 pywhispercpp
 SQLAlchemy
+PyPDF2
