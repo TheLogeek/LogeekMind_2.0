@@ -102,7 +102,7 @@ async def generate_quiz_service(
         if is_sharable:
             share_id = str(uuid.uuid4()) # Generate a unique share ID
             try:
-                insert_response = await supabase.table("shared_quizzes").insert({
+                insert_response = supabase.table("shared_quizzes").insert({
                     "id": share_id,
                     "creator_id": user_id,
                     "title": f"{quiz_topic} Quiz ({num_questions} Qs)", # Basic title for shared quiz
@@ -228,7 +228,7 @@ def calculate_grade(score: int, total: int) -> Tuple[str, str]:
 async def get_shared_quiz(supabase: Client, share_id: str) -> Dict[str, Any]:
     """Fetches a specific shared quiz by its share_id."""
     try:
-        response = await supabase.table("shared_quizzes").select("*, profiles(username)").eq("id", share_id).single().execute()
+        response = supabase.table("shared_quizzes").select("*, profiles(username)").eq("id", share_id).single().execute()
         if response.data:
             creator = response.data.get("profiles")
             creator_username = creator.get("username") if creator else "A user"
