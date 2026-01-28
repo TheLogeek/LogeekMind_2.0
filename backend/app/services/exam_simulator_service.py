@@ -347,7 +347,7 @@ async def submit_shared_exam_results(
     """Grades and saves a submission for a shared exam."""
     try:
         # 1. Fetch the shared exam to get the correct answers
-        exam_response = get_shared_exam(supabase, share_id)
+        exam_response = await get_shared_exam(supabase, share_id)
         if not exam_response["success"]:
             return exam_response # Return the error message ("Exam not found." or server error)
 
