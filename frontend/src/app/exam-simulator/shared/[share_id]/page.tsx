@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import axios, { AxiosError } from 'axios';
 import MarkdownRenderer from '../../../../components/MarkdownRenderer'; // Adjust path as needed
-import styles from '../ExamSimulatorPage.module.css'; // Use existing styles for consistency
+import styles from '../../ExamSimulatorPage.module.css'; // Use existing styles for consistency
 import AuthService from '../../../../services/AuthService'; // To check if user is logged in for student_id
 
 interface ExamQuestion {
