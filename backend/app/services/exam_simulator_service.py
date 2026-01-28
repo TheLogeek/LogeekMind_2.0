@@ -156,7 +156,7 @@ Each dictionary must have these keys:
         if is_sharable:
             share_id = str(uuid.uuid4())
             try:
-                insert_response = await supabase.table("shared_exams").insert({
+                insert_response = supabase.table("shared_exams").insert({
                     "id": share_id,
                     "creator_id": user_id,
                     "title": f"{course_name} Exam ({num_questions} Qs)",
