@@ -316,7 +316,7 @@ async def get_shared_exam(supabase: Client, share_id: str) -> Dict[str, Any]:
     try:
         # Updated for Supabase v2: wrap in try/except for APIError
         # .single() raises an exception if 0 or >1 rows found
-        response = await supabase.table("shared_exams").select("*").eq("id", share_id).single().execute()
+        response = supabase.table("shared_exams").select("*").eq("id", share_id).single().execute()
         
         # If we reach here, response.data exists
         creator_username = "A user"
