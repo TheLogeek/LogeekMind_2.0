@@ -3,19 +3,23 @@ from app.services.groq_service import get_groq_client, call_groq
 from groq import GroqError
 from app.services.usage_service import log_usage, log_performance
 from supabase import Client
-from postgrest.exceptions import APIError  # Added for Supabase v2 error handling
+from postgrest.exceptions import APIError
 import json
 from docx import Document
 import io
-import time  # For timestamp in DOCX filename
-import re  # Import re for regex operations
-import uuid  # For generating shareable IDs
-import datetime  # For timestamping submissions
-import logging  # Import logging
+import time
+import re
+import uuid
+import datetime
+import logging
 from io import BytesIO
 from PyPDF2 import PdfReader
 
 logger = logging.getLogger(__name__)
+
+# Configuration for chunking
+MAX_CHUNK_SIZE = 5000  # Characters per chunk for lecture notes
+CHUNK_OVERLAP = 400    # Overlap between chunks
 
 # Helper function to extract text from file content
 async def _extract_text_from_file_content(file_content: bytes, file_name: str) -> Optional[str]:
@@ -26,9 +30,9 @@ async def _extract_text_from_file_content(file_content: bytes, file_name: str) -
             text = ""
             for page in pdf_reader.pages:
                 page_text = page.extract_text()
-                if page_text:  # Ensure text is not None
+                if page_text:
                     text += page_text + "\n"
-            if not text.strip():  # Check if extraction yielded any text
+            if not text.strip():
                 return "Error: Could not extract text from PDF. The file might be image-based or corrupted."
             return text
 
@@ -44,13 +48,137 @@ async def _extract_text_from_file_content(file_content: bytes, file_name: str) -
         elif file_name.lower().endswith('.txt'):
             return file_content.decode("utf-8")
         else:
-            return None  # Unsupported file type
+            return None
     except Exception as e:
-        print(f"Error extracting text from file {file_name}: {e}")
+        logger.error(f"Error extracting text from file {file_name}: {e}")
         return f"Error processing file {file_name}: {e}"
 
 
-GRADE_POINTS = {  # Used in GPA Calculator, but good for reference
+def create_intelligent_chunks(text: str, max_chunk_size: int = MAX_CHUNK_SIZE, overlap: int = CHUNK_OVERLAP) -> List[str]:
+    """
+    Splits text into chunks intelligently, respecting paragraph and sentence boundaries.
+    """
+    if len(text) <= max_chunk_size:
+        return [text]
+    
+    chunks = []
+    paragraphs = text.split('\n\n')
+    current_chunk = ""
+    
+    for paragraph in paragraphs:
+        paragraph = paragraph.strip()
+        if not paragraph:
+            continue
+        
+        if len(current_chunk) + len(paragraph) + 2 > max_chunk_size:
+            if current_chunk:
+                chunks.append(current_chunk.strip())
+                overlap_text = current_chunk[-overlap:] if len(current_chunk) > overlap else current_chunk
+                current_chunk = overlap_text + "\n\n" + paragraph
+            else:
+                sentences = re.split(r'(?<=[.!?])\s+', paragraph)
+                temp_chunk = ""
+                
+                for sentence in sentences:
+                    if len(temp_chunk) + len(sentence) + 1 > max_chunk_size:
+                        if temp_chunk:
+                            chunks.append(temp_chunk.strip())
+                            overlap_text = temp_chunk[-overlap:] if len(temp_chunk) > overlap else temp_chunk
+                            temp_chunk = overlap_text + " " + sentence
+                        else:
+                            chunks.append(sentence[:max_chunk_size])
+                            temp_chunk = sentence[max_chunk_size - overlap:]
+                    else:
+                        temp_chunk += " " + sentence if temp_chunk else sentence
+                
+                current_chunk = temp_chunk
+        else:
+            current_chunk += "\n\n" + paragraph if current_chunk else paragraph
+    
+    if current_chunk.strip():
+        chunks.append(current_chunk.strip())
+    
+    return chunks
+
+
+async def summarize_lecture_notes_chunk(chunk: str, chunk_index: int, total_chunks: int, client: Any, model: str) -> Optional[str]:
+    """
+    Summarizes a chunk of lecture notes to extract key concepts.
+    """
+    context = f"This is part {chunk_index + 1} of {total_chunks} from lecture notes." if total_chunks > 1 else "These are complete lecture notes."
+    
+    system_prompt = "You are an expert at extracting key concepts from academic lecture notes."
+    
+    user_prompt = f"""{context}
+
+Extract and summarize the key concepts, definitions, formulas, and important facts from this section.
+Focus on information that would be suitable for exam questions.
+
+Lecture notes section:
+{chunk}
+
+Provide a concise summary of the most important points."""
+
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_prompt}
+    ]
+    
+    try:
+        response = call_groq(
+            client,
+            messages=messages,
+            model=model,
+            temperature=0.2
+        )
+        return response.choices[0].message.content.strip()
+    except Exception as e:
+        logger.warning(f"Failed to summarize chunk {chunk_index + 1}: {e}")
+        # Return first 800 chars as fallback
+        return chunk[:800] + "..."
+
+
+async def process_large_lecture_notes(lecture_notes_content: str, client: Any, model: str) -> str:
+    """
+    Processes large lecture notes by chunking and summarizing to fit model context.
+    """
+    text_length = len(lecture_notes_content)
+    logger.info(f"Lecture notes length: {text_length} characters")
+    
+    # If notes are small enough, return as is
+    if text_length <= MAX_CHUNK_SIZE:
+        logger.info("Lecture notes fit within size limit")
+        return lecture_notes_content
+    
+    # Large notes - need to chunk and summarize
+    logger.info("Lecture notes exceed limit, applying chunking")
+    chunks = create_intelligent_chunks(lecture_notes_content)
+    logger.info(f"Created {len(chunks)} chunks from lecture notes")
+    
+    # Summarize each chunk to extract key concepts
+    chunk_summaries = []
+    for i, chunk in enumerate(chunks):
+        logger.info(f"Processing chunk {i+1}/{len(chunks)}")
+        summary = await summarize_lecture_notes_chunk(
+            chunk=chunk,
+            chunk_index=i,
+            total_chunks=len(chunks),
+            client=client,
+            model=model
+        )
+        if summary:
+            chunk_summaries.append(summary)
+    
+    # Combine summaries
+    combined_summary = "\n\n---\n\n".join(
+        [f"Section {i+1}:\n{summary}" for i, summary in enumerate(chunk_summaries)]
+    )
+    
+    logger.info(f"Combined summary length: {len(combined_summary)} characters")
+    return combined_summary
+
+
+GRADE_POINTS = {
     "A": 5.0, "B": 4.0, "C": 3.0, "D": 2.0, "E": 1.0, "F": 0.0
 }
 
@@ -79,10 +207,8 @@ async def get_exam_performance_comparison(
 ) -> Dict[str, Any]:
     """
     Calculates how the current score compares to other submissions for the same exam.
-    Returns the percentile rank.
     """
     try:
-        # Fetch all submission scores for this shared exam
         response = supabase.table("shared_exam_submissions").select("percentage_score").eq("shared_exam_id", shared_exam_id).execute()
         
         all_percentages = [sub['percentage_score'] for sub in response.data if sub['percentage_score'] is not None]
@@ -90,13 +216,11 @@ async def get_exam_performance_comparison(
         if not all_percentages:
             return {"success": True, "comparison_message": "No other submissions yet for comparison."}
         
-        # Count how many scores are lower than or equal to the current score
         better_than_count = sum(1 for p in all_percentages if current_score_percentage > p)
         
         if len(all_percentages) > 0:
             percentile = (better_than_count / len(all_percentages)) * 100
             
-            # Refine the message
             if percentile >= 90:
                 comparison_message = f"Outstanding! You performed better than {percentile:.0f}% of test takers."
             elif percentile >= 75:
@@ -111,11 +235,62 @@ async def get_exam_performance_comparison(
             return {"success": True, "comparison_message": "Be the first to set the bar for this exam!"}
 
     except APIError as e:
-        logger.error(f"Supabase APIError fetching exam submissions for comparison: {e.message}")
+        logger.error(f"Supabase APIError fetching exam submissions: {e.message}")
         return {"success": False, "message": "Could not retrieve comparison data."}
     except Exception as e:
         logger.error(f"Error calculating exam performance comparison: {e}", exc_info=True)
         return {"success": False, "message": "An unexpected error occurred during performance comparison."}
+
+
+def validate_and_fix_exam_questions(exam_data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """
+    Validates and fixes exam questions to ensure proper format.
+    - Ensures 'answer' field contains ONLY the option letter (A, B, C, or D)
+    - Fixes common malformations from AI
+    """
+    fixed_exam_data = []
+    
+    for q_idx, question in enumerate(exam_data):
+        try:
+            # Ensure required fields exist
+            if not all(key in question for key in ['question', 'options', 'answer', 'explanation']):
+                logger.warning(f"Question {q_idx + 1} missing required fields, skipping")
+                continue
+            
+            # Ensure options is a list with 4 items
+            if not isinstance(question['options'], list) or len(question['options']) != 4:
+                logger.warning(f"Question {q_idx + 1} has invalid options format, skipping")
+                continue
+            
+            # Fix the answer field - THE KEY FIX FOR GRADING
+            answer = question['answer'].strip()
+            
+            # If answer is already just a letter, keep it
+            if len(answer) == 1 and answer.upper() in ['A', 'B', 'C', 'D']:
+                question['answer'] = answer.upper()
+            else:
+                # AI returned the full option text instead of letter - find which option matches
+                answer_found = False
+                for option_idx, option_text in enumerate(question['options']):
+                    if answer.lower() == option_text.lower() or answer in option_text or option_text in answer:
+                        question['answer'] = chr(65 + option_idx)  # Convert 0->A, 1->B, etc.
+                        answer_found = True
+                        logger.info(f"Fixed answer for Q{q_idx + 1}: '{answer}' -> '{question['answer']}'")
+                        break
+                
+                if not answer_found:
+                    # Default to A if we can't determine the answer
+                    logger.warning(f"Could not determine answer for Q{q_idx + 1}, defaulting to 'A'")
+                    question['answer'] = 'A'
+            
+            fixed_exam_data.append(question)
+            
+        except Exception as e:
+            logger.error(f"Error validating question {q_idx + 1}: {e}")
+            continue
+    
+    return fixed_exam_data
+
 
 async def generate_exam_questions(
     supabase: Client,
@@ -126,7 +301,7 @@ async def generate_exam_questions(
     topic: Optional[str] = None,
     lecture_notes_content: Optional[str] = None,
     file_name: Optional[str] = None,
-    is_sharable: bool = False  # Add is_sharable flag
+    is_sharable: bool = False
 ) -> Dict[str, Any]:
     
     if not course_name:
@@ -142,49 +317,111 @@ async def generate_exam_questions(
     if error_message:
         return {"success": False, "message": error_message}
     
+    # Test which model is available
+    models = ["llama-3.1-8b-instant", "mixtral-8x7b-32768"]
+    working_model = None
+    
+    for model in models:
+        try:
+            test_response = call_groq(
+                client,
+                messages=[{"role": "user", "content": "Hi"}],
+                model=model,
+                temperature=0.1
+            )
+            working_model = model
+            logger.info(f"Using model: {working_model}")
+            break
+        except Exception as e:
+            logger.warning(f"Model {model} not available: {e}")
+    
+    if not working_model:
+        return {"success": False, "message": "AI service is currently overloaded. Please try again."}
+    
+    # Process large lecture notes if provided
+    if lecture_notes_content:
+        lecture_notes_content = await process_large_lecture_notes(
+            lecture_notes_content, 
+            client, 
+            working_model
+        )
+    
     # Construct prompt dynamically
-    system_prompt = "You are an expert university professor setting an exam."
+    system_prompt = "You are an expert university professor setting an exam. You MUST follow the output format exactly."
     user_prompt_content = ""
 
     if lecture_notes_content:
         user_prompt_content = f"""
-Generate {num_questions} examination-standard multiple-choice questions
-based on the provided lecture notes. Do not include any information that is not explicitly mentioned in the text. Focus on the key terms, dates, and logical relationships defined in the notes. Make sure the questions test the student's ability to connect different parts of the lecture.
-Ensure questions are relevant ONLY to the content within the provided notes. Employ methods to prevent hitting rate limit like first summarising the notes before setting the questions.
+Generate {num_questions} examination-standard multiple-choice questions based ONLY on the provided lecture notes.
 
 Course: {course_name}
 
 Lecture Notes:
----\n{lecture_notes_content}
+---
+{lecture_notes_content}
 ---
 
-OUTPUT FORMAT:
-Return ONLY a raw JSON list of dictionaries. Do NOT use Markdown code blocks.
-For mathematical questions, Do NOT use LaTex commands and make sure the explanation includes a detailed step by step solving
-the exact mathematics question after your normal explanation
-Each dictionary must have these keys:
-- "question": follow the instructions provided and introduce at least one complex scenario or problem statement question where needed and relevant to context without making the question too long
-- "options": A list of strings
-- "answer": The exact string of the correct option, MUST be the option label (A, B, C, or D). Do NOT return option text.
-- "explanation": A short explanation of why it is correct, referencing the notes where applicable.
-        """
-    else:  # Use topic if no lecture notes are provided
+CRITICAL INSTRUCTIONS:
+1. Questions must be based ONLY on content from the lecture notes above
+2. Each question must have exactly 4 options labeled A, B, C, D
+3. The "answer" field MUST contain ONLY the letter (A, B, C, or D) - NOT the full text of the option
+4. For mathematical questions, do NOT use LaTeX commands
+5. Include at least one complex scenario or problem-solving question
+
+OUTPUT FORMAT (STRICT):
+Return ONLY a raw JSON array. Do NOT use markdown code blocks or any other formatting.
+Each question must be a dictionary with these EXACT keys:
+- "question": The question text (string)
+- "options": Array of exactly 4 strings
+- "answer": Single letter ONLY: "A", "B", "C", or "D" (string)
+- "explanation": Why the answer is correct (string)
+
+Example format:
+[
+  {{
+    "question": "What is photosynthesis?",
+    "options": ["Process of plant respiration", "Process converting light to energy", "Process of cell division", "Process of water absorption"],
+    "answer": "B",
+    "explanation": "Photosynthesis is the process by which plants convert light energy into chemical energy."
+  }}
+]
+
+Now generate {num_questions} questions following this EXACT format:
+"""
+    else:
         user_prompt_content = f"""
+Generate {num_questions} examination-standard multiple-choice questions.
+
 Course: {course_name}
 Topic: {topic if topic else 'General'}
 
-Generate {num_questions} examination-standard multiple-choice questions.
-Ensure the questions vary in difficulty from basic facts to complex problem-solving. Include multiple-choice questions with four distinct options where only one is correct. Create distractors that represent common mistakes students make. Use formal and clear language suitable for a high-level academic exam.
-OUTPUT FORMAT:
-Return ONLY a raw JSON list of dictionaries. Do NOT use Markdown code blocks.
-For mathematical questions, Do NOT use LaTex commands and make sure the explanation includes a detailed step by step solving
-the exact mathematics question after your normal explanation
-Each dictionary must have these keys:
-- "question": follow the instructions provided and introduce at least one complex scenario or problem statement question where needed and relevant to context without making the question too long
-- "options": A list of strings (e.g., ["Option A", "Option B", "Option C", "Option D"])
-- "answer": The exact string of the correct option, MUST be the option label (A, B, C, or D). Do NOT return option text.
-- "explanation": A short explanation of why it is correct
-        """
+CRITICAL INSTRUCTIONS:
+1. Each question must have exactly 4 options labeled A, B, C, D
+2. The "answer" field MUST contain ONLY the letter (A, B, C, or D) - NOT the full text of the option
+3. For mathematical questions, do NOT use LaTeX commands
+4. Questions should vary in difficulty
+5. Include at least one complex scenario or problem-solving question
+
+OUTPUT FORMAT (STRICT):
+Return ONLY a raw JSON array. Do NOT use markdown code blocks or any other formatting.
+Each question must be a dictionary with these EXACT keys:
+- "question": The question text (string)
+- "options": Array of exactly 4 strings
+- "answer": Single letter ONLY: "A", "B", "C", or "D" (string)
+- "explanation": Why the answer is correct (string)
+
+Example format:
+[
+  {{
+    "question": "What is the capital of France?",
+    "options": ["London", "Paris", "Berlin", "Madrid"],
+    "answer": "B",
+    "explanation": "Paris is the capital and largest city of France."
+  }}
+]
+
+Now generate {num_questions} questions following this EXACT format:
+"""
     
     messages = [
         {"role": "system", "content": system_prompt},
@@ -195,48 +432,57 @@ Each dictionary must have these keys:
     share_id = None
 
     try:
-        response = None
-        models = [
-            "llama-3.1-8b-instant",
-            "mixtral-8x7b-32768"
-        ]
-
-        for model in models:
-            try:
-                response = call_groq(
-                    client,
-                    messages=messages,
-                    model=model,
-                    temperature=0.4
-                )
-                break
-            except Exception as e:
-                logger.warning(f"Groq model {model} failed for Exam Simulator: {e}")
-
-        if not response:
-            return {
-                "success": False,
-                "message": "AI service is currently overloaded. Please try again."
-            }
+        response = call_groq(
+            client,
+            messages=messages,
+            model=working_model,
+            temperature=0.4
+        )
         
-        # Handle potential empty or malformed response text
         response_content = response.choices[0].message.content.strip()
+        
         if not response_content:
             logger.error("Groq API returned an empty response.")
-            return {"success": False, "message": "Groq API returned an empty response. Please try again."}
+            return {"success": False, "message": "AI returned an empty response. Please try again."}
 
-        cleaned_text = response_content.replace("```json", "").replace("```", "").strip()
+        # Clean the response - remove markdown code blocks
+        cleaned_text = response_content
+        
+        # Remove markdown code blocks
+        cleaned_text = re.sub(r'```json\s*', '', cleaned_text)
+        cleaned_text = re.sub(r'```\s*', '', cleaned_text)
+        cleaned_text = cleaned_text.strip()
+        
+        # Try to extract JSON if there's extra text
+        json_match = re.search(r'\[\s*\{.*\}\s*\]', cleaned_text, re.DOTALL)
+        if json_match:
+            cleaned_text = json_match.group(0)
+        
+        # Parse JSON
         generated_exam_data = json.loads(cleaned_text)
+        
+        # Validate it's a list
+        if not isinstance(generated_exam_data, list):
+            logger.error(f"Generated exam data is not a list: {type(generated_exam_data)}")
+            return {"success": False, "message": "AI generated invalid exam format. Please try again."}
+        
+        # Validate and fix the exam questions
+        generated_exam_data = validate_and_fix_exam_questions(generated_exam_data)
+        
+        if not generated_exam_data:
+            logger.error("No valid questions after validation")
+            return {"success": False, "message": "AI generated invalid questions. Please try again."}
+        
+        logger.info(f"Successfully generated {len(generated_exam_data)} valid questions")
 
         # Save to shared_exams if sharable
         if is_sharable:
             share_id = str(uuid.uuid4())
             try:
-                # Updated for Supabase v2: wrap in try/except, remove .error check
                 supabase.table("shared_exams").insert({
                     "id": share_id,
                     "creator_id": user_id,
-                    "title": f"{course_name} Exam ({num_questions} Qs)",
+                    "title": f"{course_name} Exam ({len(generated_exam_data)} Qs)",
                     "exam_data": generated_exam_data
                 }).execute()
                 
@@ -244,7 +490,7 @@ Each dictionary must have these keys:
                 logger.error(f"Supabase error saving shared exam: {db_e.message}")
                 share_id = None
             except Exception as db_e:
-                logger.error(f"Exception during Supabase insertion for shared exam: {db_e}", exc_info=True)
+                logger.error(f"Exception during Supabase insertion: {db_e}", exc_info=True)
                 share_id = None
 
         await log_usage(
@@ -253,23 +499,31 @@ Each dictionary must have these keys:
             user_name=username,
             feature_name="Exam Simulator",
             action="generated_exam",
-            metadata={"course": course_name, "topic": topic if topic else "notes", "num_questions": num_questions, "is_sharable": is_sharable, "source_file": file_name}
+            metadata={
+                "course": course_name, 
+                "topic": topic if topic else "notes", 
+                "num_questions": len(generated_exam_data),
+                "is_sharable": is_sharable, 
+                "source_file": file_name
+            }
         )
 
         return {"success": True, "exam_data": generated_exam_data, "share_id": share_id}
 
-    except json.JSONDecodeError:
-        logger.error(f"JSON Decode Error from Groq: {response_content if response_content else 'No response content'}")
-        return {"success": False, "message": "The AI generated an invalid exam format. Please try generating again or check your input."}
+    except json.JSONDecodeError as e:
+        logger.error(f"JSON Decode Error: {e}")
+        logger.error(f"Response content: {response_content if response_content else 'No content'}")
+        return {"success": False, "message": "AI generated an invalid exam format. Please try generating again."}
     except GroqError as e:
         msg = str(e)
         if "429" in msg:
             return {"success": False, "message": "Too many requests. Please wait briefly."}
-        logger.error(f"Groq API error during exam generation: {msg}", exc_info=True)
+        logger.error(f"Groq API error: {msg}", exc_info=True)
         return {"success": False, "message": "AI service error. Please try again."}
     except Exception as e:
         logger.error(f"Error during exam generation: {e}", exc_info=True)
         return {"success": False, "message": "An unexpected error occurred while generating the exam."}
+
 
 async def grade_exam_and_log_performance(
     supabase: Client,
@@ -278,8 +532,8 @@ async def grade_exam_and_log_performance(
     exam_data: List[Dict[str, Any]],
     user_answers: Dict[str, str],
     course_name: str,
-    topic: Optional[str] = None, # Make topic optional for logging
-    lecture_notes_source: bool = False # Flag to indicate if notes were used
+    topic: Optional[str] = None,
+    lecture_notes_source: bool = False
 ) -> Dict[str, Any]:
 
     score = 0
@@ -287,26 +541,22 @@ async def grade_exam_and_log_performance(
 
     for idx, q in enumerate(exam_data):
         user_selected_label = user_answers.get(str(idx))
-        correct_answer_value = q.answer # Direct access to attribute
+        correct_answer_letter = q.get('answer', '').strip().upper()
 
-        if user_selected_label and correct_answer_value:
-            try:
-                if len(user_selected_label) == 1 and user_selected_label.isalpha():
-                    option_index = ord(user_selected_label.upper()) - ord('A')
+        if not user_selected_label or not correct_answer_letter:
+            continue
+        
+        # Normalize user answer to uppercase letter
+        user_selected_label = user_selected_label.strip().upper()
+        
+        # Direct letter comparison (correct way)
+        if user_selected_label == correct_answer_letter:
+            score += 1
+            logger.debug(f"Q{idx}: Correct! User: {user_selected_label}, Answer: {correct_answer_letter}")
+        else:
+            logger.debug(f"Q{idx}: Wrong. User: {user_selected_label}, Answer: {correct_answer_letter}")
 
-                    if 0 <= option_index < len(q['options']):
-                        user_selected_option_value = q['options'][option_index]
-                        if user_selected_option_value == correct_answer_value:
-                            score += 1
-                # Fallback: if the frontend sends the full string instead of a letter
-                elif user_selected_label == correct_answer_value:
-                    score += 1
-            except Exception:
-                # If logic fails (e.g., unexpected format), skip grading this specific question
-                continue
-
-    # This line caused the error. It is now aligned with the 'score = 0' line above.
-    grade, remark, _ = calculate_grade(score, total_questions)
+    grade, remark, percentage = calculate_grade(score, total_questions)
 
     await log_performance(
         supabase=supabase,
@@ -315,7 +565,11 @@ async def grade_exam_and_log_performance(
         score=score,
         total_questions=total_questions,
         correct_answers=score,
-        extra={"course": course_name, "topic": topic if topic else ("notes" if lecture_notes_source else "general")}
+        extra={
+            "course": course_name, 
+            "topic": topic if topic else ("notes" if lecture_notes_source else "general"),
+            "percentage": percentage
+        }
     )
 
     await log_usage(
@@ -324,7 +578,13 @@ async def grade_exam_and_log_performance(
         user_name=username,
         feature_name="Exam Simulator",
         action="submitted_exam",
-        metadata={"course": course_name, "score": score, "total": total_questions, "used_notes": lecture_notes_source}
+        metadata={
+            "course": course_name, 
+            "score": score, 
+            "total": total_questions, 
+            "used_notes": lecture_notes_source,
+            "percentage": percentage
+        }
     )
 
     return {
@@ -332,7 +592,8 @@ async def grade_exam_and_log_performance(
         "score": score,
         "total_questions": total_questions,
         "grade": grade,
-        "remark": remark
+        "remark": remark,
+        "percentage": percentage
     }
 
 
@@ -343,55 +604,41 @@ async def create_docx_from_exam_results(
     total_questions: int,
     grade: str,
     course_name: str,
-    topic: Optional[str] = None, # Make topic optional for docx filename
+    topic: Optional[str] = None,
     lecture_notes_source: bool = False
 ) -> io.BytesIO:
     doc = Document()
     doc.add_heading(f"Exam Results: {course_name}", 0)
     
-    if lecture_notes_source and topic: # If notes used and topic is provided (as context for notes)
+    if lecture_notes_source and topic:
         doc.add_paragraph(f"Source Context: {topic}")
-    elif topic: # If topic is used (and not notes)
+    elif topic:
         doc.add_paragraph(f"Topic: {topic}")
 
     doc.add_paragraph(f"Final Score: {score}/{total_questions}\nGrade: {grade}")
     doc.add_paragraph("-" * 20)
 
     for idx, q in enumerate(exam_data):
-        user_choice = user_answers.get(str(idx))
+        doc.add_heading(f"Question {idx + 1}", level=2)
+        doc.add_paragraph(q['question'])
         
-        # Process Question
-        clean_question = q['question'].replace('**', '').replace('__', '').replace('*', '').replace('_', '')
-        clean_question = clean_question.replace('$', '')
-        clean_question = re.sub(r'\\a-zA-Z+', '', clean_question)
-        clean_question = re.sub(r'\{.*?\}', '', clean_question)
-        doc.add_heading(f"Q{idx+1}: {clean_question}", level=2)
-        
-        # Process Options
         doc.add_paragraph("Options:")
-        for option in q['options']:
-            clean_option = option.replace('**', '').replace('__', '').replace('*', '').replace('_', '')
-            doc.add_paragraph(clean_option, style='List Bullet')
+        for opt_idx, option in enumerate(q['options']):
+            option_letter = chr(65 + opt_idx)
+            doc.add_paragraph(f"  {option_letter}. {option}", style='List Bullet')
         
-        # Process User Answer
-        clean_user_choice = user_choice.replace('**', '').replace('__', '').replace('*', '').replace('_', '') if user_choice else '(No answer)'
-        doc.add_paragraph(f"Your Answer: {clean_user_choice}")
+        user_answer_letter = user_answers.get(str(idx), "N/A").upper()
+        correct_answer_letter = q.get('answer', 'N/A').upper()
         
-        # Process Correct Answer
-        clean_correct_answer = q['answer'].replace('**', '').replace('__', '').replace('*', '').replace('_', '')
-        doc.add_paragraph(f"Correct Answer: {clean_correct_answer}")
+        doc.add_paragraph(f"Your Answer: {user_answer_letter}")
+        doc.add_paragraph(f"Correct Answer: {correct_answer_letter}")
         
-        # Process Explanation
-        explanation_text = q.get('explanation', 'No explanation provided.')
-        for exp_line in explanation_text.split('\n'):
-            stripped_exp_line = exp_line.strip()
-            text_content = stripped_exp_line.replace('**', '').replace('__', '').replace('*', '').replace('_', '')
-            text_content = text_content.replace('$', '')
-            text_content = re.sub(r'\\a-zA-Z+', '', text_content)
-            text_content = re.sub(r'\{.*?\}', '', text_content)
-            if text_content:
-                doc.add_paragraph(text_content)
-
+        if user_answer_letter == correct_answer_letter:
+            doc.add_paragraph("Result: ✓ Correct", style='Intense Quote')
+        else:
+            doc.add_paragraph("Result: ✗ Incorrect", style='Intense Quote')
+        
+        doc.add_paragraph(f"Explanation: {q.get('explanation', 'No explanation provided.')}")
         doc.add_paragraph("-" * 20)
 
     doc_io = io.BytesIO()
@@ -399,14 +646,12 @@ async def create_docx_from_exam_results(
     doc_io.seek(0)
     return doc_io
 
+
 async def get_shared_exam(supabase: Client, share_id: str) -> Dict[str, Any]:
     """Fetches a shared exam and its creator's username."""
     try:
-        # Updated for Supabase v2: wrap in try/except for APIError
-        # .single() raises an exception if 0 or >1 rows found
         response = supabase.table("shared_exams").select("*").eq("id", share_id).single().execute()
         
-        # If we reach here, response.data exists
         creator_username = "A user"
         if response.data.get("creator_id"):
             try:
@@ -414,9 +659,13 @@ async def get_shared_exam(supabase: Client, share_id: str) -> Dict[str, Any]:
                 if profile_response.data:
                     creator_username = profile_response.data.get("username", "A user")
             except APIError:
-                pass # Fallback to default username if profile fetch fails
+                pass
         
-        return {"success": True, "exam_data": response.data["exam_data"], "creator_username": creator_username}
+        return {
+            "success": True, 
+            "exam_data": response.data["exam_data"], 
+            "creator_username": creator_username
+        }
             
     except APIError as e:
         logger.error(f"Supabase APIError fetching shared exam {share_id}: {e.message}")
@@ -425,6 +674,7 @@ async def get_shared_exam(supabase: Client, share_id: str) -> Dict[str, Any]:
         logger.error(f"Error fetching shared exam {share_id}: {e}", exc_info=True)
         return {"success": False, "message": "A server error occurred while fetching the exam."}
 
+
 async def get_shared_exam_submission_for_download(
     supabase: Client,
     user_id: str,
@@ -432,12 +682,10 @@ async def get_shared_exam_submission_for_download(
     submission_id: str
 ) -> Dict[str, Any]:
     """
-    Fetches a specific shared exam submission and prepares data for DOCX generation.
-    Authenticates that the current user is the owner of the submission.
+    Fetches a specific shared exam submission for download.
     """
     try:
-        # 1. Fetch the submission details
-        submission_response = await supabase.table("shared_exam_submissions").select("*").eq("id", submission_id).single().execute()
+        submission_response = supabase.table("shared_exam_submissions").select("*").eq("id", submission_id).single().execute()
         
         if not submission_response.data:
             logger.warning(f"Submission {submission_id} not found.")
@@ -445,28 +693,22 @@ async def get_shared_exam_submission_for_download(
         
         submission = submission_response.data
 
-        # 2. Authenticate: Check if the current user is the owner of the submission
         if submission.get("student_id") != user_id:
-            logger.warning(f"Unauthorized attempt to download submission {submission_id} by user {user_id}. Owner: {submission.get('student_id')}")
+            logger.warning(f"Unauthorized download attempt for submission {submission_id}")
             return {"success": False, "message": "Unauthorized access to submission."}
 
-        # 3. Fetch the shared exam data
         exam_fetch_response = await get_shared_exam(supabase, shared_exam_id)
         if not exam_fetch_response["success"]:
             return {"success": False, "message": exam_fetch_response.get("message", "Shared exam not found.")}
         
-        # The title is stored in the 'shared_exams' table, not directly in exam_fetch_response.data
-        shared_exam_title_response = await supabase.table("shared_exams").select("title").eq("id", shared_exam_id).single().execute()
+        shared_exam_title_response = supabase.table("shared_exams").select("title").eq("id", shared_exam_id).single().execute()
         if not shared_exam_title_response.data:
             logger.warning(f"Shared exam {shared_exam_id} title not found.")
             return {"success": False, "message": "Shared exam title not found."}
 
         exam_data = exam_fetch_response["exam_data"]
-        course_name_and_topic = shared_exam_title_response.data.get("title", "Unknown Exam Topic") # Use title for docx
+        course_name_and_topic = shared_exam_title_response.data.get("title", "Unknown Exam Topic")
 
-        # Extract course_name and topic from the title if it follows a pattern, otherwise use the whole title.
-        # Example title: "Course: Mathematics - Topic: Algebra Exam (10 Qs)"
-        # This parsing is heuristic; adjust if the title format changes
         course_name_match = re.search(r"Course: (.*?)(?: - Topic:|$)", course_name_and_topic)
         topic_match = re.search(r"Topic: (.*?)(?: Exam|$)", course_name_and_topic)
 
@@ -478,7 +720,7 @@ async def get_shared_exam_submission_for_download(
             "exam_data": exam_data,
             "score": submission["score"],
             "total_questions": submission["total_questions"],
-            "grade": submission["grade"], # Assuming grade is saved in submission
+            "grade": submission.get("grade", "N/A"),
             "course_name": course_name,
             "topic": topic,
             "user_answers": submission["user_answers"]
@@ -486,67 +728,60 @@ async def get_shared_exam_submission_for_download(
 
     except APIError as e:
         logger.error(f"Supabase APIError fetching submission {submission_id}: {e.message}")
-        return {"success": False, "message": "Failed to retrieve submission data from database."}
+        return {"success": False, "message": "Failed to retrieve submission data."}
     except Exception as e:
-        logger.error(f"Error fetching shared exam submission for download {submission_id}: {e}", exc_info=True)
-        return {"success": False, "message": "An unexpected error occurred while preparing download."}
+        logger.error(f"Error fetching submission {submission_id}: {e}", exc_info=True)
+        return {"success": False, "message": "An unexpected error occurred."}
+
 
 async def submit_shared_exam_results(
     supabase: Client,
     share_id: str,
     user_answers: Dict[str, str],
-    student_id: Optional[str] = None, # Optional student_id for logged-in users
-    student_identifier: Optional[str] = None # Optional identifier for anonymous users
+    student_id: Optional[str] = None,
+    student_identifier: Optional[str] = None
 ) -> Dict[str, Any]:
     """Grades and saves a submission for a shared exam."""
     try:
-        # 1. Fetch the shared exam to get the correct answers
         exam_response = await get_shared_exam(supabase, share_id)
         if not exam_response["success"]:
-            return exam_response # Return the error message ("Exam not found." or server error)
+            return exam_response
 
         exam_data = exam_response["exam_data"]
         total_questions = len(exam_data)
         
-        # 2. Grade the submission
+        # Grade the submission using fixed logic
         score = 0
         for idx, q in enumerate(exam_data):
-            user_selected_label = user_answers.get(str(idx))
-            correct_answer_value = q.answer # Direct access to attribute
+            user_selected_label = user_answers.get(str(idx), "").strip().upper()
+            correct_answer_letter = q.get('answer', '').strip().upper()
 
-            if user_selected_label and correct_answer_value:
-                option_index = ord(user_selected_label.upper()) - ord('A')
-
-                if 0 <= option_index < len(q['options']):
-                    user_selected_option_value = q['options'][option_index]
-                    if user_selected_option_value == correct_answer_value:
-                        score += 1
+            if user_selected_label == correct_answer_letter:
+                score += 1
         
         grade, remark, percentage = calculate_grade(score, total_questions)
 
-        # 3. Save the submission results
         submission_data = {
             "shared_exam_id": share_id,
-            "student_id": student_id, # Can be null for anonymous users
-            "student_identifier": student_identifier, # Add the identifier
+            "student_id": student_id,
+            "student_identifier": student_identifier,
             "user_answers": user_answers,
             "score": score,
             "total_questions": total_questions,
-            "percentage_score": percentage, # Save percentage score
+            "percentage_score": percentage,
+            "grade": grade,
             "submitted_at": datetime.datetime.utcnow().isoformat() + "Z"
         }
         
         try:
-            # Updated for Supabase v2: wrap in try/except
-            insert_response = await supabase.table("shared_exam_submissions").insert(submission_data).execute()
+            insert_response = supabase.table("shared_exam_submissions").insert(submission_data).execute()
             
-            # If successful, return the result
             return {
                 "success": True, 
                 "submission_id": insert_response.data[0]['id'],
                 "score": score,
                 "total_questions": total_questions,
-                "percentage_score": percentage, # Return percentage
+                "percentage_score": percentage,
                 "grade": grade,
                 "remark": remark
             }
@@ -555,5 +790,5 @@ async def submit_shared_exam_results(
             return {"success": False, "message": "Failed to save submission."}
 
     except Exception as e:
-        logger.error(f"Error submitting shared exam score for exam {share_id}: {e}", exc_info=True)
+        logger.error(f"Error submitting shared exam score: {e}", exc_info=True)
         return {"success": False, "message": "A server error occurred while submitting your score."}
