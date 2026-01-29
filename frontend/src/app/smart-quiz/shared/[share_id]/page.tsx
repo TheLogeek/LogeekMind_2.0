@@ -85,7 +85,7 @@ const SharedQuizPage = () => {
             }
 
             }
-        };
+        },
         fetchUserAndQuiz();
     }, []);
 
