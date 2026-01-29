@@ -35,7 +35,7 @@ const AudioToTextPage = () => {
         if (typeof window !== 'undefined') {
             localStorage.setItem(GUEST_USAGE_KEY, guestUsageCount.toString());
             if (!currentUser && guestUsageCount >= GUEST_TRANSCRIBE_LIMIT) {
-                setError(`You have reached the guest limit of ${GUEST_TRANSCRIBE_LIMIT} audio transcriptions. Please login or sign up for unlimited access.`);
+                setError(`You have reached the guest limit of ${GUEST_TRANSCRIBE_LIMIT} audio transcriptions. Please login or sign up for unlimited access and to download your transcripted file.`);
             } else {
                 setError('');
             }
