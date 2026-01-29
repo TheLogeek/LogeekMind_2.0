@@ -82,7 +82,8 @@ Return ONLY a JSON list of dictionaries with keys:
 - "question": question text
 - "options": list of options (e.g., ["A","B","C","D"] or ["True","False"])
 - "answer": the correct option
-- "explanation": short explanation (if not available, leave empty string)
+- "explanation": short explanation (if not available, leave empty string), for mathematical questions, make sure the explanation includes a detailed step by step solving
+the exact mathematics question after your normal explanation
 Do not include Markdown code blocks or extra text.
 """
 
