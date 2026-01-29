@@ -261,4 +261,9 @@
   .gpaResultOutput p {
     font-size: 2em;
   }
+
+  .addCourseButton, .calculateButton, .resetButton {
+    width: 100%;
+    box-sizing: border-box;
+  }
 }

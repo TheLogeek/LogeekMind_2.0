@@ -288,5 +288,11 @@
 
   .newScheduleButton {
     width: 100%;
+    box-sizing: border-box; /* Add box-sizing */
+  }
+
+  .addSubjectButton, .generateButton {
+    width: 100%;
+    box-sizing: border-box;
   }
 }
