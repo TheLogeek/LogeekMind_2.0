@@ -48,10 +48,11 @@ class QuizPerformanceLogRequest(BaseModel):
 
 class SharedQuizData(BaseModel):
     id: str
-    creator_id: str
+    creator_id: Optional[str] = None
     title: str
     quiz_data: List[Dict[str, Any]]
     created_at: str
+    creator_username: str
 
 class SharedQuizSubmissionRequest(BaseModel):
     user_answers: Dict[str, str]
@@ -139,13 +140,7 @@ async def get_shared_quiz_route(
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=msg)
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
 
-        return SharedQuizData(
-            id=share_id,
-            creator_id=response.get("creator_id"),
-            title=response.get("title"),
-            quiz_data=response["quiz_data"],
-            created_at=response.get("created_at")
-        )
+        return SharedQuizData(**response)
 
     except HTTPException as e:
         raise e

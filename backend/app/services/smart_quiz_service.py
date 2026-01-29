@@ -368,19 +368,22 @@ async def get_quiz_performance_comparison(
         return {"success": False, "message": "An unexpected error occurred during performance comparison."}
 
 async def get_shared_quiz(supabase: Client, share_id: str) -> Dict[str, Any]:
+    """Fetches a shared quiz and its creator's username."""
     try:
         response = supabase.table("shared_quizzes").select("*").eq("id", share_id).single().execute()
         
+        quiz_data = response.data
         creator_username = "A user"
-        if response.data.get("creator_id"):
+        if quiz_data.get("creator_id"):
             try:
-                profile_response = supabase.table("profiles").select("username").eq("id", response.data["creator_id"]).single().execute()
+                profile_response = supabase.table("profiles").select("username").eq("id", quiz_data["creator_id"]).single().execute()
                 if profile_response.data:
                     creator_username = profile_response.data.get("username", "A user")
             except APIError:
                 pass
         
-        return {"success": True, "quiz_data": response.data["quiz_data"], "creator_username": creator_username}
+        quiz_data["creator_username"] = creator_username
+        return {"success": True, **quiz_data}
             
     except APIError as e:
         logger.error(f"Supabase APIError fetching shared quiz {share_id}: {e.message}")
