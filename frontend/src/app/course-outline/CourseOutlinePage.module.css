@@ -180,19 +180,6 @@
   text-decoration: none;
 }
 
-.buttonLoading {
-    color: black !important;
-    opacity: 1 !important; /* Prevents the text from looking faded/gray */
-    cursor: wait; /* Optional: shows a loading cursor */
-}
-
-
-.buttonLoading {
-    color: black !important;
-    opacity: 1 !important; /* Prevents the text from looking faded/gray */
-    cursor: wait; /* Optional: shows a loading cursor */
-}
-
 
 /* Mobile Responsiveness */
 @media (max-width: 768px) {
