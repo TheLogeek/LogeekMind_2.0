@@ -27,7 +27,7 @@ class ExamInsightsRequest(BaseModel):
 async def get_ai_quiz_insights_route(
     request: QuizInsightsRequest,
     current_user: Dict[str, Any] = Depends(get_current_user_from_supabase_jwt),
-    supabase: Client = Depends(get_db_supabase)
+    supabase: Client = Depends(get_db_engine)
 ):
     if not current_user:
         raise HTTPException(status_code=401, detail="Authentication required to get AI insights.")
