@@ -32,46 +32,60 @@ def _clean_markdown_text_for_docx(text_content: str) -> str:
 
 DIFFICULTY_MAP = {1: "introductory", 2: "beginner", 3: "intermediate", 4: "advanced", 5: "expert"}
 
-def validate_and_fix_quiz_questions(quiz_data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    fixed_quiz_data = []
-    for q_idx, question in enumerate(quiz_data):
+def validate_and_normalize_quiz(quiz_data: list) -> list:
+    """Validate and normalize quiz questions to ensure consistent format."""
+    validated = []
+    
+    for idx, q in enumerate(quiz_data):
         try:
-            if not all(key in question for key in ['question', 'options', 'answer', 'explanation']):
-                logger.warning(f"Question {q_idx + 1} missing required fields, skipping")
+            # Required fields
+            if not all(k in q for k in ["question", "options", "explanation"]):
+                logger.warning(f"Question {idx} missing required fields")
                 continue
             
-            if not isinstance(question['options'], list) or len(question['options']) not in [2, 4]:
-                logger.warning(f"Question {q_idx + 1} has invalid options format, skipping")
+            options = q["options"]
+            if not isinstance(options, list) or len(options) < 2:
+                logger.warning(f"Question {idx} has invalid options")
                 continue
-
-            answer = question['answer'].strip()
             
-            if len(answer) == 1 and answer.upper() in ['A', 'B', 'C', 'D']:
-                question['answer'] = answer.upper()
-            elif answer.lower() in ['true', 'false']:
-                question['answer'] = answer.capitalize()
-            else:
-                answer_found = False
-                for option_idx, option_text in enumerate(question['options']):
-                    if answer.lower() == option_text.lower() or answer in option_text or option_text in answer:
-                        if len(question['options']) == 4:
-                            question['answer'] = chr(65 + option_idx)
-                        else:
-                            question['answer'] = option_text.capitalize()
-                        answer_found = True
-                        logger.info(f"Fixed answer for Q{q_idx + 1}: '{answer}' -> '{question['answer']}'")
-                        break
-                
-                if not answer_found:
-                    logger.warning(f"Could not determine answer for Q{q_idx + 1}, defaulting to 'A' or 'True'")
-                    question['answer'] = 'A' if len(question['options']) == 4 else 'True'
+            # Determine correct answer index
+            correct_idx = None
             
-            fixed_quiz_data.append(question)
+            # Check if correct_option_index exists (new format)
+            if "correct_option_index" in q:
+                correct_idx = int(q["correct_option_index"])
+            # Fall back to old "answer" format
+            elif "answer" in q:
+                answer = q["answer"]
+                # If answer is a letter (A, B, C, D)
+                if isinstance(answer, str) and len(answer) == 1 and answer.upper() in "ABCDEFGH":
+                    letter_to_idx = {"A": 0, "B": 1, "C": 2, "D": 3, "E": 4, "F": 5, "G": 6, "H": 7}
+                    correct_idx = letter_to_idx.get(answer.upper())
+                # If answer is "True" or "False"
+                elif answer in ["True", "False"]:
+                    correct_idx = 0 if answer == "True" else 1
+                # If answer is the actual text, find its index
+                elif answer in options:
+                    correct_idx = options.index(answer)
+            
+            if correct_idx is None or correct_idx >= len(options):
+                logger.warning(f"Question {idx} has invalid answer index")
+                continue
+            
+            # Normalize to consistent format
+            validated.append({
+                "question": q["question"],
+                "options": options,
+                "correct_option_index": correct_idx,
+                "correct_answer": options[correct_idx],  # Store actual text too
+                "explanation": q["explanation"]
+            })
             
         except Exception as e:
-            logger.error(f"Error validating question {q_idx + 1}: {e}")
+            logger.warning(f"Error validating question {idx}: {e}")
             continue
-    return fixed_quiz_data
+    
+    return validated
 
 async def generate_quiz_service(
     supabase: Client,
