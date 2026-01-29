@@ -175,7 +175,8 @@ const HomeworkAssistantPage = () => {
                     <label htmlFor="context">Add Context (Optional):</label>
                     <textarea id="context" value={context} onChange={(e) => setContext(e.target.value)} placeholder="e.g., This is a kinematics problem or I'm stuck on Step 3." rows={4}></textarea>
                 </div>
-                <button type="submit" disabled={loading || !imageFile || (!currentUser && guestUsageCount >= GUEST_HW_LIMIT)} className={styles.generateButton}>
+                <button type="submit" disabled={loading || !imageFile || (!currentUser && guestUsageCount >= GUEST_HW_LIMIT)} className={styles.generateButton}
+style={loading ? { color: 'black', opacity: 1 } : {}}>
                     {loading ? 'Generating Solution...' : 'Generate Solution'}
                 </button>
             </form>
