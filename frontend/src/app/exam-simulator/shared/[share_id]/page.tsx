@@ -36,6 +36,22 @@ interface SharedExamSubmissionResponse {
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000";
 
+// Helper function to extract option label (A, B, C, D) from full option text
+const extractOptionLabel = (option: string): string => {
+    // Match pattern like "A.", "A)", "A -", or just "A"
+    const match = option.match(/^([A-Z])[.)\-\s]/);
+    if (match) {
+        return match[1];
+    }
+    // If no pattern matches, return first character if it's a letter
+    const firstChar = option.trim()[0];
+    if (firstChar && /[A-Z]/i.test(firstChar)) {
+        return firstChar.toUpperCase();
+    }
+    // Fallback: return the option as-is
+    return option;
+};
+
 const SharedExamPage = () => {
     const params = useParams();
     const router = useRouter();
@@ -96,8 +112,14 @@ const SharedExamPage = () => {
             const accessToken = AuthService.getAccessToken(); // Check if a user is logged in
             const headers = accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
 
+            // Convert userAnswers to use option labels instead of full option text
+            const processedAnswers: { [key: number]: string } = {};
+            Object.entries(userAnswers).forEach(([key, value]) => {
+                processedAnswers[parseInt(key)] = extractOptionLabel(value);
+            });
+
             const payload: { user_answers: { [key: number]: string }; student_identifier?: string } = {
-                user_answers: userAnswers,
+                user_answers: processedAnswers,
             };
 
             // Only add student_identifier if the user is anonymous
@@ -180,24 +202,30 @@ const SharedExamPage = () => {
 
             const headers = { Authorization: `Bearer ${accessToken}` };
 
-            // Prepare exam context for AI analysis
-            const examContext = sharedExam.exam_data.map((q, index) => ({
+            // Convert userAnswers to use option labels for AI insights
+            const processedUserAnswers: { [key: string]: string } = {};
+            Object.entries(userAnswers).forEach(([key, value]) => {
+                processedUserAnswers[key] = extractOptionLabel(value);
+            });
+
+            // Prepare quiz_data format that backend expects
+            // Backend expects: [{question: str, answer: str}]
+            const quizData = sharedExam.exam_data.map((q) => ({
                 question: q.question,
-                correct_answer: q.answer,
-                user_answer: userAnswers[index] || 'N/A', // User's answer for this question
-                is_correct: (userAnswers[index] === q.answer)
+                answer: extractOptionLabel(q.answer), // Extract label from correct answer too
             }));
 
-            // Assuming a placeholder for exam topic and difficulty if not available in sharedExam directly
             const examTopic = sharedExam.creator_username ? `${sharedExam.creator_username}'s Exam` : 'General Exam';
-            const difficulty = 'intermediate'; // Placeholder, adjust if difficulty is available
 
             const payload = {
-                quiz_topic: examTopic, // Reusing quiz_topic field, but it represents exam topic
-                quiz_data: examContext, // Renaming from quiz_context to quiz_data in payload for consistency with backend service
+                quiz_topic: examTopic,
+                quiz_data: quizData, // Array of {question, answer}
+                user_answers: processedUserAnswers, // Dict with string keys
                 user_score: submissionResults.score,
                 total_questions: submissionResults.total_questions,
             };
+
+            console.log('AI Insights Payload:', payload); // Debug log
 
             const response = await axios.post(`${API_BASE_URL}/ai-insights/exam`, payload, { headers });
 
@@ -341,7 +369,9 @@ const SharedExamPage = () => {
                     </div>
                     <h4 className={styles.correctionsSection}>Answer Key & Explanations</h4>
                     {sharedExam.exam_data.map((q, qIndex) => {
-                        const isCorrect = userAnswers[qIndex] === q.answer;
+                        const userAnswerLabel = extractOptionLabel(userAnswers[qIndex] || '');
+                        const correctAnswerLabel = extractOptionLabel(q.answer);
+                        const isCorrect = userAnswerLabel === correctAnswerLabel;
                         return (
                             <div key={qIndex} className={`${styles.correctionItem} ${isCorrect ? styles.correct : styles.incorrect}`}>
                                 <p>{qIndex + 1}. <MarkdownRenderer content={q.question} /></p>
@@ -352,14 +382,6 @@ const SharedExamPage = () => {
                             </div>
                         );
                     })}
-                    {/* Display guest call to action if user is a guest and a message exists */}
-                    {submissionResults.guest_call_to_action && (
-                        <div className={styles.guestMessage} style={{ marginTop: '20px', border: '1px solid #f0ad4e', padding: '15px', borderRadius: '5px', backgroundColor: '#fcf8e3', color: '#8a6d3b' }}>
-                            <p>
-                                <strong>{submissionResults.guest_call_to_action}</strong>
-                            </p>
-                        </div>
-                    )}
                     {/* Display guest call to action if user is a guest and a message exists */}
                     {submissionResults.guest_call_to_action && (
                         <div className={styles.guestMessage} style={{ marginTop: '20px', border: '1px solid #f0ad4e', padding: '15px', borderRadius: '5px', backgroundColor: '#fcf8e3', color: '#8a6d3b' }}>
