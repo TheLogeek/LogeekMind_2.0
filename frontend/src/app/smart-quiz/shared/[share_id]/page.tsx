@@ -83,9 +83,6 @@ const SharedQuizPage = () => {
                 setCurrentUser(user);
                 setGuestUsageCount(parseInt(localStorage.getItem(GUEST_USAGE_KEY) || '0', 10));
             }
-
-            }
-        }
         fetchUserAndQuiz();
     }, []);
 
