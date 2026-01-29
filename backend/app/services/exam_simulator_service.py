@@ -112,6 +112,7 @@ Lecture Notes:
 
 OUTPUT FORMAT:
 Return ONLY a raw JSON list of dictionaries. Do NOT use Markdown code blocks.
+For mathematical questions, Do NOT use LaTex commands.
 Each dictionary must have these keys:
 - \"question\": follow the instructions provided and introduce at least one complex scenario or problem statement question where needed and relevant to context without making the question too long
 - \"options\": A list of strings
@@ -128,6 +129,7 @@ Generate {num_questions} examination-standard multiple-choice questions.
 Ensure the questions vary in difficulty from basic facts to complex problem-solving. Include multiple-choice questions with four distinct options where only one is correct. Create distractors that represent common mistakes students make. Use formal and clear language suitable for a high-level academic exam.
 OUTPUT FORMAT:
 Return ONLY a raw JSON list of dictionaries. Do NOT use Markdown code blocks.
+For mathematical questions, Do NOT use LaTex commands.
 Each dictionary must have these keys:
 - \"question\": follow the instructions provided and introduce at least one complex scenario or problem statement question where needed and relevant to context without making the question too long
 - \"options\": A list of strings (e.g., [\"Option A\", \"Option B\", \"Option C\", \"Option D\"])
