@@ -292,6 +292,30 @@ async def get_quiz_performance_comparison(
     except Exception as e:
         logger.error(f"Error calculating quiz performance comparison: {e}", exc_info=True)
         return {"success": False, "message": "An unexpected error occurred during performance comparison."}
+
+async def get_shared_quiz(supabase: Client, share_id: str) -> Dict[str, Any]:
+    """Fetches a shared quiz and its creator's username."""
+    try:
+        response = supabase.table("shared_quizzes").select("*").eq("id", share_id).single().execute()
+        
+        creator_username = "A user"
+        if response.data.get("creator_id"):
+            try:
+                profile_response = supabase.table("profiles").select("username").eq("id", response.data["creator_id"]).single().execute()
+                if profile_response.data:
+                    creator_username = profile_response.data.get("username", "A user")
+            except APIError:
+                pass # Fallback to default username if profile fetch fails
+        
+        return {"success": True, "quiz_data": response.data["quiz_data"], "creator_username": creator_username}
+            
+    except APIError as e:
+        logger.error(f"Supabase APIError fetching shared quiz {share_id}: {e.message}")
+        return {"success": False, "message": "Quiz not found or unavailable."}
+    except Exception as e:
+        logger.error(f"Error fetching shared quiz {share_id}: {e}", exc_info=True)
+        return {"success": False, "message": "A server error occurred while fetching the quiz."}
+
     
 async def save_shared_quiz_submission(
     supabase: Client,

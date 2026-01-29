@@ -287,7 +287,7 @@ async def grade_exam_and_log_performance(
         if user_answers.get(str(idx)) == q.answer:
             score += 1
 
-    grade, remark = calculate_grade(score, total_questions)
+    grade, remark, _ = calculate_grade(score, total_questions)
 
     await log_performance(
         supabase=supabase,
