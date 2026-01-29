@@ -36,7 +36,7 @@ const HomeworkAssistantPage = () => {
     useEffect(() => {
         localStorage.setItem(GUEST_USAGE_KEY, guestUsageCount.toString());
         if (!currentUser && guestUsageCount >= GUEST_HW_LIMIT) {
-            setError(`You have reached the guest limit of ${GUEST_HW_LIMIT} homework solutions. Please login or sign up for unlimited access.`);
+            setError(`You have reached the guest limit of ${GUEST_HW_LIMIT} homework solutions. Please login or sign up for unlimited access and to download your homework solution.`);
         } else {
             setError('');
         }
