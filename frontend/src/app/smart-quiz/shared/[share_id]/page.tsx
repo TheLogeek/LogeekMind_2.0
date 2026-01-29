@@ -239,11 +239,12 @@ const SharedQuizPage = () => {
 
             const payload = {
                 quiz_topic: sharedQuiz.title,
-                quiz_type: "Multiple Choice",
-                difficulty: "intermediate",
+                // Remove quiz_type and difficulty as they are not expected by the backend
+                // quiz_type: "Multiple Choice",
+                // difficulty: "intermediate",
                 user_score: submissionResults.score,
                 total_questions: submissionResults.total_questions,
-                quiz_context: quizContext
+                quiz_data: quizContext, // Rename quiz_context to quiz_data
             };
 
             const response = await axios.post(`${API_BASE_URL}/ai-insights/quiz`, payload, { headers });
