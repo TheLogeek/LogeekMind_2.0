@@ -336,8 +336,18 @@ async def save_shared_quiz_submission(
 
         score = 0
         for idx, q in enumerate(quiz_data):
-            if user_answers.get(str(idx)) == q.get('answer'):
-                score += 1
+            user_selected_label = user_answers.get(str(idx))
+            correct_answer_value = q.get('answer')
+
+            if user_selected_label and correct_answer_value:
+                # Assuming options are labeled A, B, C, ...
+                # Find the index corresponding to the user's selected label
+                option_index = ord(user_selected_label.upper()) - ord('A')
+
+                if 0 <= option_index < len(q['options']):
+                    user_selected_option_value = q['options'][option_index]
+                    if user_selected_option_value == correct_answer_value:
+                        score += 1
 
         grade, remark, percentage = calculate_grade(score, total_questions)
 
