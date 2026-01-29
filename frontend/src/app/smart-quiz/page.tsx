@@ -270,7 +270,8 @@ const SmartQuizPage = () => {
                         </label>
                     </div>
                 )}
-                <button type="submit" disabled={loading || !quizTopic.trim() || (!currentUser && guestUsageCount >= GUEST_QUIZ_LIMIT)} className={styles.generateButton}>
+                <button type="submit" disabled={loading || !quizTopic.trim() || (!currentUser && guestUsageCount >= GUEST_QUIZ_LIMIT)} className={styles.generateButton}
+style={loading ? { color: 'black', opacity: 1 } : {}}>
                     {loading ? 'Generating Quiz...' : 'Generate Quiz'}
                 </button>
             </form>
