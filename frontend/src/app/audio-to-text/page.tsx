@@ -166,6 +166,7 @@ const AudioToTextPage = () => {
                 onClick={handleTranscribe}
                 disabled={loading || !audioFile || (!currentUser && guestUsageCount >= GUEST_TRANSCRIBE_LIMIT)}
                 className={styles.transcribeButton}
+style={loading ? { color: 'black', opacity: 1 } : {}}
             >
                 {loading ? 'Transcribing...' : 'Convert and Generate File'}
             </button>
