@@ -243,57 +243,57 @@ def calculate_grade(score: int, total: int) -> Tuple[str, str, float]:
     else:
             return "F", "Fail. You are not ready for this exam.", percentage
     
-    async def get_quiz_performance_comparison(
-        supabase: Client,
-        shared_quiz_id: str,
-        current_score_percentage: float
-    ) -> Dict[str, Any]:
-        """
-        Calculates how the current score compares to other submissions for the same quiz.
-        Returns the percentile rank.
-        """
-        try:
-            # Fetch all submission scores for this shared quiz
-            response = supabase.table("shared_quiz_submissions").select("percentage_score").eq("shared_quiz_id", shared_quiz_id).execute()
+async def get_quiz_performance_comparison(
+    supabase: Client,
+    shared_quiz_id: str,
+    current_score_percentage: float
+) -> Dict[str, Any]:
+    """
+    Calculates how the current score compares to other submissions for the same quiz.
+    Returns the percentile rank.
+    """
+    try:
+        # Fetch all submission scores for this shared quiz
+        response = supabase.table("shared_quiz_submissions").select("percentage_score").eq("shared_quiz_id", shared_quiz_id).execute()
+        
+        all_percentages = [sub['percentage_score'] for sub in response.data if sub['percentage_score'] is not None]
+
+        if not all_percentages:
+            return {"success": True, "comparison_message": "No other submissions yet for comparison."}
+        
+        # Count how many scores are lower than or equal to the current score
+        # Using strict less than for "better than"
+        better_than_count = sum(1 for p in all_percentages if current_score_percentage > p)
+        
+        # Calculate percentile: (count of scores lower than yours / total scores) * 100
+        # If there are N submissions and your score is better than K, you are better than (K/N)*100 %
+        # Ensure to handle edge cases like current_score_percentage being the lowest or highest.
+        # If there are other submissions, we calculate percentile.
+        if len(all_percentages) > 0:
+            percentile = (better_than_count / len(all_percentages)) * 100
             
-            all_percentages = [sub['percentage_score'] for sub in response.data if sub['percentage_score'] is not None]
-    
-            if not all_percentages:
-                return {"success": True, "comparison_message": "No other submissions yet for comparison."}
-            
-            # Count how many scores are lower than or equal to the current score
-            # Using strict less than for "better than"
-            better_than_count = sum(1 for p in all_percentages if current_score_percentage > p)
-            
-            # Calculate percentile: (count of scores lower than yours / total scores) * 100
-            # If there are N submissions and your score is better than K, you are better than (K/N)*100 %
-            # Ensure to handle edge cases like current_score_percentage being the lowest or highest.
-            # If there are other submissions, we calculate percentile.
-            if len(all_percentages) > 0:
-                percentile = (better_than_count / len(all_percentages)) * 100
-                
-                # Refine the message
-                if percentile >= 90:
-                    comparison_message = f"Outstanding! You performed better than {percentile:.0f}% of test takers."
-                elif percentile >= 75:
-                    comparison_message = f"Excellent! You performed better than {percentile:.0f}% of test takers."
-                elif percentile >= 50:
-                    comparison_message = f"Good job! You performed better than {percentile:.0f}% of test takers."
-                else:
-                    comparison_message = f"You performed better than {percentile:.0f}% of test takers. Keep studying!"
-    
-                return {"success": True, "comparison_message": comparison_message, "percentile": percentile}
+            # Refine the message
+            if percentile >= 90:
+                comparison_message = f"Outstanding! You performed better than {percentile:.0f}% of test takers."
+            elif percentile >= 75:
+                comparison_message = f"Excellent! You performed better than {percentile:.0f}% of test takers."
+            elif percentile >= 50:
+                comparison_message = f"Good job! You performed better than {percentile:.0f}% of test takers."
             else:
-                return {"success": True, "comparison_message": "Be the first to set the bar for this quiz!"}
+                comparison_message = f"You performed better than {percentile:.0f}% of test takers. Keep studying!"
+
+            return {"success": True, "comparison_message": comparison_message, "percentile": percentile}
+        else:
+            return {"success": True, "comparison_message": "Be the first to set the bar for this quiz!"}
+
+    except APIError as e:
+        logger.error(f"Supabase APIError fetching quiz submissions for comparison: {e.message}")
+        return {"success": False, "message": "Could not retrieve comparison data."}
+    except Exception as e:
+        logger.error(f"Error calculating quiz performance comparison: {e}", exc_info=True)
+        return {"success": False, "message": "An unexpected error occurred during performance comparison."}
     
-        except APIError as e:
-            logger.error(f"Supabase APIError fetching quiz submissions for comparison: {e.message}")
-            return {"success": False, "message": "Could not retrieve comparison data."}
-        except Exception as e:
-            logger.error(f"Error calculating quiz performance comparison: {e}", exc_info=True)
-            return {"success": False, "message": "An unexpected error occurred during performance comparison."}
-    
-    async def save_shared_quiz_submission(
+async def save_shared_quiz_submission(
     supabase: Client,
     shared_quiz_id: str,
     user_answers: Dict[str, str],
