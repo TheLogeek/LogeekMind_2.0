@@ -560,20 +560,28 @@ async def grade_exam_and_log_performance(
 
     for idx, q in enumerate(exam_data):
         user_selected_label = user_answers.get(str(idx))
-        correct_answer_letter = q['answer'].strip().upper()
+
+        # ✅ SAFE extraction for dict OR object
+        if isinstance(q, dict):
+            correct_answer_letter = q.get("answer")
+        else:
+            correct_answer_letter = getattr(q, "answer", None)
 
         if not user_selected_label or not correct_answer_letter:
             continue
-        
-        # Normalize user answer to uppercase letter
+
         user_selected_label = user_selected_label.strip().upper()
-        
-        # Direct letter comparison (correct way)
+        correct_answer_letter = correct_answer_letter.strip().upper()
+
         if user_selected_label == correct_answer_letter:
             score += 1
-            logger.debug(f"Q{idx}: Correct! User: {user_selected_label}, Answer: {correct_answer_letter}")
+            logger.debug(
+                f"Q{idx}: Correct | User={user_selected_label} | Answer={correct_answer_letter}"
+            )
         else:
-            logger.debug(f"Q{idx}: Wrong. User: {user_selected_label}, Answer: {correct_answer_letter}")
+            logger.debug(
+                f"Q{idx}: Wrong | User={user_selected_label} | Answer={correct_answer_letter}"
+            )
 
     grade, remark, percentage = calculate_grade(score, total_questions)
 
@@ -585,7 +593,7 @@ async def grade_exam_and_log_performance(
         total_questions=total_questions,
         correct_answers=score,
         extra={
-            "course": course_name, 
+            "course": course_name,
             "topic": topic if topic else ("notes" if lecture_notes_source else "general"),
             "percentage": percentage
         }
@@ -598,9 +606,9 @@ async def grade_exam_and_log_performance(
         feature_name="Exam Simulator",
         action="submitted_exam",
         metadata={
-            "course": course_name, 
-            "score": score, 
-            "total": total_questions, 
+            "course": course_name,
+            "score": score,
+            "total": total_questions,
             "used_notes": lecture_notes_source,
             "percentage": percentage
         }
@@ -614,6 +622,7 @@ async def grade_exam_and_log_performance(
         "remark": remark,
         "percentage": percentage
     }
+
 
 
 async def create_docx_from_exam_results(
