@@ -247,41 +247,60 @@ def validate_and_fix_exam_questions(exam_data: List[Dict[str, Any]]) -> List[Dic
     Validates and fixes exam questions to ensure proper format.
     - Ensures 'answer' field contains ONLY the option letter (A, B, C, or D)
     - Fixes common malformations from AI
+    - Handles both dictionary and object types for questions.
     """
     fixed_exam_data = []
     
+    # Helper function to get value safely from dict or object
+    def safe_get(item, key, default=None):
+        if isinstance(item, dict):
+            return item.get(key, default)
+        else:
+            return getattr(item, key, default)
+
+    # Helper function to set value safely on dict or object
+    def safe_set(item, key, value):
+        if isinstance(item, dict):
+            item[key] = value
+        else:
+            setattr(item, key, value)
+
     for q_idx, question in enumerate(exam_data):
         try:
-            # Ensure required fields exist
-            if not all(key in question for key in ['question', 'options', 'answer', 'explanation']):
+            # Ensure required fields exist using safe_get
+            # 'key in item' works for both dicts and objects if keys/attributes exist
+            if not all(safe_get(question, key) is not None for key in ['question', 'options', 'answer', 'explanation']):
                 logger.warning(f"Question {q_idx + 1} missing required fields, skipping")
                 continue
             
-            # Ensure options is a list with 4 items
-            if not isinstance(question['options'], list) or len(question['options']) != 4:
+            # Ensure options is a list with 4 items using safe_get
+            options_val = safe_get(question, 'options')
+            if not isinstance(options_val, list) or len(options_val) != 4:
                 logger.warning(f"Question {q_idx + 1} has invalid options format, skipping")
                 continue
             
-            # Fix the answer field - THE KEY FIX FOR GRADING
-            answer = question['answer'].strip()
+            # Fix the answer field
+            answer = safe_get(question, 'answer', '').strip()
             
             # If answer is already just a letter, keep it
             if len(answer) == 1 and answer.upper() in ['A', 'B', 'C', 'D']:
-                question['answer'] = answer.upper()
+                safe_set(question, 'answer', answer.upper())
             else:
                 # AI returned the full option text instead of letter - find which option matches
                 answer_found = False
-                for option_idx, option_text in enumerate(question['options']):
+                for option_idx, option_text in enumerate(options_val):
                     if answer.lower() == option_text.lower() or answer in option_text or option_text in answer:
-                        question['answer'] = chr(65 + option_idx)  # Convert 0->A, 1->B, etc.
+                        # Use safe_set for assignment
+                        safe_set(question, 'answer', chr(65 + option_idx)) 
                         answer_found = True
-                        logger.info(f"Fixed answer for Q{q_idx + 1}: '{answer}' -> '{question['answer']}'")
+                        # Log using safe_get to read the updated answer, handling both dict/object
+                        logger.info(f"Fixed answer for Q{q_idx + 1}: '{answer}' -> '{safe_get(question, 'answer')}'")
                         break
                 
                 if not answer_found:
                     # Default to A if we can't determine the answer
                     logger.warning(f"Could not determine answer for Q{q_idx + 1}, defaulting to 'A'")
-                    question['answer'] = 'A'
+                    safe_set(question, 'answer', 'A')
             
             fixed_exam_data.append(question)
             
