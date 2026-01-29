@@ -23,6 +23,7 @@ interface SharedQuizData {
     creator_username?: string; // Added for display
 }
 
+// Updated to include performance comparison data and guest call to action
 interface SharedQuizSubmissionResponse {
     success: boolean;
     submission_id?: string;
@@ -60,10 +61,26 @@ const SharedQuizPage = () => {
         return typeof window !== 'undefined' ? parseInt(localStorage.getItem(GUEST_USAGE_KEY) || '0', 10) : 0;
     });
 
+    // Refined share message for better structure and clarity
+    const SHARE_MESSAGE_TEMPLATE = (score: number | undefined, total: number | undefined, grade: string | undefined, comparison: string | undefined) => {
+        let baseMessage = `I just took a quiz on LogeekMind!`;
+        if (score !== undefined && total !== undefined) {
+            baseMessage += ` Scored ${score}/${total} (${grade}).`;
+        }
+        if (comparison) {
+            baseMessage += ` ${comparison}`;
+        }
+        baseMessage += ` Think you can beat me? Try it!`;
+        return baseMessage;
+    };
+
+    const INITIAL_GUEST_CALL_TO_ACTION = "Sign up on LogeekMind to track your progress and unlock more features!";
+
     useEffect(() => {
         const fetchUserAndQuiz = async () => {
             if (typeof window !== 'undefined') {
-                setCurrentUser(AuthService.getCurrentUser()); // Check for logged-in user on mount
+                const user = await AuthService.getCurrentUser();
+                setCurrentUser(user);
                 setGuestUsageCount(parseInt(localStorage.getItem(GUEST_USAGE_KEY) || '0', 10));
             }
 
@@ -143,7 +160,6 @@ const SharedQuizPage = () => {
                 user_answers: userAnswers,
             };
 
-            // Only add student_identifier if the user is anonymous
             if (!currentUser && studentIdentifier.trim()) {
                 payload.student_identifier = studentIdentifier.trim();
             }
@@ -189,7 +205,6 @@ const SharedQuizPage = () => {
             };
 
             // Refine guest message if applicable
-            const INITIAL_GUEST_CALL_TO_ACTION = "Sign up on LogeekMind to track your progress and unlock more features!"; // Define the message here
             if (!currentUser && finalSubmissionResults.comparison_message) {
                 finalSubmissionResults.guest_call_to_action = INITIAL_GUEST_CALL_TO_ACTION;
             } else if (!currentUser && !finalSubmissionResults.comparison_message) {
