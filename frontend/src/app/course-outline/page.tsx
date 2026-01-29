@@ -190,6 +190,7 @@ const CourseOutlinePage = () => {
                     type="submit"
                     disabled={loading || !courseFullName.trim() || (!currentUser && guestUsageCount >= GUEST_OUTLINE_LIMIT)}
                     className={styles.generateButton}
+style={loading ? { color: 'black', opacity: 1 } : {}}
                 >
                     {loading ? 'Generating Outline...' : 'Generate Outline'}
                 </button>
