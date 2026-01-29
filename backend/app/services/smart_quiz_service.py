@@ -83,24 +83,25 @@ async def generate_quiz_service(
     difficulty: int,
     is_sharable: bool = False
 ) -> Dict[str, Any]:
-
     if not quiz_topic:
         return {"success": False, "message": "Quiz topic is required."}
-
+    
     if is_sharable and user_id.startswith("guest_"):
         return {"success": False, "message": "Guest users cannot create sharable quizzes. Please log in."}
-
+    
     client, error_message = get_groq_client()
     if error_message:
         return {"success": False, "message": error_message}
-
+    
     system_prompt = "You are an expert quiz creator. You MUST follow the output format exactly."
     
     options_instructions = """
-- For "multiple-choice" questions, provide exactly 4 options labeled A, B, C, D. The "answer" MUST be the letter (e.g., "B").
-- For "true-false" questions, the options MUST be ["True", "False"]. The "answer" MUST be "True" or "False".
+- For "multiple-choice" questions, provide exactly 4 options labeled in an array.
+  The "correct_option_index" MUST be the zero-based index (0, 1, 2, or 3) of the correct answer.
+- For "true-false" questions, the options MUST be ["True", "False"].
+  The "correct_option_index" MUST be either 0 (True) or 1 (False).
 """
-
+    
     quiz_prompt = f"""
 Create a {quiz_type} quiz on the topic: "{quiz_topic}".
 Difficulty: {DIFFICULTY_MAP[difficulty]}.
@@ -108,23 +109,23 @@ Number of Questions: {num_questions}.
 
 CRITICAL INSTRUCTIONS:
 {options_instructions}
-- Each question must have a "question", "options", "answer", and "explanation".
+- Each question must have a "question", "options", "correct_option_index", and "explanation".
 - For mathematical questions, do NOT use LaTeX commands. Provide a detailed step-by-step solution in the "explanation".
 
 OUTPUT FORMAT (STRICT):
 Return ONLY a raw JSON array. Do NOT use markdown code blocks or any other formatting.
 Each question must be a dictionary with these EXACT keys:
 - "question": The question text (string)
-- "options": An array of strings.
-- "answer": The correct answer (string, either a letter or True/False).
-- "explanation": A clear explanation of why the answer is correct (string).
+- "options": An array of strings (the answer choices)
+- "correct_option_index": The index of the correct answer (integer: 0, 1, 2, or 3 for multiple choice; 0 or 1 for true/false)
+- "explanation": A clear explanation of why the answer is correct (string)
 
 Example for multiple-choice:
 [
   {{
     "question": "What is the capital of France?",
     "options": ["London", "Paris", "Berlin", "Madrid"],
-    "answer": "B",
+    "correct_option_index": 1,
     "explanation": "Paris is the capital and largest city of France."
   }}
 ]
@@ -134,18 +135,18 @@ Example for true-false:
   {{
     "question": "The Earth is flat.",
     "options": ["True", "False"],
-    "answer": "False",
-    "explanation": "The Earth is an oblate spheroid."
+    "correct_option_index": 1,
+    "explanation": "The Earth is an oblate spheroid, not flat."
   }}
 ]
 
 Now generate {num_questions} questions following this EXACT format:
 """
-
+    
     try:
         response = None
         models = ["llama-3.1-8b-instant", "mixtral-8x7b-32768"]
-
+        
         for model in models:
             try:
                 response = call_groq(
@@ -160,34 +161,37 @@ Now generate {num_questions} questions following this EXACT format:
                 break
             except Exception as e:
                 logger.warning(f"Groq model {model} failed: {e}")
-
+        
         if not response:
             return {"success": False, "message": "AI service is currently overloaded. Please try again."}
-
+        
         content = response.choices[0].message.content.strip()
         
+        # Clean markdown formatting
         cleaned_text = re.sub(r'```json\s*', '', content)
         cleaned_text = re.sub(r'```\s*', '', cleaned_text)
         cleaned_text = cleaned_text.strip()
         
+        # Extract JSON array
         json_match = re.search(r'\[\s*\{.*\}\s*\]', cleaned_text, re.DOTALL)
         if json_match:
             cleaned_text = json_match.group(0)
-
+        
         generated_quiz_data = json.loads(cleaned_text)
-
+        
         if not isinstance(generated_quiz_data, list):
             logger.error(f"Generated quiz data is not a list: {type(generated_quiz_data)}")
             return {"success": False, "message": "AI generated invalid quiz format. Please try again."}
-
-        generated_quiz_data = validate_and_fix_quiz_questions(generated_quiz_data)
-
+        
+        # Validate and normalize the quiz data
+        generated_quiz_data = validate_and_normalize_quiz(generated_quiz_data)
+        
         if not generated_quiz_data:
             logger.error("No valid questions after validation")
             return {"success": False, "message": "AI generated invalid questions. Please try again."}
-
+        
         logger.info(f"Successfully generated {len(generated_quiz_data)} valid questions")
-
+        
         share_id = None
         if is_sharable:
             share_id = str(uuid.uuid4())
@@ -204,7 +208,7 @@ Now generate {num_questions} questions following this EXACT format:
             except Exception as e:
                 logger.error(f"Exception saving shared quiz: {e}", exc_info=True)
                 share_id = None
-
+        
         await log_usage(
             supabase=supabase,
             user_id=user_id,
@@ -213,9 +217,9 @@ Now generate {num_questions} questions following this EXACT format:
             action="generated",
             metadata={"topic": quiz_topic, "num_questions": len(generated_quiz_data), "is_sharable": is_sharable}
         )
-
+        
         return {"success": True, "quiz_data": generated_quiz_data, "share_id": share_id}
-
+        
     except GroqError as e:
         msg = str(e)
         if "429" in msg:
