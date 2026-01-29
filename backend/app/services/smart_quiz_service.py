@@ -268,7 +268,7 @@ async def create_docx_from_quiz_results(
             doc.add_paragraph(_clean_markdown_text_for_docx(option), style='List Bullet')
 
         doc.add_paragraph(f"Your Answer: {_clean_markdown_text_for_docx(user_choice) if user_choice else '(No answer)'}")
-        doc.add_paragraph(f"Correct Answer: {_clean_markdown_text_for_docx(q['answer'])}")
+        doc.add_paragraph(f"Correct Answer: {_clean_markdown_text_for_docx(q.get('correct_answer', q['options'][q['correct_option_index']]))}")
         doc.add_paragraph("Explanation:")
         explanation_text = q['explanation']
         for exp_line in explanation_text.split('\n'):
