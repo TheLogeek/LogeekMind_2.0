@@ -27,6 +27,11 @@ interface SharedExamSubmissionResponse {
     grade?: string;
     remark?: string;
     message?: string;
+    // New fields for performance comparison
+    comparison_message?: string;
+    percentile?: number;
+    // New field for guest call to action
+    guest_call_to_action?: string;
 }
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000";
@@ -104,7 +109,42 @@ const SharedExamPage = () => {
             );
 
             if (response.data.success) {
-                setSubmissionResults(response.data);
+                // Fetch performance comparison data *after* successful submission
+                let comparisonData = null;
+                // Attempt to fetch comparison data if score and total questions are valid
+                if (response.data.score !== undefined && response.data.total_questions !== undefined && response.data.score >= 0 && response.data.total_questions > 0) {
+                    try {
+                        const comparisonRes = await axios.get<{ success: boolean; comparison_message?: string; percentile?: number }>(
+                            `${API_BASE_URL}/exam-simulator/shared-exams/${share_id}/performance`
+                        );
+                        if (comparisonRes.data.success) {
+                            comparisonData = comparisonRes.data;
+                        } else {
+                            console.warn("Failed to fetch performance comparison:", comparisonRes.data.message);
+                        }
+                    } catch (compError: unknown) {
+                        const axiosCompError = compError as AxiosError<any>;
+                        console.error("Error fetching performance comparison:", axiosCompError.response?.data || axiosCompError);
+                    }
+                }
+
+                // Update submission results with comparison data and potentially refine messages for guests
+                const finalSubmissionResults: SharedExamSubmissionResponse = {
+                    ...response.data,
+                    comparison_message: comparisonData?.comparison_message,
+                    percentile: comparisonData?.percentile,
+                };
+
+                // Refine guest message if applicable
+                const INITIAL_GUEST_CALL_TO_ACTION = "Sign up on LogeekMind to track your progress and unlock more features!";
+                if (!currentUser && finalSubmissionResults.comparison_message) {
+                    finalSubmissionResults.guest_call_to_action = INITIAL_GUEST_CALL_TO_ACTION;
+                } else if (!currentUser && !finalSubmissionResults.comparison_message) {
+                    // If no comparison data, provide a generic prompt to sign up
+                    finalSubmissionResults.guest_call_to_action = INITIAL_GUEST_CALL_TO_ACTION;
+                }
+
+                setSubmissionResults(finalSubmissionResults);
             } else {
                 setError(response.data.message || 'Failed to submit exam results.');
             }
@@ -144,6 +184,12 @@ const SharedExamPage = () => {
                         <h3>Score: {submissionResults.score} / {submissionResults.total_questions}</h3>
                         <p>{submissionResults.remark}</p>
                     </div>
+                    {/* Display performance comparison if available */}
+                    {submissionResults.comparison_message && (
+                        <div className={styles.performanceComparison}>
+                            <p><strong>Performance:</strong> {submissionResults.comparison_message}</p>
+                        </div>
+                    )}
                     <h4 className={styles.correctionsSection}>Answer Key & Explanations</h4>
                     {sharedExam.exam_data.map((q, qIndex) => {
                         const isCorrect = userAnswers[qIndex] === q.answer;
@@ -157,6 +203,14 @@ const SharedExamPage = () => {
                             </div>
                         );
                     })}
+                    {/* Display guest call to action if user is a guest and a message exists */}
+                    {submissionResults.guest_call_to_action && (
+                        <div className={styles.guestMessage} style={{ marginTop: '20px', border: '1px solid #f0ad4e', padding: '15px', borderRadius: '5px', backgroundColor: '#fcf8e3', color: '#8a6d3b' }}>
+                            <p>
+                                <strong>{submissionResults.guest_call_to_action}</strong>
+                            </p>
+                        </div>
+                    )}
                     <div className={styles.resultsActions}>
                         <button onClick={() => router.push('/exam-simulator')} className={styles.takeAnotherExamButton}>
                             Go to Exam Simulator

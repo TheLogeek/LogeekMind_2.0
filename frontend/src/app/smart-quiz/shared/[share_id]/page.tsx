@@ -15,9 +15,12 @@ interface QuizQuestion {
 }
 
 interface SharedQuizData {
-    quiz_data: QuizQuestion[];
-    creator_username: string;
+    id: string;
+    creator_id: string;
     title: string;
+    quiz_data: QuizQuestion[];
+    created_at: string;
+    creator_username?: string; // Added for display
 }
 
 interface SharedQuizSubmissionResponse {
@@ -28,6 +31,11 @@ interface SharedQuizSubmissionResponse {
     grade?: string;
     remark?: string;
     message?: string;
+    // New fields for performance comparison
+    comparison_message?: string;
+    percentile?: number;
+    // New field for guest call to action
+    guest_call_to_action?: string;
 }
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000";
@@ -45,24 +53,66 @@ const SharedQuizPage = () => {
     const [submissionResults, setSubmissionResults] = useState<SharedQuizSubmissionResponse | null>(null);
     const [currentUser, setCurrentUser] = useState<any>(null); // State for logged-in user info
 
-    useEffect(() => {
-        setCurrentUser(AuthService.getCurrentUser()); // Check for logged-in user on mount
-        const fetchSharedQuiz = async () => {
-            try {
-                const response = await axios.get<SharedQuizData>(`${API_BASE_URL}/smart-quiz/shared-quizzes/${share_id}`);
-                setSharedQuiz(response.data);
-            } catch (err) {
-                const axiosError = err as AxiosError<any>;
-                setError(axiosError.response?.data?.detail || 'Failed to load shared quiz.');
-            } finally {
-                setLoading(false);
-            }
-        };
+    // Guest usage limit for this specific shared quiz
+    const GUEST_QUIZ_LIMIT = 2;
+    const GUEST_USAGE_KEY = `shared_quiz_guest_usage_${share_id}`; // Unique key per shared quiz
+    const [guestUsageCount, setGuestUsageCount] = useState(() => {
+        return typeof window !== 'undefined' ? parseInt(localStorage.getItem(GUEST_USAGE_KEY) || '0', 10) : 0;
+    });
 
-        if (share_id) {
-            fetchSharedQuiz();
+    useEffect(() => {
+        const fetchUserAndQuiz = async () => {
+            if (typeof window !== 'undefined') {
+                setCurrentUser(AuthService.getCurrentUser()); // Check for logged-in user on mount
+                setGuestUsageCount(parseInt(localStorage.getItem(GUEST_USAGE_KEY) || '0', 10));
+            }
+
+            const savedInputs = sessionStorage.getItem('smart_quiz_inputs');
+            if (savedInputs) {
+                try {
+                    const { quizTopic, numQuestions, quizType, difficulty } = JSON.parse(savedInputs);
+                    setQuizTopic(quizTopic || '');
+                    setNumQuestions(numQuestions || 5);
+                    setQuizType(quizType || 'Multiple Choice');
+                    setDifficulty(difficulty || 3);
+                } catch (e) { console.error("Failed to parse saved inputs:", e); }
+            }
+            const savedQuizData = sessionStorage.getItem('smart_quiz_data');
+            if (savedQuizData) setQuizData(JSON.parse(savedQuizData));
+            const savedUserAnswers = sessionStorage.getItem('smart_quiz_userAnswers');
+            if (savedUserAnswers) setUserAnswers(JSON.parse(savedUserAnswers));
+            if (sessionStorage.getItem('smart_quiz_submitted') === 'true') setQuizSubmitted(true);
+            const savedQuizScore = sessionStorage.getItem('smart_quiz_score');
+            if (savedQuizScore) setQuizScore(parseInt(savedQuizScore, 10));
+        };
+        fetchUserAndQuiz();
+    }, []);
+
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            localStorage.setItem(GUEST_USAGE_KEY, guestUsageCount.toString());
+            if (!currentUser && guestUsageCount >= GUEST_QUIZ_LIMIT) {
+                setError(`You have reached the guest limit of ${GUEST_QUIZ_LIMIT} attempts for this quiz. Please login or sign up for unlimited access.`);
+            } else {
+                setError('');
+            }
         }
-    }, [share_id]);
+    }, [guestUsageCount, currentUser, share_id]); // Include share_id in dependencies
+
+    const checkGuestLimit = () => {
+        if (currentUser) return true;
+        if (guestUsageCount >= GUEST_QUIZ_LIMIT) {
+            setError(`You have reached the guest limit of ${GUEST_QUIZ_LIMIT} attempts for this quiz. Please login or sign up for unlimited access.`);
+            return false;
+        }
+        return true;
+    };
+
+    const incrementGuestUsage = () => {
+        if (!currentUser) {
+            setGuestUsageCount(prev => prev + 1);
+        }
+    };
 
     const handleAnswerChange = (questionIndex: number, selectedOption: string) => {
         setUserAnswers(prev => ({ ...prev, [questionIndex]: selectedOption }));
@@ -86,7 +136,7 @@ const SharedQuizPage = () => {
         }
 
         try {
-            const accessToken = AuthService.getAccessToken(); // Check if a user is logged in
+            const accessToken = AuthService.getAccessToken();
             const headers = accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
 
             const payload: { user_answers: { [key: number]: string }; student_identifier?: string } = {
@@ -97,25 +147,67 @@ const SharedQuizPage = () => {
             if (!currentUser && studentIdentifier.trim()) {
                 payload.student_identifier = studentIdentifier.trim();
             }
-
-            const response = await axios.post<SharedQuizSubmissionResponse>(
+            
+            // Submit answers
+            const submissionResponse = await axios.post<SharedQuizSubmissionResponse>(
                 `${API_BASE_URL}/smart-quiz/shared-quizzes/${share_id}/submit`,
                 payload,
                 { headers }
             );
 
-            if (response.data.success) {
-                setSubmissionResults(response.data);
-            } else {
-                setError(response.data.message || 'Failed to submit quiz results.');
+            if (!submissionResponse.data.success) {
+                setError(submissionResponse.data.message || 'Failed to submit quiz results.');
+                setLoading(false);
+                return;
             }
-        } catch (err) {
+
+            // Fetch performance comparison data *after* successful submission
+            let comparisonData = null;
+            // Only attempt to fetch comparison if score/total are valid and a share_id exists
+            if (submissionResponse.data.score !== undefined && submissionResponse.data.total_questions !== undefined && submissionResponse.data.score >= 0 && submissionResponse.data.total_questions > 0) {
+                try {
+                    // Fetch performance data from the new backend endpoint
+                    const comparisonRes = await axios.get<{ success: boolean; comparison_message?: string; percentile?: number }>(
+                        `${API_BASE_URL}/smart-quiz/shared-quizzes/${share_id}/performance`
+                    );
+                    if (comparisonRes.data.success) {
+                        comparisonData = comparisonRes.data;
+                    } else {
+                        console.warn("Failed to fetch performance comparison:", comparisonRes.data.message);
+                    }
+                } catch (compError: unknown) {
+                    const axiosCompError = compError as AxiosError<any>;
+                    console.error("Error fetching performance comparison:", axiosCompError.response?.data || axiosCompError);
+                }
+            }
+
+            // Update submission results with comparison data and potentially refine messages for guests
+            const finalSubmissionResults: SharedQuizSubmissionResponse = {
+                ...submissionResponse.data,
+                comparison_message: comparisonData?.comparison_message,
+                percentile: comparisonData?.percentile,
+            };
+
+            // Refine guest message if applicable
+            const INITIAL_GUEST_CALL_TO_ACTION = "Sign up on LogeekMind to track your progress and unlock more features!"; // Define the message here
+            if (!currentUser && finalSubmissionResults.comparison_message) {
+                finalSubmissionResults.guest_call_to_action = INITIAL_GUEST_CALL_TO_ACTION;
+            } else if (!currentUser && !finalSubmissionResults.comparison_message) {
+                // If no comparison data, provide a generic prompt to sign up
+                finalSubmissionResults.guest_call_to_action = INITIAL_GUEST_CALL_TO_ACTION;
+            }
+            
+            setSubmissionResults(finalSubmissionResults);
+            incrementGuestUsage(); // Increment usage only on successful submission
+
+        } catch (err: unknown) {
             const axiosError = err as AxiosError<any>;
+            console.error('Quiz submission error:', axiosError.response?.data || axiosError);
             setError(axiosError.response?.data?.detail || 'An error occurred during submission.');
         } finally {
             setLoading(false);
         }
-    }, [sharedQuiz, userAnswers, share_id, studentIdentifier, currentUser]);
+    }, [sharedQuiz, userAnswers, share_id, studentIdentifier, currentUser, guestUsageCount]); // Ensure dependencies are complete
 
     if (loading) {
         return <div className={`page-container ${styles.smartQuizPageContainer}`}>Loading shared quiz...</div>;
@@ -145,6 +237,14 @@ const SharedQuizPage = () => {
                     </p>
                     <p>Grade: {submissionResults.grade}</p>
                     <p>Remark: {submissionResults.remark}</p>
+                    
+                    {/* Display performance comparison if available */}
+                    {submissionResults.comparison_message && (
+                        <div className={styles.performanceComparison}>
+                            <p><strong>Performance:</strong> {submissionResults.comparison_message}</p>
+                        </div>
+                    )}
+
                     <h4 className={styles.answerKeyHeading}>Answer Key & Explanations</h4>
                     {sharedQuiz.quiz_data.map((q, qIndex) => {
                         const isCorrect = userAnswers[qIndex] === q.answer;
@@ -158,6 +258,16 @@ const SharedQuizPage = () => {
                             </div>
                         );
                     })}
+                    
+                    {/* Display guest call to action if user is a guest and a message exists */}
+                    {submissionResults.guest_call_to_action && (
+                        <div className={styles.guestMessage} style={{ marginTop: '20px', border: '1px solid #f0ad4e', padding: '15px', borderRadius: '5px', backgroundColor: '#fcf8e3', color: '#8a6d3b' }}>
+                            <p>
+                                <strong>{submissionResults.guest_call_to_action}</strong>
+                            </p>
+                        </div>
+                    )}
+
                     <div className={styles.quizActions}>
                         <button onClick={() => router.push('/smart-quiz')} className={styles.newQuizButton}>
                             Go to Smart Quiz Generator
@@ -198,7 +308,7 @@ const SharedQuizPage = () => {
                             ))}
                         </div>
                     ))}
-                    <button onClick={handleSubmitSharedQuiz} disabled={loading} className={styles.submitQuizButton}>
+                    <button onClick={handleSubmitSharedQuiz} disabled={loading || answeredQuestions < totalQuestions} className={styles.submitQuizButton}>
                         {loading ? 'Submitting...' : 'Submit Shared Quiz'}
                     </button>
                 </>

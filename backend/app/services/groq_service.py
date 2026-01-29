@@ -19,7 +19,7 @@ def get_groq_client():
 
 @retry(
     stop=stop_after_attempt(3),
-    wait=wait_after_attempt(1), # Wait for 2^n seconds between retries, starting with 2 seconds.
+    wait=wait_exponential(), # Corrected from wait_after_attempt(1)
     reraise=True
 )
 def call_groq(client: Groq, messages: list, model: str, temperature: float = 0.4):
