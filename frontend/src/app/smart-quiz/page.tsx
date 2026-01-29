@@ -30,6 +30,9 @@ const SmartQuizPage = () => {
     const [shareMessage, setShareMessage] = useState("Just aced this quiz on LogeekMind! Think you can beat my score? Give it a try!"); // New state for share message
     
     const [currentUser, setCurrentUser] = useState<any>(null);
+    const [aiInsightsLoading, setAiInsightsLoading] = useState(false);
+    const [aiInsightsError, setAiInsightsError] = useState('');
+    const [aiInsightsContent, setAiInsightsContent] = useState('');
 
     const GUEST_QUIZ_LIMIT = 2; // Adjusted limit
     const GUEST_USAGE_KEY = 'smart_quiz_guest_usage';
@@ -165,6 +168,59 @@ const SmartQuizPage = () => {
             } catch (err) {
                 console.error('Error logging quiz performance:', err);
             }
+        }
+    };
+
+    const handleGetAIInsights = async () => {
+        setAiInsightsLoading(true);
+        setAiInsightsError('');
+        setAiInsightsContent('');
+
+        if (!quizData || !quizSubmitted) {
+            setAiInsightsError('Cannot get AI insights: quiz data or submission results missing.');
+            setAiInsightsLoading(false);
+            return;
+        }
+
+        try {
+            const accessToken = AuthService.getAccessToken();
+            if (!accessToken) {
+                setAiInsightsError('You must be logged in to get AI insights.');
+                setAiInsightsLoading(false);
+                return;
+            }
+
+            const headers = { Authorization: `Bearer ${accessToken}` };
+
+            // Prepare quiz context for AI analysis
+            const quizContext = quizData.map((q, index) => ({
+                question: q.question,
+                correct_answer: q.answer,
+                user_answer: userAnswers[index] || 'N/A', // User's answer for this question
+                is_correct: (userAnswers[index] === q.answer)
+            }));
+
+            const payload = {
+                quiz_topic: quizTopic,
+                quiz_data: quizContext,
+                user_score: quizScore,
+                total_questions: quizData.length
+            };
+
+            const response = await axios.post(`${API_BASE_URL}/ai-insights/quiz`, payload, { headers });
+
+            if (response.data.success) {
+                setAiInsightsContent(response.data.insights);
+            } else {
+                setAiInsightsError(response.data.message || 'Failed to get AI insights.');
+            }
+
+        } catch (err: unknown) {
+            const axiosError = err as AxiosError<any>;
+            console.error('AI insights error:', axiosError.response?.data || axiosError);
+            setAiInsightsError(axiosError.response?.data?.detail || 'AI insights is currently unavailable right now. Please try again later.');
+        } finally {
+            setAiInsightsLoading(false);
         }
     };
 
@@ -377,6 +433,24 @@ style={loading ? { color: 'black', opacity: 1 } : {}}>
                         >
                             Download Results as DOCX
                         </button>
+                        <button 
+                            type="button"
+                            onClick={handleGetAIInsights}
+                            disabled={!currentUser || aiInsightsLoading}
+                            className={styles.newQuizButton} // Re-using existing button style
+                            style={{ marginRight: '10px' }}
+                        >
+                            {aiInsightsLoading ? 'Getting Insights...' : 'Get AI Insights'}
+                        </button>
+                        {!currentUser && (
+                            <p style={{ color: '#dc3545', fontSize: '0.9em', marginTop: '5px' }}>Login to get AI Insights.</p>
+                        )}
+                        {aiInsightsError && <p className={styles.errorText} style={{ marginTop: '10px' }}>{aiInsightsError}</p>}
+                        {aiInsightsContent && (
+                            <div className={styles.aiInsightsContent} style={{ marginTop: '15px', borderTop: '1px solid #eee', paddingTop: '15px' }}>
+                                <MarkdownRenderer content={aiInsightsContent} />
+                            </div>
+                        )}
                         <button type="button" onClick={handleNewQuiz} className={styles.newQuizButton}>
                             Generate New Quiz
                         </button>

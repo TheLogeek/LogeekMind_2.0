@@ -245,6 +245,8 @@
   .removeCourseButton {
     padding: 10px;
     margin-top: var(--spacing-sm);
+    justify-self: end; /* Align to the end of the grid cell */
+    width: auto; /* Allow button to size according to its content */
   }
 
   .addCourseButton, .calculateButton {

@@ -45,6 +45,9 @@ const ExamSimulatorPage = () => {
     const [error, setError] = useState('');
 
     const [currentUser, setCurrentUser] = useState<any>(null);
+    const [aiInsightsLoading, setAiInsightsLoading] = useState(false);
+    const [aiInsightsError, setAiInsightsError] = useState('');
+    const [aiInsightsContent, setAiInsightsContent] = useState('');
 
     const GUEST_EXAM_LIMIT = 1;
     const GUEST_USAGE_KEY = 'exam_simulator_guest_usage';
@@ -351,6 +354,62 @@ const ExamSimulatorPage = () => {
         }
     };
 
+    const handleGetAIInsights = async () => {
+        setAiInsightsLoading(true);
+        setAiInsightsError('');
+        setAiInsightsContent('');
+
+        if (!examData.length || examStage !== "finished") {
+            setAiInsightsError('Cannot get AI insights: exam data or submission results missing.');
+            setAiInsightsLoading(false);
+            return;
+        }
+
+        try {
+            const accessToken = AuthService.getAccessToken();
+            if (!accessToken) {
+                setAiInsightsError('You must be logged in to get AI insights.');
+                setAiInsightsLoading(false);
+                return;
+            }
+
+            const headers = { Authorization: `Bearer ${accessToken}` };
+
+            // Prepare exam context for AI analysis
+            const examContext = examData.map((q, index) => ({
+                question: q.question,
+                correct_answer: q.answer,
+                user_answer: userAnswers[index] || 'N/A', // User's answer for this question
+                is_correct: (userAnswers[index] === q.answer)
+            }));
+
+            // Determine exam topic for AI request (use fileName if notes were uploaded, otherwise use topic input)
+            const insightTopic = selectedSource === 'notes' && fileName ? `Notes from ${fileName}` : courseName + (topic ? ` - ${topic}` : '');
+
+            const payload = {
+                quiz_topic: insightTopic, // Using quiz_topic for generic topic field in backend
+                quiz_data: examContext, // Using quiz_data for generic exam questions/answers in backend
+                user_score: examScore,
+                total_questions: examData.length,
+            };
+
+            const response = await axios.post(`${API_BASE_URL}/ai-insights/exam`, payload, { headers });
+
+            if (response.data.success) {
+                setAiInsightsContent(response.data.insights);
+            } else {
+                setAiInsightsError(response.data.message || 'Failed to get AI insights.');
+            }
+
+        } catch (err: unknown) {
+            const axiosError = err as AxiosError<any>;
+            console.error('AI insights error:', axiosError.response?.data || axiosError);
+            setAiInsightsError(axiosError.response?.data?.detail || 'AI insights is currently unavailable right now. Please try again later.');
+        } finally {
+            setAiInsightsLoading(false);
+        }
+    };
+
     const handleTakeAnotherExam = () => {
         setError('');
         setExamStage("setup");
@@ -536,6 +595,23 @@ style={loading ? { color: 'black', opacity: 1 } : {}}>
                         <button onClick={handleDownloadResultsDocx} className={styles.downloadButton} disabled={!currentUser} title={!currentUser ? "Login to download" : "Download Results as DOCX"}>
                             Download Results as DOCX
                         </button>
+                        <button 
+                            onClick={handleGetAIInsights}
+                            disabled={!currentUser || aiInsightsLoading}
+                            className={styles.takeAnotherExamButton} // Re-using existing button style
+                            style={{ marginRight: '10px' }}
+                        >
+                            {aiInsightsLoading ? 'Getting Insights...' : 'Get AI Insights'}
+                        </button>
+                        {!currentUser && (
+                            <p style={{ color: '#dc3545', fontSize: '0.9em', marginTop: '5px' }}>Login to get AI Insights.</p>
+                        )}
+                        {aiInsightsError && <p className={styles.errorText} style={{ marginTop: '10px' }}>{aiInsightsError}</p>}
+                        {aiInsightsContent && (
+                            <div className={styles.aiInsightsContent} style={{ marginTop: '15px', borderTop: '1px solid #eee', paddingTop: '15px' }}>
+                                <MarkdownRenderer content={aiInsightsContent} />
+                            </div>
+                        )}
                         <button onClick={handleTakeAnotherExam} className={styles.takeAnotherExamButton}>
                             Take Another Exam
                         </button>

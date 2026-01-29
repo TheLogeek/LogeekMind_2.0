@@ -48,6 +48,9 @@ const SharedExamPage = () => {
     const [studentIdentifier, setStudentIdentifier] = useState('');
     const [submissionResults, setSubmissionResults] = useState<SharedExamSubmissionResponse | null>(null);
     const [currentUser, setCurrentUser] = useState<any>(null); // State for logged-in user info
+    const [aiInsightsLoading, setAiInsightsLoading] = useState(false);
+    const [aiInsightsError, setAiInsightsError] = useState('');
+    const [aiInsightsContent, setAiInsightsContent] = useState('');
 
     useEffect(() => {
         setCurrentUser(AuthService.getCurrentUser()); // Check for logged-in user on mount
@@ -156,6 +159,63 @@ const SharedExamPage = () => {
         }
     }, [sharedExam, userAnswers, share_id, studentIdentifier, currentUser]);
 
+    const handleGetAIInsights = useCallback(async () => {
+        setAiInsightsLoading(true);
+        setAiInsightsError('');
+        setAiInsightsContent('');
+
+        if (!sharedExam || !submissionResults) {
+            setAiInsightsError('Cannot get AI insights: exam data or submission results missing.');
+            setAiInsightsLoading(false);
+            return;
+        }
+
+        try {
+            const accessToken = AuthService.getAccessToken();
+            if (!accessToken) {
+                setAiInsightsError('You must be logged in to get AI insights.');
+                setAiInsightsLoading(false);
+                return;
+            }
+
+            const headers = { Authorization: `Bearer ${accessToken}` };
+
+            // Prepare exam context for AI analysis
+            const examContext = sharedExam.exam_data.map((q, index) => ({
+                question: q.question,
+                correct_answer: q.answer,
+                user_answer: userAnswers[index] || 'N/A', // User's answer for this question
+                is_correct: (userAnswers[index] === q.answer)
+            }));
+
+            // Assuming a placeholder for exam topic and difficulty if not available in sharedExam directly
+            const examTopic = sharedExam.creator_username ? `${sharedExam.creator_username}'s Exam` : 'General Exam';
+            const difficulty = 'intermediate'; // Placeholder, adjust if difficulty is available
+
+            const payload = {
+                quiz_topic: examTopic, // Reusing quiz_topic field, but it represents exam topic
+                quiz_data: examContext, // Renaming from quiz_context to quiz_data in payload for consistency with backend service
+                user_score: submissionResults.score,
+                total_questions: submissionResults.total_questions,
+            };
+
+            const response = await axios.post(`${API_BASE_URL}/ai-insights/exam`, payload, { headers });
+
+            if (response.data.success) {
+                setAiInsightsContent(response.data.insights);
+            } else {
+                setAiInsightsError(response.data.message || 'Failed to get AI insights.');
+            }
+
+        } catch (err: unknown) {
+            const axiosError = err as AxiosError<any>;
+            console.error('AI insights error:', axiosError.response?.data || axiosError);
+            setAiInsightsError(axiosError.response?.data?.detail || 'AI insights is currently unavailable right now. Please try again later.');
+        } finally {
+            setAiInsightsLoading(false);
+        }
+    }, [sharedExam, submissionResults, userAnswers]); // Dependencies for useCallback
+
     if (loading) {
         return <div className={`page-container ${styles.examSimulatorPageContainer}`}>Loading shared exam...</div>;
     }
@@ -190,6 +250,28 @@ const SharedExamPage = () => {
                             <p><strong>Performance:</strong> {submissionResults.comparison_message}</p>
                         </div>
                     )}
+                    
+                    <div className={styles.aiInsightsSection} style={{ marginTop: '20px', padding: '15px', border: '1px solid #ccc', borderRadius: '5px' }}>
+                        <h4>AI Insights</h4>
+                        <p style={{ fontSize: '0.9em', color: '#666' }}>Click here to get tips from the AI on your weak points.</p>
+                        <button 
+                            onClick={handleGetAIInsights}
+                            disabled={!currentUser || aiInsightsLoading}
+                            className={styles.takeAnotherExamButton} // Re-using existing button style
+                            style={{ marginRight: '10px' }}
+                        >
+                            {aiInsightsLoading ? 'Getting Insights...' : 'Get AI Insights'}
+                        </button>
+                        {!currentUser && (
+                            <p style={{ color: '#dc3545', fontSize: '0.9em', marginTop: '5px' }}>Login to get AI Insights.</p>
+                        )}
+                        {aiInsightsError && <p className={styles.errorText} style={{ marginTop: '10px' }}>{aiInsightsError}</p>}
+                        {aiInsightsContent && (
+                            <div className={styles.aiInsightsContent} style={{ marginTop: '15px', borderTop: '1px solid #eee', paddingTop: '15px' }}>
+                                <MarkdownRenderer content={aiInsightsContent} />
+                            </div>
+                        )}
+                    </div>
                     <h4 className={styles.correctionsSection}>Answer Key & Explanations</h4>
                     {sharedExam.exam_data.map((q, qIndex) => {
                         const isCorrect = userAnswers[qIndex] === q.answer;

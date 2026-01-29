@@ -53,6 +53,9 @@ const SharedQuizPage = () => {
     const [studentIdentifier, setStudentIdentifier] = useState('');
     const [submissionResults, setSubmissionResults] = useState<SharedQuizSubmissionResponse | null>(null);
     const [currentUser, setCurrentUser] = useState<any>(null); // State for logged-in user info
+    const [aiInsightsLoading, setAiInsightsLoading] = useState(false);
+    const [aiInsightsError, setAiInsightsError] = useState('');
+    const [aiInsightsContent, setAiInsightsContent] = useState('');
 
     // Guest usage limit for this specific shared quiz
     const GUEST_QUIZ_LIMIT = 2;
@@ -205,6 +208,61 @@ const SharedQuizPage = () => {
         }
     }, [sharedQuiz, userAnswers, share_id, studentIdentifier, currentUser, guestUsageCount]); // Ensure dependencies are complete
 
+    const handleGetAIInsights = useCallback(async () => {
+        setAiInsightsLoading(true);
+        setAiInsightsError('');
+        setAiInsightsContent('');
+
+        if (!sharedQuiz || !submissionResults) {
+            setAiInsightsError('Cannot get AI insights: quiz data or submission results missing.');
+            setAiInsightsLoading(false);
+            return;
+        }
+
+        try {
+            const accessToken = AuthService.getAccessToken();
+            if (!accessToken) {
+                setAiInsightsError('You must be logged in to get AI insights.');
+                setAiInsightsLoading(false);
+                return;
+            }
+
+            const headers = { Authorization: `Bearer ${accessToken}` };
+
+            // Prepare quiz context for AI analysis
+            const quizContext = sharedQuiz.quiz_data.map((q, index) => ({
+                question: q.question,
+                correct_answer: q.answer,
+                user_answer: userAnswers[index] || 'N/A', // User's answer for this question
+                is_correct: (userAnswers[index] === q.answer)
+            }));
+
+            const payload = {
+                quiz_topic: sharedQuiz.title,
+                quiz_type: "Multiple Choice", // Assuming type, or infer if available
+                difficulty: "intermediate", // Assuming difficulty, or infer if available
+                user_score: submissionResults.score,
+                total_questions: submissionResults.total_questions,
+                quiz_context: quizContext
+            };
+
+            const response = await axios.post(`${API_BASE_URL}/ai-insights/quiz`, payload, { headers });
+
+            if (response.data.success) {
+                setAiInsightsContent(response.data.insights);
+            } else {
+                setAiInsightsError(response.data.message || 'Failed to get AI insights.');
+            }
+
+        } catch (err: unknown) {
+            const axiosError = err as AxiosError<any>;
+            console.error('AI insights error:', axiosError.response?.data || axiosError);
+            setAiInsightsError(axiosError.response?.data?.detail || 'AI insights is currently unavailable right now. Please try again later.');
+        } finally {
+            setAiInsightsLoading(false);
+        }
+    }, [sharedQuiz, submissionResults, userAnswers]); // Dependencies for useCallback
+
     if (loading) {
         return <div className={`page-container ${styles.smartQuizPageContainer}`}>Loading shared quiz...</div>;
     }
@@ -233,6 +291,28 @@ const SharedQuizPage = () => {
                     </p>
                     <p>Grade: {submissionResults.grade}</p>
                     <p>Remark: {submissionResults.remark}</p>
+                    
+                    <div className={styles.aiInsightsSection} style={{ marginTop: '20px', padding: '15px', border: '1px solid #ccc', borderRadius: '5px' }}>
+                        <h4>AI Insights</h4>
+                        <p style={{ fontSize: '0.9em', color: '#666' }}>Click here to get tips from the AI on your weak points.</p>
+                        <button 
+                            onClick={handleGetAIInsights}
+                            disabled={!currentUser || aiInsightsLoading}
+                            className={styles.newQuizButton} // Re-using existing button style
+                            style={{ marginRight: '10px' }}
+                        >
+                            {aiInsightsLoading ? 'Getting Insights...' : 'Get AI Insights'}
+                        </button>
+                        {!currentUser && (
+                            <p style={{ color: '#dc3545', fontSize: '0.9em', marginTop: '5px' }}>Login to get AI Insights.</p>
+                        )}
+                        {aiInsightsError && <p className={styles.errorText} style={{ marginTop: '10px' }}>{aiInsightsError}</p>}
+                        {aiInsightsContent && (
+                            <div className={styles.aiInsightsContent} style={{ marginTop: '15px', borderTop: '1px solid #eee', paddingTop: '15px' }}>
+                                <MarkdownRenderer content={aiInsightsContent} />
+                            </div>
+                        )}
+                    </div>
                     
                     {/* Display performance comparison if available */}
                     {submissionResults.comparison_message && (
