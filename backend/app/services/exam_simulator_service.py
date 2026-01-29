@@ -281,21 +281,33 @@ async def grade_exam_and_log_performance(
     topic: Optional[str] = None, # Make topic optional for logging
     lecture_notes_source: bool = False # Flag to indicate if notes were used
 ) -> Dict[str, Any]:
-    
-            score = 0
-            total_questions = len(exam_data)
-    
-            for idx, q in enumerate(exam_data):
-                user_selected_label = user_answers.get(str(idx))
-                correct_answer_value = q.get('answer') # Use .get() for consistency and safety
-    
-                if user_selected_label and correct_answer_value:
+
+    score = 0
+    total_questions = len(exam_data)
+
+    for idx, q in enumerate(exam_data):
+        user_selected_label = user_answers.get(str(idx))
+        correct_answer_value = q.get('answer') # Use .get() for consistency and safety
+
+        if user_selected_label and correct_answer_value:
+            # Assuming user_selected_label is "A", "B", etc.
+            # We need to map this letter back to the options index.
+            try:
+                if len(user_selected_label) == 1 and user_selected_label.isalpha():
                     option_index = ord(user_selected_label.upper()) - ord('A')
-    
+
                     if 0 <= option_index < len(q['options']):
                         user_selected_option_value = q['options'][option_index]
                         if user_selected_option_value == correct_answer_value:
                             score += 1
+                # Fallback: if the frontend sends the full string instead of a letter
+                elif user_selected_label == correct_answer_value:
+                    score += 1
+            except Exception:
+                # If logic fails (e.g., unexpected format), skip grading this specific question
+                continue
+
+    # This line caused the error. It is now aligned with the 'score = 0' line above.
     grade, remark, _ = calculate_grade(score, total_questions)
 
     await log_performance(
@@ -307,7 +319,7 @@ async def grade_exam_and_log_performance(
         correct_answers=score,
         extra={"course": course_name, "topic": topic if topic else ("notes" if lecture_notes_source else "general")}
     )
-    
+
     await log_usage(
         supabase=supabase,
         user_id=user_id,
@@ -324,6 +336,7 @@ async def grade_exam_and_log_performance(
         "grade": grade,
         "remark": remark
     }
+
 
 async def create_docx_from_exam_results(
     exam_data: List[Dict[str, Any]],
