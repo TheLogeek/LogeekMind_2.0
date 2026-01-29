@@ -3,7 +3,7 @@ from app.services.groq_service import get_groq_client, call_groq
 from groq import GroqError
 from app.services.usage_service import log_usage, log_performance
 from supabase import Client
-from postgrest.exceptions import APIError
+from postgrest.exceptions import APIError #for supabase v2
 import json
 from docx import Document
 import io
@@ -311,165 +311,237 @@ def validate_and_fix_exam_questions(exam_data: List[Dict[str, Any]]) -> List[Dic
     return fixed_exam_data
 
 
-async def generate_quiz_service(
+async def generate_exam_questions(
     supabase: Client,
     user_id: str,
     username: str,
-    quiz_topic: str,
+    course_name: str,
     num_questions: int,
-    quiz_type: str,
-    difficulty: int,
+    topic: Optional[str] = None,
+    lecture_notes_content: Optional[str] = None,
+    file_name: Optional[str] = None,
     is_sharable: bool = False
 ) -> Dict[str, Any]:
-    if not quiz_topic:
-        return {"success": False, "message": "Quiz topic is required."}
     
+    if not course_name:
+        return {"success": False, "message": "Course Name is required."}
+    
+    if not topic and not lecture_notes_content:
+        return {"success": False, "message": "Either a topic or lecture notes must be provided."}
+
     if is_sharable and user_id.startswith("guest_"):
-        return {"success": False, "message": "Guest users cannot create sharable quizzes. Please log in."}
-    
+        return {"success": False, "message": "Guest users cannot create sharable exams. Please log in to use this feature."}
+
     client, error_message = get_groq_client()
     if error_message:
         return {"success": False, "message": error_message}
     
-    system_prompt = "You are an expert quiz creator. You MUST follow the output format exactly."
+    # Test which model is available
+    models = ["llama-3.1-8b-instant", "mixtral-8x7b-32768"]
+    working_model = None
     
-    options_instructions = """
-- For "multiple-choice" questions, provide exactly 4 options labeled in an array.
-  The "correct_option_index" MUST be the zero-based index (0, 1, 2, or 3) of the correct answer.
-- For "true-false" questions, the options MUST be ["True", "False"].
-  The "correct_option_index" MUST be either 0 (True) or 1 (False).
-"""
+    for model in models:
+        try:
+            test_response = call_groq(
+                client,
+                messages=[{"role": "user", "content": "Hi"}],
+                model=model,
+                temperature=0.1
+            )
+            working_model = model
+            logger.info(f"Using model: {working_model}")
+            break
+        except Exception as e:
+            logger.warning(f"Model {model} not available: {e}")
     
-    quiz_prompt = f"""
-Create a {quiz_type} quiz on the topic: "{quiz_topic}".
-Difficulty: {DIFFICULTY_MAP[difficulty]}.
-Number of Questions: {num_questions}.
+    if not working_model:
+        return {"success": False, "message": "AI service is currently overloaded. Please try again."}
+    
+    # Process large lecture notes if provided
+    if lecture_notes_content:
+        lecture_notes_content = await process_large_lecture_notes(
+            lecture_notes_content, 
+            client, 
+            working_model
+        )
+    
+    # Construct prompt dynamically
+    system_prompt = "You are an expert university professor setting an exam. You MUST follow the output format exactly."
+    user_prompt_content = ""
+
+    if lecture_notes_content:
+        user_prompt_content = f"""
+Generate {num_questions} examination-standard multiple-choice questions based ONLY on the provided lecture notes.
+
+Course: {course_name}
+
+Lecture Notes:
+---
+{lecture_notes_content}
+---
 
 CRITICAL INSTRUCTIONS:
-{options_instructions}
-- Each question must have a "question", "options", "correct_option_index", and "explanation".
-- For mathematical questions, do NOT use LaTeX commands. Provide a detailed step-by-step solution in the "explanation".
+1. Questions must be based ONLY on content from the lecture notes above
+2. Each question must have exactly 4 options labeled A, B, C, D
+3. The "answer" field MUST contain ONLY the letter (A, B, C, or D) - NOT the full text of the option
+4. For mathematical questions, do NOT use LaTeX commands
+5. Include at least one complex scenario or problem-solving question
 
 OUTPUT FORMAT (STRICT):
 Return ONLY a raw JSON array. Do NOT use markdown code blocks or any other formatting.
 Each question must be a dictionary with these EXACT keys:
 - "question": The question text (string)
-- "options": An array of strings (the answer choices)
-- "correct_option_index": The index of the correct answer (integer: 0, 1, 2, or 3 for multiple choice; 0 or 1 for true/false)
-- "explanation": A clear explanation of why the answer is correct (string)
+- "options": Array of exactly 4 strings
+- "answer": Single letter ONLY: "A", "B", "C", or "D" (string)
+- "explanation": Why the answer is correct (string)
 
-Example for multiple-choice:
+Example format:
+[
+  {{
+    "question": "What is photosynthesis?",
+    "options": ["Process of plant respiration", "Process converting light to energy", "Process of cell division", "Process of water absorption"],
+    "answer": "B",
+    "explanation": "Photosynthesis is the process by which plants convert light energy into chemical energy."
+  }}
+]
+
+Now generate {num_questions} questions following this EXACT format:
+"""
+    else:
+        user_prompt_content = f"""
+Generate {num_questions} examination-standard multiple-choice questions.
+
+Course: {course_name}
+Topic: {topic if topic else 'General'}
+
+CRITICAL INSTRUCTIONS:
+1. Each question must have exactly 4 options labeled A, B, C, D
+2. The "answer" field MUST contain ONLY the letter (A, B, C, or D) - NOT the full text of the option
+3. For mathematical questions, do NOT use LaTeX commands
+4. Questions should vary in difficulty
+5. Include at least one complex scenario or problem-solving question
+
+OUTPUT FORMAT (STRICT):
+Return ONLY a raw JSON array. Do NOT use markdown code blocks or any other formatting.
+Each question must be a dictionary with these EXACT keys:
+- "question": The question text (string)
+- "options": Array of exactly 4 strings
+- "answer": Single letter ONLY: "A", "B", "C", or "D" (string)
+- "explanation": Why the answer is correct (string)
+
+Example format:
 [
   {{
     "question": "What is the capital of France?",
     "options": ["London", "Paris", "Berlin", "Madrid"],
-    "correct_option_index": 1,
+    "answer": "B",
     "explanation": "Paris is the capital and largest city of France."
-  }}
-]
-
-Example for true-false:
-[
-  {{
-    "question": "The Earth is flat.",
-    "options": ["True", "False"],
-    "correct_option_index": 1,
-    "explanation": "The Earth is an oblate spheroid, not flat."
   }}
 ]
 
 Now generate {num_questions} questions following this EXACT format:
 """
     
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_prompt_content}
+    ]
+
+    generated_exam_data = None
+    share_id = None
+
     try:
-        response = None
-        models = ["llama-3.1-8b-instant", "mixtral-8x7b-32768"]
+        response = call_groq(
+            client,
+            messages=messages,
+            model=working_model,
+            temperature=0.4
+        )
         
-        for model in models:
-            try:
-                response = call_groq(
-                    client,
-                    messages=[
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": quiz_prompt}
-                    ],
-                    model=model,
-                    temperature=0.4
-                )
-                break
-            except Exception as e:
-                logger.warning(f"Groq model {model} failed: {e}")
+        response_content = response.choices[0].message.content.strip()
         
-        if not response:
-            return {"success": False, "message": "AI service is currently overloaded. Please try again."}
+        if not response_content:
+            logger.error("Groq API returned an empty response.")
+            return {"success": False, "message": "AI returned an empty response. Please try again."}
+
+        # Clean the response - remove markdown code blocks
+        cleaned_text = response_content
         
-        content = response.choices[0].message.content.strip()
-        
-        # Clean markdown formatting
-        cleaned_text = re.sub(r'```json\s*', '', content)
+        # Remove markdown code blocks
+        cleaned_text = re.sub(r'```json\s*', '', cleaned_text)
         cleaned_text = re.sub(r'```\s*', '', cleaned_text)
         cleaned_text = cleaned_text.strip()
         
-        # Extract JSON array
+        # Try to extract JSON if there's extra text
         json_match = re.search(r'\[\s*\{.*\}\s*\]', cleaned_text, re.DOTALL)
         if json_match:
             cleaned_text = json_match.group(0)
         
-        generated_quiz_data = json.loads(cleaned_text)
+        # Parse JSON
+        generated_exam_data = json.loads(cleaned_text)
         
-        if not isinstance(generated_quiz_data, list):
-            logger.error(f"Generated quiz data is not a list: {type(generated_quiz_data)}")
-            return {"success": False, "message": "AI generated invalid quiz format. Please try again."}
+        # Validate it's a list
+        if not isinstance(generated_exam_data, list):
+            logger.error(f"Generated exam data is not a list: {type(generated_exam_data)}")
+            return {"success": False, "message": "AI generated invalid exam format. Please try again."}
         
-        # Validate and normalize the quiz data
-        generated_quiz_data = validate_and_normalize_quiz(generated_quiz_data)
+        # Validate and fix the exam questions
+        generated_exam_data = validate_and_fix_exam_questions(generated_exam_data)
         
-        if not generated_quiz_data:
+        if not generated_exam_data:
             logger.error("No valid questions after validation")
             return {"success": False, "message": "AI generated invalid questions. Please try again."}
         
-        logger.info(f"Successfully generated {len(generated_quiz_data)} valid questions")
-        
-        share_id = None
+        logger.info(f"Successfully generated {len(generated_exam_data)} valid questions")
+
+        # Save to shared_exams if sharable
         if is_sharable:
             share_id = str(uuid.uuid4())
             try:
-                supabase.table("shared_quizzes").insert({
+                supabase.table("shared_exams").insert({
                     "id": share_id,
                     "creator_id": user_id,
-                    "title": f"{quiz_topic} Quiz ({num_questions} Qs)",
-                    "quiz_data": generated_quiz_data
+                    "title": f"{course_name} Exam ({len(generated_exam_data)} Qs)",
+                    "exam_data": generated_exam_data
                 }).execute()
+                
             except APIError as db_e:
-                logger.error(f"Supabase APIError saving shared quiz: {db_e.message}")
+                logger.error(f"Supabase error saving shared exam: {db_e.message}")
                 share_id = None
-            except Exception as e:
-                logger.error(f"Exception saving shared quiz: {e}", exc_info=True)
+            except Exception as db_e:
+                logger.error(f"Exception during Supabase insertion: {db_e}", exc_info=True)
                 share_id = None
-        
+
         await log_usage(
             supabase=supabase,
             user_id=user_id,
             user_name=username,
-            feature_name="Quiz Generator",
-            action="generated",
-            metadata={"topic": quiz_topic, "num_questions": len(generated_quiz_data), "is_sharable": is_sharable}
+            feature_name="Exam Simulator",
+            action="generated_exam",
+            metadata={
+                "course": course_name, 
+                "topic": topic if topic else "notes", 
+                "num_questions": len(generated_exam_data),
+                "is_sharable": is_sharable, 
+                "source_file": file_name
+            }
         )
-        
-        return {"success": True, "quiz_data": generated_quiz_data, "share_id": share_id}
-        
+
+        return {"success": True, "exam_data": generated_exam_data, "share_id": share_id}
+
+    except json.JSONDecodeError as e:
+        logger.error(f"JSON Decode Error: {e}")
+        logger.error(f"Response content: {response_content if response_content else 'No content'}")
+        return {"success": False, "message": "AI generated an invalid exam format. Please try generating again."}
     except GroqError as e:
         msg = str(e)
         if "429" in msg:
             return {"success": False, "message": "Too many requests. Please wait briefly."}
-        logger.error(f"Groq API error during quiz generation: {msg}", exc_info=True)
+        logger.error(f"Groq API error: {msg}", exc_info=True)
         return {"success": False, "message": "AI service error. Please try again."}
-    except json.JSONDecodeError:
-        logger.error(f"Invalid JSON returned from Groq during quiz generation. Content: {content}", exc_info=True)
-        return {"success": False, "message": "AI returned an invalid quiz format. Try again."}
     except Exception as e:
-        logger.error("Unexpected error during quiz generation", exc_info=True)
-        return {"success": False, "message": "An unexpected error occurred while generating the quiz."}
+        logger.error(f"Error during exam generation: {e}", exc_info=True)
+        return {"success": False, "message": "An unexpected error occurred while generating the exam."}
 
 
 async def grade_exam_and_log_performance(
