@@ -14,40 +14,64 @@ from docx import Document
 
 logger = logging.getLogger(__name__)
 
-# Helper function to clean markdown text for docx
 def _clean_markdown_text_for_docx(text_content: str) -> str:
-    # Replace HTML <br> with newline
     text_content = text_content.replace('<br>', '\n')
-
-    # Remove bold, italic, and strikethrough markers
-    text_content = re.sub(r'(\*\*|__)(.*?)\1', r'\2', text_content)  # **bold** or __bold__
-    text_content = re.sub(r'(\*|_)(.*?)\1', r'\2', text_content)    # *italic* or _italic_
-    text_content = re.sub(r'~~(.*?)~~', r'\1', text_content)        # ~~strikethrough~~
-
-    # Remove links [text](url) -> text
+    text_content = re.sub(r'(\*\*|__)(.*?)\1', r'\2', text_content)
+    text_content = re.sub(r'(\*|_)(.*?)\1', r'\2', text_content)
+    text_content = re.sub(r'~~(.*?)~~', r'\1', text_content)
     text_content = re.sub(r'\[(.*?)\]\(.*?\)', r'\1', text_content)
-
-    # Remove inline code blocks `code`
     text_content = re.sub(r'`([^`]+)`', r'\1', text_content)
-
-    # More aggressive cleanup for math environments for simpler display if not rendering
-    text_content = re.sub(r'\[a-zA-Z]+\{.*?\}', '', text_content)  # Remove LaTeX commands like \frac{..., \sqrt{...
-    text_content = re.sub(r'\[a-zA-Z]+', '', text_content)  # Remove LaTeX commands like \frac, \sqrt
-    text_content = re.sub(r'\{.*?\}', '', text_content)  # Remove content in curly braces after LaTeX commands
-    text_content = text_content.replace('$', '')  # Catch any remaining lone $
-
-    # Handle Markdown tables: simply strip pipes and header separators
-    # This will turn tables into continuous lines of text, which is a compromise for simplicity
-    text_content = re.sub(r'\|.*\|', lambda m: m.group(0).replace('|', ' '), text_content)  # Replace pipes with spaces
-    text_content = re.sub(r'[-=]+\s*[-=]+\s*[-=]+', '', text_content)  # Remove table header separators (---)
-
-    # Remove block code fences ```
+    text_content = re.sub(r'\[a-zA-Z]+\{.*?\}', '', text_content)
+    text_content = re.sub(r'\[a-zA-Z]+', '', text_content)
+    text_content = re.sub(r'\{.*?\}', '', text_content)
+    text_content = text_content.replace('$', '')
+    text_content = re.sub(r'\|.*\|', lambda m: m.group(0).replace('|', ' '), text_content)
+    text_content = re.sub(r'[-=]+\s*[-=]+\s*[-=]+', '', text_content)
     text_content = text_content.replace('```', '')
-
     return text_content.strip()
 
-
 DIFFICULTY_MAP = {1: "introductory", 2: "beginner", 3: "intermediate", 4: "advanced", 5: "expert"}
+
+def validate_and_fix_quiz_questions(quiz_data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    fixed_quiz_data = []
+    for q_idx, question in enumerate(quiz_data):
+        try:
+            if not all(key in question for key in ['question', 'options', 'answer', 'explanation']):
+                logger.warning(f"Question {q_idx + 1} missing required fields, skipping")
+                continue
+            
+            if not isinstance(question['options'], list) or len(question['options']) not in [2, 4]:
+                logger.warning(f"Question {q_idx + 1} has invalid options format, skipping")
+                continue
+
+            answer = question['answer'].strip()
+            
+            if len(answer) == 1 and answer.upper() in ['A', 'B', 'C', 'D']:
+                question['answer'] = answer.upper()
+            elif answer.lower() in ['true', 'false']:
+                question['answer'] = answer.capitalize()
+            else:
+                answer_found = False
+                for option_idx, option_text in enumerate(question['options']):
+                    if answer.lower() == option_text.lower() or answer in option_text or option_text in answer:
+                        if len(question['options']) == 4:
+                            question['answer'] = chr(65 + option_idx)
+                        else:
+                            question['answer'] = option_text.capitalize()
+                        answer_found = True
+                        logger.info(f"Fixed answer for Q{q_idx + 1}: '{answer}' -> '{question['answer']}'")
+                        break
+                
+                if not answer_found:
+                    logger.warning(f"Could not determine answer for Q{q_idx + 1}, defaulting to 'A' or 'True'")
+                    question['answer'] = 'A' if len(question['options']) == 4 else 'True'
+            
+            fixed_quiz_data.append(question)
+            
+        except Exception as e:
+            logger.error(f"Error validating question {q_idx + 1}: {e}")
+            continue
+    return fixed_quiz_data
 
 async def generate_quiz_service(
     supabase: Client,
@@ -66,64 +90,104 @@ async def generate_quiz_service(
     if is_sharable and user_id.startswith("guest_"):
         return {"success": False, "message": "Guest users cannot create sharable quizzes. Please log in."}
 
-    # Get Groq client
     client, error_message = get_groq_client()
     if error_message:
         return {"success": False, "message": error_message}
 
-    # Build quiz prompt
+    system_prompt = "You are an expert quiz creator. You MUST follow the output format exactly."
+    
+    options_instructions = """
+- For "multiple-choice" questions, provide exactly 4 options labeled A, B, C, D. The "answer" MUST be the letter (e.g., "B").
+- For "true-false" questions, the options MUST be ["True", "False"]. The "answer" MUST be "True" or "False".
+"""
+
     quiz_prompt = f"""
-You are an expert quiz creator. Create a {quiz_type} quiz on the topic: "{quiz_topic}".
+Create a {quiz_type} quiz on the topic: "{quiz_topic}".
 Difficulty: {DIFFICULTY_MAP[difficulty]}.
 Number of Questions: {num_questions}.
 
-OUTPUT FORMAT:
-Return ONLY a JSON list of dictionaries with keys:
-- "question": question text
-- "options": list of options (e.g., ["A","B","C","D"] or ["True","False"])
-- "answer": the correct option, MUST be the option label (A, B, C, or D).
-- "explanation": short explanation (if not available, leave empty string), for mathematical questions, make sure the explanation includes a detailed step by step solving
-the exact mathematics question after your normal explanation
-Do not include Markdown code blocks or extra text.
-Do not use LaTex commands for mathematical questions.
+CRITICAL INSTRUCTIONS:
+{options_instructions}
+- Each question must have a "question", "options", "answer", and "explanation".
+- For mathematical questions, do NOT use LaTeX commands. Provide a detailed step-by-step solution in the "explanation".
+
+OUTPUT FORMAT (STRICT):
+Return ONLY a raw JSON array. Do NOT use markdown code blocks or any other formatting.
+Each question must be a dictionary with these EXACT keys:
+- "question": The question text (string)
+- "options": An array of strings.
+- "answer": The correct answer (string, either a letter or True/False).
+- "explanation": A clear explanation of why the answer is correct (string).
+
+Example for multiple-choice:
+[
+  {{
+    "question": "What is the capital of France?",
+    "options": ["London", "Paris", "Berlin", "Madrid"],
+    "answer": "B",
+    "explanation": "Paris is the capital and largest city of France."
+  }}
+]
+
+Example for true-false:
+[
+  {{
+    "question": "The Earth is flat.",
+    "options": ["True", "False"],
+    "answer": "False",
+    "explanation": "The Earth is an oblate spheroid."
+  }}
+]
+
+Now generate {num_questions} questions following this EXACT format:
 """
 
     try:
         response = None
-        models = [
-            "llama-3.1-8b-instant",
-            "mixtral-8x7b-32768"
-        ]
+        models = ["llama-3.1-8b-instant", "mixtral-8x7b-32768"]
 
         for model in models:
             try:
                 response = call_groq(
                     client,
                     messages=[
-                        {"role": "system", "content": "You are an expert quiz creator."},
+                        {"role": "system", "content": system_prompt},
                         {"role": "user", "content": quiz_prompt}
                     ],
-                    model=model
+                    model=model,
+                    temperature=0.4
                 )
                 break
             except Exception as e:
                 logger.warning(f"Groq model {model} failed: {e}")
 
         if not response:
-            return {
-                "success": False,
-                "message": "AI service is currently overloaded. Please try again."
-            }
+            return {"success": False, "message": "AI service is currently overloaded. Please try again."}
 
         content = response.choices[0].message.content.strip()
-        generated_quiz_data = json.loads(content)
+        
+        cleaned_text = re.sub(r'```json\s*', '', content)
+        cleaned_text = re.sub(r'```\s*', '', cleaned_text)
+        cleaned_text = cleaned_text.strip()
+        
+        json_match = re.search(r'\[\s*\{.*\}\s*\]', cleaned_text, re.DOTALL)
+        if json_match:
+            cleaned_text = json_match.group(0)
 
-        # Ensure each question has an explanation
-        for q in generated_quiz_data:
-            if "explanation" not in q or not q["explanation"].strip():
-                q["explanation"] = "No explanation provided."
+        generated_quiz_data = json.loads(cleaned_text)
 
-        # Save sharable quiz if needed
+        if not isinstance(generated_quiz_data, list):
+            logger.error(f"Generated quiz data is not a list: {type(generated_quiz_data)}")
+            return {"success": False, "message": "AI generated invalid quiz format. Please try again."}
+
+        generated_quiz_data = validate_and_fix_quiz_questions(generated_quiz_data)
+
+        if not generated_quiz_data:
+            logger.error("No valid questions after validation")
+            return {"success": False, "message": "AI generated invalid questions. Please try again."}
+
+        logger.info(f"Successfully generated {len(generated_quiz_data)} valid questions")
+
         share_id = None
         if is_sharable:
             share_id = str(uuid.uuid4())
@@ -141,14 +205,13 @@ Do not use LaTex commands for mathematical questions.
                 logger.error(f"Exception saving shared quiz: {e}", exc_info=True)
                 share_id = None
 
-        # Log usage
         await log_usage(
             supabase=supabase,
             user_id=user_id,
             user_name=username,
             feature_name="Quiz Generator",
             action="generated",
-            metadata={"topic": quiz_topic, "num_questions": num_questions, "is_sharable": is_sharable}
+            metadata={"topic": quiz_topic, "num_questions": len(generated_quiz_data), "is_sharable": is_sharable}
         )
 
         return {"success": True, "quiz_data": generated_quiz_data, "share_id": share_id}
@@ -159,71 +222,41 @@ Do not use LaTex commands for mathematical questions.
             return {"success": False, "message": "Too many requests. Please wait briefly."}
         logger.error(f"Groq API error during quiz generation: {msg}", exc_info=True)
         return {"success": False, "message": "AI service error. Please try again."}
-
     except json.JSONDecodeError:
-        logger.error("Invalid JSON returned from Groq during quiz generation", exc_info=True)
-        return {
-            "success": False,
-            "message": "AI returned an invalid quiz format. Try again."
-        }
-
+        logger.error(f"Invalid JSON returned from Groq during quiz generation. Content: {content}", exc_info=True)
+        return {"success": False, "message": "AI returned an invalid quiz format. Try again."}
     except Exception as e:
         logger.error("Unexpected error during quiz generation", exc_info=True)
-        return {
-            "success": False,
-            "message": "An unexpected error occurred while generating the quiz."
-        }
-
-
-async def log_quiz_performance_service(
-    supabase: Client,
-    user_id: str,
-    feature: str,
-    score: int,
-    total_questions: int,
-    correct_answers: int,
-    extra: Optional[Dict[str, Any]] = None
-):
-    return await log_performance(supabase, user_id, feature, score, total_questions, correct_answers, extra)
-
+        return {"success": False, "message": "An unexpected error occurred while generating the quiz."}
 
 async def create_docx_from_quiz_results(
     quiz_data: List[Dict[str, Any]],
     quiz_topic: str,
     user_score: int,
     total_questions: int,
-    user_answers: Dict[str, str] # Added parameter
+    user_answers: Dict[str, str]
 ) -> io.BytesIO:
     doc = Document()
     doc.add_heading(f"Quiz Results: {quiz_topic}", 0)
     doc.add_paragraph(f"Final Score: {user_score}/{total_questions}\n")
 
     for idx, q in enumerate(quiz_data):
-        user_choice = user_answers.get(str(idx)) # Get user's choice
-        
-        # Process Question
+        user_choice = user_answers.get(str(idx))
         question_text = q['question']
         doc.add_heading(f"Q{idx + 1}: {_clean_markdown_text_for_docx(question_text)}", level=2)
 
-        # Process Options
         doc.add_paragraph("Options:")
         for option in q['options']:
             doc.add_paragraph(_clean_markdown_text_for_docx(option), style='List Bullet')
 
-        # Process User Answer
-        doc.add_paragraph(f"Your Answer: {_clean_markdown_text_for_docx(user_choice) if user_choice else '(No answer)'}") # Display user's choice
-
-        # Process Correct Answer
+        doc.add_paragraph(f"Your Answer: {_clean_markdown_text_for_docx(user_choice) if user_choice else '(No answer)'}")
         doc.add_paragraph(f"Correct Answer: {_clean_markdown_text_for_docx(q['answer'])}")
-
-        # Process Explanation
         doc.add_paragraph("Explanation:")
         explanation_text = q['explanation']
         for exp_line in explanation_text.split('\n'):
             stripped_exp_line = exp_line.strip()
             if stripped_exp_line:
                 doc.add_paragraph(_clean_markdown_text_for_docx(stripped_exp_line))
-
         doc.add_paragraph("-" * 20)
 
     doc_io = io.BytesIO()
@@ -231,20 +264,13 @@ async def create_docx_from_quiz_results(
     doc_io.seek(0)
     return doc_io
 
-# --- New functions for shared quizzes ---
-
 async def get_shared_quiz_submission_for_download(
     supabase: Client,
     user_id: str,
     shared_quiz_id: str,
     submission_id: str
 ) -> Dict[str, Any]:
-    """
-    Fetches a specific shared quiz submission and prepares data for DOCX generation.
-    Authenticates that the current user is the owner of the submission.
-    """
     try:
-        # 1. Fetch the submission details
         submission_response = await supabase.table("shared_quiz_submissions").select("*").eq("id", submission_id).single().execute()
         
         if not submission_response.data:
@@ -253,17 +279,14 @@ async def get_shared_quiz_submission_for_download(
         
         submission = submission_response.data
 
-        # 2. Authenticate: Check if the current user is the owner of the submission
         if submission.get("student_id") != user_id:
             logger.warning(f"Unauthorized attempt to download submission {submission_id} by user {user_id}. Owner: {submission.get('student_id')}")
             return {"success": False, "message": "Unauthorized access to submission."}
 
-        # 3. Fetch the shared quiz data
         quiz_fetch_response = await get_shared_quiz(supabase, shared_quiz_id)
         if not quiz_fetch_response["success"]:
             return {"success": False, "message": quiz_fetch_response.get("message", "Shared quiz not found.")}
         
-        # The title is stored in the 'shared_quizzes' table, not directly in quiz_fetch_response.data
         shared_quiz_title_response = await supabase.table("shared_quizzes").select("title").eq("id", shared_quiz_id).single().execute()
         if not shared_quiz_title_response.data:
             logger.warning(f"Shared quiz {shared_quiz_id} title not found.")
@@ -304,19 +327,14 @@ def calculate_grade(score: int, total: int) -> Tuple[str, str, float]:
     elif percentage >= 40:
         return "E", "Weak Pass. Dangerous territory.", percentage
     else:
-            return "F", "Fail. You are not ready for this exam.", percentage
-    
+        return "F", "Fail. You are not ready for this exam.", percentage
+
 async def get_quiz_performance_comparison(
     supabase: Client,
     shared_quiz_id: str,
     current_score_percentage: float
 ) -> Dict[str, Any]:
-    """
-    Calculates how the current score compares to other submissions for the same quiz.
-    Returns the percentile rank.
-    """
     try:
-        # Fetch all submission scores for this shared quiz
         response = supabase.table("shared_quiz_submissions").select("percentage_score").eq("shared_quiz_id", shared_quiz_id).execute()
         
         all_percentages = [sub['percentage_score'] for sub in response.data if sub['percentage_score'] is not None]
@@ -324,18 +342,11 @@ async def get_quiz_performance_comparison(
         if not all_percentages:
             return {"success": True, "comparison_message": "No other submissions yet for comparison."}
         
-        # Count how many scores are lower than or equal to the current score
-        # Using strict less than for "better than"
         better_than_count = sum(1 for p in all_percentages if current_score_percentage > p)
         
-        # Calculate percentile: (count of scores lower than yours / total scores) * 100
-        # If there are N submissions and your score is better than K, you are better than (K/N)*100 %
-        # Ensure to handle edge cases like current_score_percentage being the lowest or highest.
-        # If there are other submissions, we calculate percentile.
         if len(all_percentages) > 0:
             percentile = (better_than_count / len(all_percentages)) * 100
             
-            # Refine the message
             if percentile >= 90:
                 comparison_message = f"Outstanding! You performed better than {percentile:.0f}% of test takers."
             elif percentile >= 75:
@@ -357,7 +368,6 @@ async def get_quiz_performance_comparison(
         return {"success": False, "message": "An unexpected error occurred during performance comparison."}
 
 async def get_shared_quiz(supabase: Client, share_id: str) -> Dict[str, Any]:
-    """Fetches a shared quiz and its creator's username."""
     try:
         response = supabase.table("shared_quizzes").select("*").eq("id", share_id).single().execute()
         
@@ -368,7 +378,7 @@ async def get_shared_quiz(supabase: Client, share_id: str) -> Dict[str, Any]:
                 if profile_response.data:
                     creator_username = profile_response.data.get("username", "A user")
             except APIError:
-                pass # Fallback to default username if profile fetch fails
+                pass
         
         return {"success": True, "quiz_data": response.data["quiz_data"], "creator_username": creator_username}
             
@@ -379,7 +389,6 @@ async def get_shared_quiz(supabase: Client, share_id: str) -> Dict[str, Any]:
         logger.error(f"Error fetching shared quiz {share_id}: {e}", exc_info=True)
         return {"success": False, "message": "A server error occurred while fetching the quiz."}
 
-    
 async def save_shared_quiz_submission(
     supabase: Client,
     shared_quiz_id: str,
@@ -387,7 +396,6 @@ async def save_shared_quiz_submission(
     student_id: Optional[str],
     student_identifier: Optional[str] = None
 ) -> Dict[str, Any]:
-    """Saves a student's submission for a shared quiz."""
     try:
         quiz_fetch_response = await get_shared_quiz(supabase, shared_quiz_id)
         if not quiz_fetch_response["success"]:
@@ -398,18 +406,11 @@ async def save_shared_quiz_submission(
 
         score = 0
         for idx, q in enumerate(quiz_data):
-            user_selected_label = user_answers.get(str(idx))
-            correct_answer_value = q.get('answer')
+            user_selected_label = user_answers.get(str(idx), "").strip()
+            correct_answer = q.get('answer', '').strip()
 
-            if user_selected_label and correct_answer_value:
-                # Assuming options are labeled A, B, C, ...
-                # Find the index corresponding to the user's selected label
-                option_index = ord(user_selected_label.upper()) - ord('A')
-
-                if 0 <= option_index < len(q['options']):
-                    user_selected_option_value = q['options'][option_index]
-                    if user_selected_option_value == correct_answer_value:
-                        score += 1
+            if user_selected_label.lower() == correct_answer.lower():
+                score += 1
 
         grade, remark, percentage = calculate_grade(score, total_questions)
 
@@ -420,12 +421,12 @@ async def save_shared_quiz_submission(
             "user_answers": user_answers,
             "score": score,
             "total_questions": total_questions,
-            "percentage_score": percentage # Save percentage score
+            "percentage_score": percentage,
+            "grade": grade,
+            "submitted_at": datetime.datetime.utcnow().isoformat() + "Z"
         }
         
         try:
-            # Updated for Supabase v2: wrap in try/except
-            # Ensure we await the execute call to avoid 'coroutine not subscriptable' error
             response = await supabase.table("shared_quiz_submissions").insert(submission_data).execute()
 
             return {
@@ -433,7 +434,7 @@ async def save_shared_quiz_submission(
                 "submission_id": response.data[0]['id'],
                 "score": score,
                 "total_questions": total_questions,
-                "percentage_score": percentage, # Return percentage
+                "percentage_score": percentage,
                 "grade": grade,
                 "remark": remark
             }
