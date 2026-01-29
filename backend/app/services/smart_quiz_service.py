@@ -190,13 +190,16 @@ async def create_docx_from_quiz_results(
     quiz_data: List[Dict[str, Any]],
     quiz_topic: str,
     user_score: int,
-    total_questions: int
+    total_questions: int,
+    user_answers: Dict[str, str] # Added parameter
 ) -> io.BytesIO:
     doc = Document()
     doc.add_heading(f"Quiz Results: {quiz_topic}", 0)
     doc.add_paragraph(f"Final Score: {user_score}/{total_questions}\n")
 
     for idx, q in enumerate(quiz_data):
+        user_choice = user_answers.get(str(idx)) # Get user's choice
+        
         # Process Question
         question_text = q['question']
         doc.add_heading(f"Q{idx + 1}: {_clean_markdown_text_for_docx(question_text)}", level=2)
@@ -205,6 +208,9 @@ async def create_docx_from_quiz_results(
         doc.add_paragraph("Options:")
         for option in q['options']:
             doc.add_paragraph(_clean_markdown_text_for_docx(option), style='List Bullet')
+
+        # Process User Answer
+        doc.add_paragraph(f"Your Answer: {_clean_markdown_text_for_docx(user_choice) if user_choice else '(No answer)'}") # Display user's choice
 
         # Process Correct Answer
         doc.add_paragraph(f"Correct Answer: {_clean_markdown_text_for_docx(q['answer'])}")
@@ -225,6 +231,61 @@ async def create_docx_from_quiz_results(
     return doc_io
 
 # --- New functions for shared quizzes ---
+
+async def get_shared_quiz_submission_for_download(
+    supabase: Client,
+    user_id: str,
+    shared_quiz_id: str,
+    submission_id: str
+) -> Dict[str, Any]:
+    """
+    Fetches a specific shared quiz submission and prepares data for DOCX generation.
+    Authenticates that the current user is the owner of the submission.
+    """
+    try:
+        # 1. Fetch the submission details
+        submission_response = await supabase.table("shared_quiz_submissions").select("*").eq("id", submission_id).single().execute()
+        
+        if not submission_response.data:
+            logger.warning(f"Submission {submission_id} not found.")
+            return {"success": False, "message": "Submission not found."}
+        
+        submission = submission_response.data
+
+        # 2. Authenticate: Check if the current user is the owner of the submission
+        if submission.get("student_id") != user_id:
+            logger.warning(f"Unauthorized attempt to download submission {submission_id} by user {user_id}. Owner: {submission.get('student_id')}")
+            return {"success": False, "message": "Unauthorized access to submission."}
+
+        # 3. Fetch the shared quiz data
+        quiz_fetch_response = await get_shared_quiz(supabase, shared_quiz_id)
+        if not quiz_fetch_response["success"]:
+            return {"success": False, "message": quiz_fetch_response.get("message", "Shared quiz not found.")}
+        
+        # The title is stored in the 'shared_quizzes' table, not directly in quiz_fetch_response.data
+        shared_quiz_title_response = await supabase.table("shared_quizzes").select("title").eq("id", shared_quiz_id).single().execute()
+        if not shared_quiz_title_response.data:
+            logger.warning(f"Shared quiz {shared_quiz_id} title not found.")
+            return {"success": False, "message": "Shared quiz title not found."}
+
+        quiz_data = quiz_fetch_response["quiz_data"]
+        quiz_topic = shared_quiz_title_response.data.get("title", "Unknown Quiz Topic")
+
+        return {
+            "success": True,
+            "quiz_data": quiz_data,
+            "quiz_topic": quiz_topic,
+            "user_score": submission["score"],
+            "total_questions": submission["total_questions"],
+            "user_answers": submission["user_answers"]
+        }
+
+    except APIError as e:
+        logger.error(f"Supabase APIError fetching submission {submission_id}: {e.message}")
+        return {"success": False, "message": "Failed to retrieve submission data from database."}
+    except Exception as e:
+        logger.error(f"Error fetching shared quiz submission for download {submission_id}: {e}", exc_info=True)
+        return {"success": False, "message": "An unexpected error occurred while preparing download."}
 
 def calculate_grade(score: int, total: int) -> Tuple[str, str, float]:
     if total == 0:

@@ -414,6 +414,72 @@ async def get_shared_exam(supabase: Client, share_id: str) -> Dict[str, Any]:
         logger.error(f"Error fetching shared exam {share_id}: {e}", exc_info=True)
         return {"success": False, "message": "A server error occurred while fetching the exam."}
 
+async def get_shared_exam_submission_for_download(
+    supabase: Client,
+    user_id: str,
+    shared_exam_id: str,
+    submission_id: str
+) -> Dict[str, Any]:
+    """
+    Fetches a specific shared exam submission and prepares data for DOCX generation.
+    Authenticates that the current user is the owner of the submission.
+    """
+    try:
+        # 1. Fetch the submission details
+        submission_response = await supabase.table("shared_exam_submissions").select("*").eq("id", submission_id).single().execute()
+        
+        if not submission_response.data:
+            logger.warning(f"Submission {submission_id} not found.")
+            return {"success": False, "message": "Submission not found."}
+        
+        submission = submission_response.data
+
+        # 2. Authenticate: Check if the current user is the owner of the submission
+        if submission.get("student_id") != user_id:
+            logger.warning(f"Unauthorized attempt to download submission {submission_id} by user {user_id}. Owner: {submission.get('student_id')}")
+            return {"success": False, "message": "Unauthorized access to submission."}
+
+        # 3. Fetch the shared exam data
+        exam_fetch_response = await get_shared_exam(supabase, shared_exam_id)
+        if not exam_fetch_response["success"]:
+            return {"success": False, "message": exam_fetch_response.get("message", "Shared exam not found.")}
+        
+        # The title is stored in the 'shared_exams' table, not directly in exam_fetch_response.data
+        shared_exam_title_response = await supabase.table("shared_exams").select("title").eq("id", shared_exam_id).single().execute()
+        if not shared_exam_title_response.data:
+            logger.warning(f"Shared exam {shared_exam_id} title not found.")
+            return {"success": False, "message": "Shared exam title not found."}
+
+        exam_data = exam_fetch_response["exam_data"]
+        course_name_and_topic = shared_exam_title_response.data.get("title", "Unknown Exam Topic") # Use title for docx
+
+        # Extract course_name and topic from the title if it follows a pattern, otherwise use the whole title.
+        # Example title: "Course: Mathematics - Topic: Algebra Exam (10 Qs)"
+        # This parsing is heuristic; adjust if the title format changes
+        course_name_match = re.search(r"Course: (.*?)(?: - Topic:|$)", course_name_and_topic)
+        topic_match = re.search(r"Topic: (.*?)(?: Exam|$)", course_name_and_topic)
+
+        course_name = course_name_match.group(1).strip() if course_name_match else course_name_and_topic
+        topic = topic_match.group(1).strip() if topic_match else None
+
+        return {
+            "success": True,
+            "exam_data": exam_data,
+            "score": submission["score"],
+            "total_questions": submission["total_questions"],
+            "grade": submission["grade"], # Assuming grade is saved in submission
+            "course_name": course_name,
+            "topic": topic,
+            "user_answers": submission["user_answers"]
+        }
+
+    except APIError as e:
+        logger.error(f"Supabase APIError fetching submission {submission_id}: {e.message}")
+        return {"success": False, "message": "Failed to retrieve submission data from database."}
+    except Exception as e:
+        logger.error(f"Error fetching shared exam submission for download {submission_id}: {e}", exc_info=True)
+        return {"success": False, "message": "An unexpected error occurred while preparing download."}
+
 async def submit_shared_exam_results(
     supabase: Client,
     share_id: str,

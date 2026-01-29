@@ -257,3 +257,61 @@ async def submit_shared_exam_route(
     
     # Return submission results and comparison data
     return response
+
+@router.get("/shared-exams/{share_id}/submissions/{submission_id}/download")
+async def download_shared_exam_results(
+    share_id: str,
+    submission_id: str,
+    supabase: Client = Depends(get_supabase_client),
+    current_user: Dict[str, Any] = Depends(get_current_user_from_supabase_jwt) # Strict authentication
+):
+    """
+    Downloads the results of a specific shared exam submission as a DOCX file.
+    Requires authentication, and the current user must be the owner of the submission.
+    """
+    try:
+        # Use the service function to get all necessary data
+        download_data_response = await exam_simulator_service.get_shared_exam_submission_for_download(
+            supabase=supabase,
+            user_id=current_user["id"], # Pass authenticated user's ID
+            shared_exam_id=share_id,
+            submission_id=submission_id
+        )
+
+        if not download_data_response["success"]:
+            status_code = status.HTTP_404_NOT_FOUND if "not found" in download_data_response["message"].lower() else status.HTTP_403_FORBIDDEN
+            raise HTTPException(status_code=status_code, detail=download_data_response["message"])
+
+        # Generate the DOCX file
+        docx_buffer = await exam_simulator_service.create_docx_from_exam_results(
+            exam_data=download_data_response["exam_data"],
+            user_answers=download_data_response["user_answers"],
+            score=download_data_response["score"],
+            total_questions=download_data_response["total_questions"],
+            grade=download_data_response["grade"],
+            course_name=download_data_response["course_name"],
+            topic=download_data_response["topic"]
+        )
+
+        # Log usage
+        await exam_simulator_service.log_usage(
+            supabase=supabase,
+            user_id=current_user["id"],
+            user_name=current_user.get("username", "Authenticated User"),
+            feature_name="Exam Download",
+            action="downloaded",
+            metadata={"shared_exam_id": share_id, "submission_id": submission_id}
+        )
+
+        filename = f"exam_results_{share_id}_{submission_id}.docx"
+        return StreamingResponse(
+            docx_buffer,
+            media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
+        )
+
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        logger.error(f"Unexpected error downloading shared exam results for submission {submission_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="An unexpected error occurred while processing the download.")

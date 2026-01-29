@@ -216,6 +216,53 @@ const SharedExamPage = () => {
         }
     }, [sharedExam, submissionResults, userAnswers]); // Dependencies for useCallback
 
+    const handleDownloadResults = useCallback(async () => {
+        if (!currentUser || !submissionResults?.submission_id || !share_id) {
+            setError("Cannot download results: user not logged in or submission data missing.");
+            return;
+        }
+
+        try {
+            const accessToken = AuthService.getAccessToken();
+            const headers = accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
+
+            const downloadUrl = `${API_BASE_URL}/exam-simulator/shared-exams/${share_id}/submissions/${submissionResults.submission_id}/download`;
+            
+            const response = await axios.get(downloadUrl, {
+                headers,
+                responseType: 'blob', // Important for file downloads
+            });
+
+            // Create a Blob from the response data
+            const blob = new Blob([response.data], { type: response.headers['content-type'] });
+            
+            // Create a link element, set the download attribute, and click it
+            const contentDisposition = response.headers['content-disposition'];
+            let filename = `exam_results_${share_id}.docx`;
+            if (contentDisposition) {
+                const filenameMatch = contentDisposition.match(/filename="([^"]+)"/);
+                if (filenameMatch && filenameMatch[1]) {
+                    filename = filenameMatch[1];
+                }
+            }
+
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
+
+        } catch (err: unknown) {
+            const axiosError = err as AxiosError<any>;
+            console.error('Download results error:', axiosError.response?.data || axiosError);
+            const errorDetail = axiosError.response?.data?.detail || 'Failed to download results.';
+            setError(errorDetail);
+        }
+    }, [currentUser, submissionResults, share_id]);
+
     if (loading) {
         return <div className={`page-container ${styles.examSimulatorPageContainer}`}>Loading shared exam...</div>;
     }
@@ -293,6 +340,33 @@ const SharedExamPage = () => {
                             </p>
                         </div>
                     )}
+                    {/* Display guest call to action if user is a guest and a message exists */}
+                    {submissionResults.guest_call_to_action && (
+                        <div className={styles.guestMessage} style={{ marginTop: '20px', border: '1px solid #f0ad4e', padding: '15px', borderRadius: '5px', backgroundColor: '#fcf8e3', color: '#8a6d3b' }}>
+                            <p>
+                                <strong>{submissionResults.guest_call_to_action}</strong>
+                            </p>
+                        </div>
+                    )}
+
+                    {/* NEW DOWNLOAD BUTTON SECTION START */}
+                    <div className={styles.downloadSection} style={{ marginTop: '20px' }}>
+                        <button
+                            onClick={handleDownloadResults}
+                            disabled={!currentUser || !submissionResults?.submission_id}
+                            className={styles.takeAnotherExamButton} // Reusing existing button style
+                            style={{ marginRight: '10px' }}
+                        >
+                            Download Results (.docx)
+                        </button>
+                        {!currentUser && (
+                            <p style={{ color: '#dc3545', fontSize: '0.9em', marginTop: '5px' }}>
+                                Login or Signup to download your results.
+                            </p>
+                        )}
+                    </div>
+                    {/* NEW DOWNLOAD BUTTON SECTION END */}
+
                     <div className={styles.resultsActions}>
                         <button onClick={() => router.push('/exam-simulator')} className={styles.takeAnotherExamButton}>
                             Go to Exam Simulator

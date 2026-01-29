@@ -7,7 +7,7 @@ import json
 import logging
 
 from app.core.database import get_supabase_client
-from app.core.security import try_get_current_user_from_supabase_jwt
+from app.core.security import try_get_current_user_from_supabase_jwt, get_current_user_from_supabase_jwt
 from app.services import smart_quiz_service
 
 logger = logging.getLogger(__name__)
@@ -184,6 +184,62 @@ async def submit_shared_quiz_route(
 
 
 
+@router.get("/shared-quizzes/{share_id}/submissions/{submission_id}/download")
+async def download_shared_quiz_results(
+    share_id: str,
+    submission_id: str,
+    supabase: Client = Depends(get_supabase_client),
+    current_user: Dict[str, Any] = Depends(get_current_user_from_supabase_jwt) # Strict authentication
+):
+    """
+    Downloads the results of a specific shared quiz submission as a DOCX file.
+    Requires authentication, and the current user must be the owner of the submission.
+    """
+    try:
+        # Use the service function to get all necessary data
+        download_data_response = await smart_quiz_service.get_shared_quiz_submission_for_download(
+            supabase=supabase,
+            user_id=current_user["id"], # Pass authenticated user's ID
+            shared_quiz_id=share_id,
+            submission_id=submission_id
+        )
+
+        if not download_data_response["success"]:
+            status_code = status.HTTP_404_NOT_FOUND if "not found" in download_data_response["message"].lower() else status.HTTP_403_FORBIDDEN
+            raise HTTPException(status_code=status_code, detail=download_data_response["message"])
+
+        # Generate the DOCX file
+        docx_buffer = await smart_quiz_service.create_docx_from_quiz_results(
+            quiz_data=download_data_response["quiz_data"],
+            quiz_topic=download_data_response["quiz_topic"],
+            user_score=download_data_response["user_score"],
+            total_questions=download_data_response["total_questions"],
+            user_answers=download_data_response["user_answers"]
+        )
+
+        # Log usage
+        await smart_quiz_service.log_usage(
+            supabase=supabase,
+            user_id=current_user["id"],
+            user_name=current_user.get("username", "Authenticated User"),
+            feature_name="Quiz Download",
+            action="downloaded",
+            metadata={"shared_quiz_id": share_id, "submission_id": submission_id}
+        )
+
+        filename = f"quiz_results_{share_id}_{submission_id}.docx"
+        return StreamingResponse(
+            docx_buffer,
+            media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
+        )
+
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        logger.error(f"Unexpected error downloading shared quiz results for submission {submission_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="An unexpected error occurred while processing the download.")
+
 @router.get("/shared-quizzes/{share_id}/performance")
 async def get_shared_quiz_performance_route(
     share_id: str,
@@ -214,49 +270,4 @@ async def get_shared_quiz_performance_route(
         logger.error(f"Unexpected error fetching shared quiz performance {share_id}: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Unexpected error fetching performance data.")
 
-@router.post("/shared-quizzes/{share_id}/submit", response_model=SharedQuizSubmissionResponse)
-async def submit_shared_quiz_route(
-    share_id: str,
-    request: SharedQuizSubmissionRequest,
-    supabase: Client = Depends(get_supabase_client),
-    current_user: Optional[Dict[str, Any]] = Depends(try_get_current_user_from_supabase_jwt)
-):
-    student_id = current_user["id"] if current_user else None
-    try:
-        submission_response = await smart_quiz_service.save_shared_quiz_submission(
-            supabase=supabase,
-            shared_quiz_id=share_id,
-            student_id=student_id,
-            user_answers=request.user_answers,
-            student_identifier=request.student_identifier if not student_id else None
-        )
 
-        if not submission_response["success"]:
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=submission_response.get("message"))
-        
-        # Fetch performance comparison data *after* submission
-        # We need the percentage score from the submission_response to pass to the comparison function if needed for direct comparison,
-        # but the service function `get_quiz_performance_comparison` recalculates based on all submissions.
-        # So, we just need the `shared_quiz_id` and the current user's percentage.
-        
-        # The percentage score is available in submission_response
-        current_percentage = submission_response.get("percentage_score", 0.0) 
-
-        # Fetch comparison data using the submission's share_id
-        comparison_response = await smart_quiz_service.get_quiz_performance_comparison(
-            supabase=supabase,
-            shared_quiz_id=share_id,
-            current_score_percentage=current_percentage
-        )
-        
-        # Add comparison data to the response
-        submission_response["comparison_message"] = comparison_response.get("comparison_message")
-        submission_response["percentile"] = comparison_response.get("percentile")
-
-        return SharedQuizSubmissionResponse(**submission_response)
-
-    except HTTPException as e:
-        raise e
-    except Exception as e:
-        logger.error(f"Unexpected error submitting shared quiz {share_id}: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Unexpected error submitting shared quiz.")
