@@ -512,7 +512,7 @@ async def submit_shared_exam_results(
         score = 0
         for idx, q in enumerate(exam_data):
             user_selected_label = user_answers.get(str(idx))
-            correct_answer_value = q.get('answer')
+            correct_answer_value = q.answer # Direct access to attribute
 
             if user_selected_label and correct_answer_value:
                 option_index = ord(user_selected_label.upper()) - ord('A')
