@@ -235,6 +235,7 @@ const NotesToAudioPage = () => {
                 onClick={handleGenerateAudio}
                 disabled={loading || (inputMode === 'paste' && !textInput.trim()) || (inputMode === 'upload' && !fileInput) || (!currentUser && guestUsageCount >= GUEST_NTA_LIMIT)}
                 className={styles.generateButton}
+style={loading ? { color: 'black', opacity: 1 } : {}}
             >
                 {loading ? 'Generating Audio...' : 'Generate Audio Lecture'}
             </button>
