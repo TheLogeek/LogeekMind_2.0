@@ -430,7 +430,7 @@ async def save_shared_quiz_submission(
         }
         
         try:
-            response = await supabase.table("shared_quiz_submissions").insert(submission_data).execute()
+            response = supabase.table("shared_quiz_submissions").insert(submission_data).execute()
 
             return {
                 "success": True, 
