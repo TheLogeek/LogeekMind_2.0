@@ -529,7 +529,7 @@ async def grade_exam_and_log_performance(
     supabase: Client,
     user_id: str,
     username: str,
-    exam_data: List[Dict[str, Any]],
+    exam_data: List[Any],
     user_answers: Dict[str, str],
     course_name: str,
     topic: Optional[str] = None,
@@ -541,7 +541,7 @@ async def grade_exam_and_log_performance(
 
     for idx, q in enumerate(exam_data):
         user_selected_label = user_answers.get(str(idx))
-        correct_answer_letter = q.get('answer', '').strip().upper()
+        correct_answer_letter = q.answer.strip().upper()
 
         if not user_selected_label or not correct_answer_letter:
             continue
@@ -754,7 +754,7 @@ async def submit_shared_exam_results(
         score = 0
         for idx, q in enumerate(exam_data):
             user_selected_label = user_answers.get(str(idx), "").strip().upper()
-            correct_answer_letter = q.get('answer', '').strip().upper()
+            correct_answer_letter = q.answer.strip().upper()
 
             if user_selected_label == correct_answer_letter:
                 score += 1
