@@ -120,7 +120,7 @@ const SharedExamPage = () => {
                         if (comparisonRes.data.success) {
                             comparisonData = comparisonRes.data;
                         } else {
-                            console.warn("Failed to fetch performance comparison:", comparisonRes.data.message);
+                            console.warn("Failed to fetch performance comparison:", comparisonRes.data.comparison_message);
                         }
                     } catch (compError: unknown) {
                         const axiosCompError = compError as AxiosError<any>;
