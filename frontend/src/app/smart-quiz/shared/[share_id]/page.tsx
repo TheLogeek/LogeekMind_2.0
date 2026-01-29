@@ -84,23 +84,7 @@ const SharedQuizPage = () => {
                 setGuestUsageCount(parseInt(localStorage.getItem(GUEST_USAGE_KEY) || '0', 10));
             }
 
-            const savedInputs = sessionStorage.getItem('smart_quiz_inputs');
-            if (savedInputs) {
-                try {
-                    const { quizTopic, numQuestions, quizType, difficulty } = JSON.parse(savedInputs);
-                    setQuizTopic(quizTopic || '');
-                    setNumQuestions(numQuestions || 5);
-                    setQuizType(quizType || 'Multiple Choice');
-                    setDifficulty(difficulty || 3);
-                } catch (e) { console.error("Failed to parse saved inputs:", e); }
             }
-            const savedQuizData = sessionStorage.getItem('smart_quiz_data');
-            if (savedQuizData) setQuizData(JSON.parse(savedQuizData));
-            const savedUserAnswers = sessionStorage.getItem('smart_quiz_userAnswers');
-            if (savedUserAnswers) setUserAnswers(JSON.parse(savedUserAnswers));
-            if (sessionStorage.getItem('smart_quiz_submitted') === 'true') setQuizSubmitted(true);
-            const savedQuizScore = sessionStorage.getItem('smart_quiz_score');
-            if (savedQuizScore) setQuizScore(parseInt(savedQuizScore, 10));
         };
         fetchUserAndQuiz();
     }, []);

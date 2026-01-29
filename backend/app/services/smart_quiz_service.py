@@ -240,7 +240,7 @@ def calculate_grade(score: int, total: int) -> Tuple[str, str, float]:
         return "D", "Pass. You need to study more.", percentage
     elif percentage >= 40:
         return "E", "Weak Pass. Dangerous territory.", percentage
-        else:
+    else:
             return "F", "Fail. You are not ready for this exam.", percentage
     
     async def get_quiz_performance_comparison(
