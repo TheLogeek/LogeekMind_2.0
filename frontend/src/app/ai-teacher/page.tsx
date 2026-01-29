@@ -53,7 +53,7 @@ const AITeacherPage = () => {
     useEffect(() => {
         localStorage.setItem(GUEST_USAGE_KEY, guestUsageCount.toString());
         if (!currentUser && guestUsageCount >= GUEST_AI_TEACHER_LIMIT) {
-            setError(`You have reached the guest limit of ${GUEST_AI_TEACHER_LIMIT} AI Teacher sessions. Please login or sign up for unlimited access.`);
+            setError(`You have reached the guest limit of ${GUEST_AI_TEACHER_LIMIT} AI Teacher sessions. Please login or sign up for unlimited access and to download your notes.`);
         } else {
             setError('');
         }
