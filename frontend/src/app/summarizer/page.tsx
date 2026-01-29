@@ -182,7 +182,8 @@ const SummarizerPage = () => {
                 <textarea id="text-input" value={textInput} onChange={handleTextInputChange} placeholder="Enter your text here..." rows={10}></textarea>
             </div>
 
-            <button onClick={handleSummarize} disabled={loading || (!file && !textInput.trim()) || (!currentUser && guestUsageCount >= GUEST_SUMMARY_LIMIT)} className={styles.summarizeButton}>
+            <button onClick={handleSummarize} disabled={loading || (!file && !textInput.trim()) || (!currentUser && guestUsageCount >= GUEST_SUMMARY_LIMIT)} className={styles.summarizeButton}
+style={loading ? { color: 'black', opacity: 1 } : {}}>
                 {loading ? 'Generating Summary...' : 'Generate Summary'}
             </button>
 
