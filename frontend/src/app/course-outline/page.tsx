@@ -27,7 +27,11 @@ const CourseOutlinePage = () => {
     });
 
     useEffect(() => {
-        setCurrentUser(AuthService.getCurrentUser());
+        const fetchUser = async () => {
+            const user = await AuthService.getCurrentUser();
+            setCurrentUser(user);
+        };
+        fetchUser();
         const savedOutline = sessionStorage.getItem('course_outline_outline');
         const savedInputs = sessionStorage.getItem('course_outline_inputs');
         if (savedOutline) {

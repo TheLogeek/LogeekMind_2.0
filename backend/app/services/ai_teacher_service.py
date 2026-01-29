@@ -1,9 +1,12 @@
 from typing import List, Dict, Any, Optional
-from app.services.gemini_service import get_gemini_client
+from app.services.groq_service import get_groq_client, call_groq
+from groq import GroqError
 from app.services.usage_service import log_usage
 from supabase import Client
-from google import genai
-from google.genai import types
+import json
+import logging
+
+logger = logging.getLogger(__name__)
 
 AI_TEACHER_INSTRUCTIONS = (
     """
@@ -84,25 +87,43 @@ async def generate_ai_teacher_response(
     chat_history: List[Dict[str, str]]
 ) -> Dict[str, Any]:
     
-    client, error_message = await get_gemini_client(user_id=user_id)
+    client, error_message = get_groq_client()
     if error_message:
         return {"success": False, "message": error_message}
 
-    contents = []
+    messages = [{"role": "system", "content": AI_TEACHER_INSTRUCTIONS}]
     for msg in chat_history:
-        role = "user" if msg["role"] == "user" else "model"
-        contents.append({"role": role, "parts": [{"text": msg["text"]}]})
+        role = "user" if msg["role"] == "user" else "assistant" # Groq uses 'assistant' not 'model'
+        messages.append({"role": role, "content": msg["text"]})
     
-    contents.append({"role": "user", "parts": [{"text": current_prompt}]})
+    messages.append({"role": "user", "content": current_prompt})
 
     try:
-        response = client.models.generate_content(
-            model="gemini-2.5-flash",
-            config=types.GenerateContentConfig(system_instruction=AI_TEACHER_INSTRUCTIONS),
-            contents=contents,
-        )
+        response = None
+        models = [
+            "llama-3.1-8b-instant",
+            "mixtral-8x7b-32768"
+        ]
+
+        for model in models:
+            try:
+                response = call_groq(
+                    client,
+                    messages=messages,
+                    model=model,
+                    temperature=0.7 # A bit higher temperature for conversational AI
+                )
+                break
+            except Exception as e:
+                logger.warning(f"Groq model {model} failed for AI Teacher: {e}")
+
+        if not response:
+            return {
+                "success": False,
+                "message": "AI service is currently overloaded. Please try again."
+            }
         
-        ai_text = response.text
+        ai_text = response.choices[0].message.content.strip()
 
         await log_usage(
             supabase=supabase,
@@ -115,18 +136,12 @@ async def generate_ai_teacher_response(
 
         return {"success": True, "ai_text": ai_text}
 
-    except genai.errors.APIError as e:
-        error_message = str(e)
-        if "429" in error_message or "RESOURCE_EXHAUSTED" in error_message.upper():
-            print(f"Gemini API rate limit exceeded during AI teacher response: {e}")
-            return {"success": False, "message": "AI is currently experiencing high traffic. Please try again shortly."}
-        elif "503" in error_message:
-            print(f"AI is currently experiencing high traffic. Try again shortly.")
-            return {"success": False, "message": "AI is currently experiencing high traffic. Please try again shortly."}
-        else:
-            print(f"An API error occurred: {e}")
-            return {"success": False, "message": f"A Gemini API error occurred: {e}"}
+    except GroqError as e:
+        msg = str(e)
+        if "429" in msg:
+            return {"success": False, "message": "Too many requests. Please wait briefly."}
+        logger.error(f"Groq API error during AI Teacher response: {msg}", exc_info=True)
+        return {"success": False, "message": "AI service error. Please try again."}
     except Exception as e:
-        # This catches errors during the generate_content call itself.
-        print(f"Error during AI Teacher response generation: {e}")
+        logger.error("Unexpected error during AI Teacher response generation", exc_info=True)
         return {"success": False, "message": "An unexpected error occurred while generating the AI response."}

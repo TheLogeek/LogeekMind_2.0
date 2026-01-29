@@ -132,7 +132,11 @@ const ExamSimulatorPage = () => {
     };
 
     useEffect(() => {
-        setCurrentUser(AuthService.getCurrentUser());
+        const fetchUser = async () => {
+            const user = await AuthService.getCurrentUser();
+            setCurrentUser(user);
+        };
+        fetchUser();
         const savedInputs = sessionStorage.getItem('exam_simulator_inputs');
         if (savedInputs) {
             const { courseName, topic, numQuestions, durationMins, selectedSource, lectureNotesContent, fileName } = JSON.parse(savedInputs);

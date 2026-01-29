@@ -38,7 +38,11 @@ const SmartQuizPage = () => {
     });
 
     useEffect(() => {
-        setCurrentUser(AuthService.getCurrentUser());
+        const fetchUser = async () => {
+            const user = await AuthService.getCurrentUser();
+            setCurrentUser(user);
+        };
+        fetchUser();
         // Restore state from sessionStorage
         const savedInputs = sessionStorage.getItem('smart_quiz_inputs');
         if (savedInputs) {

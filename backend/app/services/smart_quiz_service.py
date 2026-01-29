@@ -1,18 +1,16 @@
-from typing import Dict, Any, List, Optional, Tuple
-from app.services.gemini_service import get_gemini_client
-from app.services.usage_service import log_usage, log_performance
-from supabase import Client
-from postgrest.exceptions import APIError  # Added for Supabase v2 error handling
-from google import genai
 import json
-from docx import Document
-from docx.shared import Pt
-from docx.enum.text import WD_ALIGN_PARAGRAPH
+import uuid
 import io
-import re  # Import re for regex operations
-import uuid  # For generating shareable IDs
-import datetime  # For timestamping submissions
+import re
 import logging
+import datetime
+from typing import Dict, Any, List, Optional, Tuple
+from supabase import Client
+from postgrest.exceptions import APIError
+from app.services.groq_service import get_groq_client, call_groq
+from groq import GroqError
+from app.services.usage_service import log_usage, log_performance
+from docx import Document
 
 logger = logging.getLogger(__name__)
 
@@ -59,70 +57,89 @@ async def generate_quiz_service(
     num_questions: int,
     quiz_type: str,
     difficulty: int,
-    is_sharable: bool = False  # New parameter added
+    is_sharable: bool = False
 ) -> Dict[str, Any]:
 
     if not quiz_topic:
         return {"success": False, "message": "Quiz topic is required."}
 
     if is_sharable and user_id.startswith("guest_"):
-        return {"success": False, "message": "Guest users cannot create sharable quizzes. Please log in to use this feature."}
+        return {"success": False, "message": "Guest users cannot create sharable quizzes. Please log in."}
 
-    client, error_message = await get_gemini_client(user_id=user_id)
+    # Get Groq client
+    client, error_message = get_groq_client()
     if error_message:
         return {"success": False, "message": error_message}
 
+    # Build quiz prompt
     quiz_prompt = f"""
-    You are an expert quiz creator. Create a {quiz_type} quiz on the topic: \"{quiz_topic}\".
-    Difficulty: {DIFFICULTY_MAP[difficulty]}.
-    Number of Questions: {num_questions}.
+You are an expert quiz creator. Create a {quiz_type} quiz on the topic: "{quiz_topic}".
+Difficulty: {DIFFICULTY_MAP[difficulty]}.
+Number of Questions: {num_questions}.
 
-    OUTPUT FORMAT:
-    Return ONLY a raw JSON list of dictionaries. Do NOT use Markdown code blocks (like ```json).
-    Each dictionary must have these keys:
-    - \"question\": The question text
-    - \"options\": A list of strings (e.g., [\"Option A\", \"Option B\", \"Option C\", \"Option D\"] or [\"True\", \"False\"])
-    - \"answer\": The exact string of the correct option
-    - \"explanation\": A short explanation of why it is correct
-    """
-
-    generated_quiz_data = None
-    share_id = None  # Initialize share_id to None
+OUTPUT FORMAT:
+Return ONLY a JSON list of dictionaries with keys:
+- "question": question text
+- "options": list of options (e.g., ["A","B","C","D"] or ["True","False"])
+- "answer": the correct option
+- "explanation": short explanation (if not available, leave empty string)
+Do not include Markdown code blocks or extra text.
+"""
 
     try:
-        response = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=[quiz_prompt]
-        )
+        response = None
+        models = [
+            "llama-3.1-8b-instant",
+            "mixtral-8x7b-32768"
+        ]
 
-        if not response.text:
-            print("Gemini API returned an empty response.")
-            return {"success": False, "message": "Gemini API returned an empty response. Please try again."}
-
-        cleaned_text = response.text.replace("```json", "").replace("```", "").strip()
-        generated_quiz_data = json.loads(cleaned_text)
-
-        # Save to shared_quizzes if sharable
-        if is_sharable:
-            share_id = str(uuid.uuid4())  # Generate a unique share ID
+        for model in models:
             try:
-                # Updated for Supabase v2: wrapped in try/except APIError
+                response = call_groq(
+                    client,
+                    messages=[
+                        {"role": "system", "content": "You are an expert quiz creator."},
+                        {"role": "user", "content": quiz_prompt}
+                    ],
+                    model=model
+                )
+                break
+            except Exception as e:
+                logger.warning(f"Groq model {model} failed: {e}")
+
+        if not response:
+            return {
+                "success": False,
+                "message": "AI service is currently overloaded. Please try again."
+            }
+
+        content = response.choices[0].message.content.strip()
+        generated_quiz_data = json.loads(content)
+
+        # Ensure each question has an explanation
+        for q in generated_quiz_data:
+            if "explanation" not in q or not q["explanation"].strip():
+                q["explanation"] = "No explanation provided."
+
+        # Save sharable quiz if needed
+        share_id = None
+        if is_sharable:
+            share_id = str(uuid.uuid4())
+            try:
                 supabase.table("shared_quizzes").insert({
                     "id": share_id,
                     "creator_id": user_id,
-                    "title": f"{quiz_topic} Quiz ({num_questions} Qs)",  # Basic title for shared quiz
+                    "title": f"{quiz_topic} Quiz ({num_questions} Qs)",
                     "quiz_data": generated_quiz_data
                 }).execute()
-                
             except APIError as db_e:
-                logger.error(f"Supabase error saving shared quiz: {db_e.message}")
-                print(f"Failed to save shared quiz to Supabase: {db_e.message}")
-                share_id = None  # Ensure share_id is None if saving failed
-            except Exception as db_e:
-                logger.error(f"Exception during Supabase insertion for shared quiz: {db_e}", exc_info=True)
-                print(f"Exception during Supabase insertion for shared quiz: {db_e}")
-                share_id = None  # Ensure share_id is None if DB operation fails
+                logger.error(f"Supabase APIError saving shared quiz: {db_e.message}")
+                share_id = None
+            except Exception as e:
+                logger.error(f"Exception saving shared quiz: {e}", exc_info=True)
+                share_id = None
 
+        # Log usage
         await log_usage(
             supabase=supabase,
             user_id=user_id,
@@ -132,28 +149,29 @@ async def generate_quiz_service(
             metadata={"topic": quiz_topic, "num_questions": num_questions, "is_sharable": is_sharable}
         )
 
-        # Return share_id only if it was successfully generated and saved
         return {"success": True, "quiz_data": generated_quiz_data, "share_id": share_id}
 
-    except genai.errors.APIError as e:
-        error_message = str(e)
-        if "429" in error_message or "RESOURCE_EXHAUSTED" in error_message.upper():
-            print(f"Gemini API rate limit exceeded during quiz generation: {e}")
-            return {"success": False, "message": "Gemini API rate limit exceeded. Please try again in a moment."}
-        elif "503" in error_message:
-            print(f"AI is currently experiencing high traffic. Try again shortly.")
-            return {"success": False, "message": "AI is currently experiencing high traffic. Please try again shortly."}
-        else:
-            print(f"An API error occurred: {e}")
-            return {"success": False, "message": f"A Gemini API error occurred: {e}"}
+    except GroqError as e:
+        msg = str(e)
+        if "429" in msg:
+            return {"success": False, "message": "Too many requests. Please wait briefly."}
+        logger.error(f"Groq API error during quiz generation: {msg}", exc_info=True)
+        return {"success": False, "message": "AI service error. Please try again."}
+
     except json.JSONDecodeError:
-        print(f"JSON Decode Error: {response.text if response.text else 'No response text'}")
-        return {"success": False, "message": "The AI generated an invalid quiz format. Please try generating again or check your input."}
+        logger.error("Invalid JSON returned from Groq during quiz generation", exc_info=True)
+        return {
+            "success": False,
+            "message": "AI returned an invalid quiz format. Try again."
+        }
+
     except Exception as e:
-        # This catches errors during the generate_content call itself, Supabase insertion, or other unexpected issues.
-        print(f"Error during quiz generation or saving: {e}")
-        logger.error(f"Error during quiz generation or saving: {e}", exc_info=True)
-        return {"success": False, "message": "An unexpected error occurred while generating or saving the quiz."}
+        logger.error("Unexpected error during quiz generation", exc_info=True)
+        return {
+            "success": False,
+            "message": "An unexpected error occurred while generating the quiz."
+        }
+
 
 async def log_quiz_performance_service(
     supabase: Client,
@@ -207,52 +225,75 @@ async def create_docx_from_quiz_results(
 
 # --- New functions for shared quizzes ---
 
-def calculate_grade(score: int, total: int) -> Tuple[str, str]:
+def calculate_grade(score: int, total: int) -> Tuple[str, str, float]:
     if total == 0:
-        return "N/A", "No questions graded."
+        return "N/A", "No questions graded.", 0.0
 
     percentage = (score / total) * 100
     if percentage >= 70:
-        return "A", "Excellent! Distinction level."
+        return "A", "Excellent! Distinction level.", percentage
     elif percentage >= 60:
-        return "B", "Very Good. Keep it up."
+        return "B", "Very Good. Keep it up.", percentage
     elif percentage >= 50:
-        return "C", "Credit. You passed, but barely."
+        return "C", "Credit. You passed, but barely.", percentage
     elif percentage >= 45:
-        return "D", "Pass. You need to study more."
+        return "D", "Pass. You need to study more.", percentage
     elif percentage >= 40:
-        return "E", "Weak Pass. Dangerous territory."
-    else:
-        return "F", "Fail. You are not ready for this exam."
-
-async def get_shared_quiz(supabase: Client, share_id: str) -> Dict[str, Any]:
-    """Fetches a specific shared quiz by its share_id."""
-    try:
-        # Updated for Supabase v2: wrap in try/except for APIError
-        # .single() raises an exception if 0 or >1 rows found
-        response = supabase.table("shared_quizzes").select("*, profiles(username)").eq("id", share_id).single().execute()
-        
-        # If we reach here, response.data exists
-        creator = response.data.get("profiles")
-        creator_username = creator.get("username") if creator else "A user"
-
-        return {
-            "success": True, 
-            "quiz_data": response.data["quiz_data"], 
-            "creator_username": creator_username,
-            "title": response.data.get("title"),
-            "creator_id": response.data.get("creator_id"),
-            "created_at": response.data.get("created_at")
-        }
+        return "E", "Weak Pass. Dangerous territory.", percentage
+        else:
+            return "F", "Fail. You are not ready for this exam.", percentage
+    
+    async def get_quiz_performance_comparison(
+        supabase: Client,
+        shared_quiz_id: str,
+        current_score_percentage: float
+    ) -> Dict[str, Any]:
+        """
+        Calculates how the current score compares to other submissions for the same quiz.
+        Returns the percentile rank.
+        """
+        try:
+            # Fetch all submission scores for this shared quiz
+            response = supabase.table("shared_quiz_submissions").select("percentage_score").eq("shared_quiz_id", shared_quiz_id).execute()
             
-    except APIError as e:
-        logger.error(f"Supabase APIError fetching shared quiz {share_id}: {e.message}")
-        return {"success": False, "message": "Quiz not found or unavailable."}
-    except Exception as e:
-        logger.error(f"Error fetching shared quiz {share_id}: {e}", exc_info=True)
-        return {"success": False, "message": "A server error occurred while fetching the quiz."}
-
-async def save_shared_quiz_submission(
+            all_percentages = [sub['percentage_score'] for sub in response.data if sub['percentage_score'] is not None]
+    
+            if not all_percentages:
+                return {"success": True, "comparison_message": "No other submissions yet for comparison."}
+            
+            # Count how many scores are lower than or equal to the current score
+            # Using strict less than for "better than"
+            better_than_count = sum(1 for p in all_percentages if current_score_percentage > p)
+            
+            # Calculate percentile: (count of scores lower than yours / total scores) * 100
+            # If there are N submissions and your score is better than K, you are better than (K/N)*100 %
+            # Ensure to handle edge cases like current_score_percentage being the lowest or highest.
+            # If there are other submissions, we calculate percentile.
+            if len(all_percentages) > 0:
+                percentile = (better_than_count / len(all_percentages)) * 100
+                
+                # Refine the message
+                if percentile >= 90:
+                    comparison_message = f"Outstanding! You performed better than {percentile:.0f}% of test takers."
+                elif percentile >= 75:
+                    comparison_message = f"Excellent! You performed better than {percentile:.0f}% of test takers."
+                elif percentile >= 50:
+                    comparison_message = f"Good job! You performed better than {percentile:.0f}% of test takers."
+                else:
+                    comparison_message = f"You performed better than {percentile:.0f}% of test takers. Keep studying!"
+    
+                return {"success": True, "comparison_message": comparison_message, "percentile": percentile}
+            else:
+                return {"success": True, "comparison_message": "Be the first to set the bar for this quiz!"}
+    
+        except APIError as e:
+            logger.error(f"Supabase APIError fetching quiz submissions for comparison: {e.message}")
+            return {"success": False, "message": "Could not retrieve comparison data."}
+        except Exception as e:
+            logger.error(f"Error calculating quiz performance comparison: {e}", exc_info=True)
+            return {"success": False, "message": "An unexpected error occurred during performance comparison."}
+    
+    async def save_shared_quiz_submission(
     supabase: Client,
     shared_quiz_id: str,
     user_answers: Dict[str, str],
@@ -273,7 +314,7 @@ async def save_shared_quiz_submission(
             if user_answers.get(str(idx)) == q.get('answer'):
                 score += 1
 
-        grade, remark = calculate_grade(score, total_questions)
+        grade, remark, percentage = calculate_grade(score, total_questions)
 
         submission_data = {
             "shared_quiz_id": shared_quiz_id,
@@ -281,7 +322,8 @@ async def save_shared_quiz_submission(
             "student_identifier": student_identifier,
             "user_answers": user_answers,
             "score": score,
-            "total_questions": total_questions
+            "total_questions": total_questions,
+            "percentage_score": percentage # Save percentage score
         }
         
         try:
@@ -294,6 +336,7 @@ async def save_shared_quiz_submission(
                 "submission_id": response.data[0]['id'],
                 "score": score,
                 "total_questions": total_questions,
+                "percentage_score": percentage, # Return percentage
                 "grade": grade,
                 "remark": remark
             }

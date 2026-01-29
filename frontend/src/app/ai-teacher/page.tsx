@@ -30,7 +30,11 @@ const AITeacherPage = () => {
     });
 
     useEffect(() => {
-        setCurrentUser(AuthService.getCurrentUser());
+        const fetchUser = async () => {
+            const user = await AuthService.getCurrentUser();
+            setCurrentUser(user);
+        };
+        fetchUser();
         const savedMessages = sessionStorage.getItem('ai_teacher_messages');
         if (savedMessages) {
             setMessages(JSON.parse(savedMessages));

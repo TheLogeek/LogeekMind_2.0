@@ -1,6 +1,6 @@
 from typing import Dict, Any, Optional
-from app.services.gemini_service import get_gemini_client
-from google import genai
+from app.services.groq_service import get_groq_client, call_groq
+from groq import GroqError
 from app.services.usage_service import log_usage
 from supabase import Client
 from docx import Document
@@ -8,6 +8,10 @@ from docx.shared import Pt
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 import io
 import re # Import re for regex operations
+import json
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 # Helper function to clean markdown text for docx (re-defined here for self-containment)
@@ -55,15 +59,15 @@ async def generate_course_outline(
     if not course_full_name:
         return {"success": False, "message": "Course Full Name is required."}
 
-    client, error_message = await get_gemini_client(user_id=user_id)
+    client, error_message = get_groq_client()
     if error_message:
         return {"success": False, "message": error_message}
     
     uni_context = f"taught at {university_name}." if university_name else "taught at a major Nigerian University."
     code_context = f"(Code: {course_code})" if course_code else ""
 
-    outline_prompt = f"""
-    You are an expert curriculum designer. Generate a comprehensive, 12-week university_level course outline for the 
+    outline_prompt_content = f"""
+    Generate a comprehensive, 12-week university_level course outline for the 
     course: "{course_full_name}" {code_context}. The course should reflect standards {uni_context}.
 
     **REQUIRED SECTIONS:**
@@ -74,13 +78,37 @@ async def generate_course_outline(
     Ensure the output is formatted cleanly using **Markdown**.
     """
 
+    messages = [
+        {"role": "system", "content": "You are an expert curriculum designer."},
+        {"role": "user", "content": outline_prompt_content}
+    ]
+
     try:
-        response = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=[outline_prompt]
-        )
+        response = None
+        models = [
+            "llama-3.1-8b-instant",
+            "mixtral-8x7b-32768"
+        ]
+
+        for model in models:
+            try:
+                response = call_groq(
+                    client,
+                    messages=messages,
+                    model=model,
+                    temperature=0.4
+                )
+                break
+            except Exception as e:
+                logger.warning(f"Groq model {model} failed for Course Outline: {e}")
+
+        if not response:
+            return {
+                "success": False,
+                "message": "AI service is currently overloaded. Please try again."
+            }
         
-        outline_text = response.text
+        outline_text = response.choices[0].message.content.strip()
 
         await log_usage(
             supabase=supabase,
@@ -92,19 +120,14 @@ async def generate_course_outline(
         )
 
         return {"success": True, "outline_text": outline_text}
-    except genai.errors.APIError as e:
-        error_message = str(e)
-        if "429" in error_message or "RESOURCE_EXHAUSTED" in error_message.upper():
-            print(f"Gemini API rate limit exceeded during summarization: {e}")
-            return {"success": False, "message": "AI is currently experiencing high traffic. Please try again shortly."}
-        elif "503" in error_message:
-            print(f"AI is currently eperiencing high traffic. Try again shortly.")
-            return {"success": False, "message": "AI is currently experiencing high traffic. Please try again shortly."}
-        else:
-            print(f"An API error occurred: {e}")
-            return "", f"An API error occurred: {e}"
+    except GroqError as e:
+        msg = str(e)
+        if "429" in msg:
+            return {"success": False, "message": "Too many requests. Please wait briefly."}
+        logger.error(f"Groq API error during Course Outline generation: {msg}", exc_info=True)
+        return {"success": False, "message": "AI service error. Please try again."}
     except Exception as e:
-        print(f"Error during course outline generation: {e}")
+        logger.error("Unexpected error during course outline generation", exc_info=True)
         return {"success": False, "message": "An unexpected error occurred while generating the AI response."}
 
 async def create_docx_from_outline(outline_text: str, course_full_name: str) -> io.BytesIO:

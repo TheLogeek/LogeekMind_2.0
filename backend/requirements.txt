@@ -25,3 +25,4 @@ psycopg2-binary
 pywhispercpp
 SQLAlchemy
 PyPDF2
+groq

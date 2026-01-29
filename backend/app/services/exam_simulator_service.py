@@ -1,7 +1,7 @@
 from typing import Dict, Any, List, Optional, Tuple
-from app.services.gemini_service import get_gemini_client
+from app.services.groq_service import get_groq_client, call_groq
+from groq import GroqError
 from app.services.usage_service import log_usage, log_performance
-from google import genai
 from supabase import Client
 from postgrest.exceptions import APIError  # Added for Supabase v2 error handling
 import json
@@ -54,23 +54,68 @@ GRADE_POINTS = {  # Used in GPA Calculator, but good for reference
     "A": 5.0, "B": 4.0, "C": 3.0, "D": 2.0, "E": 1.0, "F": 0.0
 }
 
-def calculate_grade(score: int, total: int) -> Tuple[str, str]:
+def calculate_grade(score: int, total: int) -> Tuple[str, str, float]:
     if total == 0:
-        return "N/A", "No questions graded."
+        return "N/A", "No questions graded.", 0.0
     
     percentage = (score / total) * 100
     if percentage >= 70:
-        return "A", "Excellent! Distinction level."
+        return "A", "Excellent! Distinction level.", percentage
     elif percentage >= 60:
-        return "B", "Very Good. Keep it up."
+        return "B", "Very Good. Keep it up.", percentage
     elif percentage >= 50:
-        return "C", "Credit. You passed, but barely."
+        return "C", "Credit. You passed, but barely.", percentage
     elif percentage >= 45:
-        return "D", "Pass. You need to study more."
+        return "D", "Pass. You need to study more.", percentage
     elif percentage >= 40:
-        return "E", "Weak Pass. Dangerous territory."
+        return "E", "Weak Pass. Dangerous territory.", percentage
     else:
-        return "F", "Fail. You are not ready for this exam."
+        return "F", "Fail. You are not ready for this exam.", percentage
+
+async def get_exam_performance_comparison(
+    supabase: Client,
+    shared_exam_id: str,
+    current_score_percentage: float
+) -> Dict[str, Any]:
+    """
+    Calculates how the current score compares to other submissions for the same exam.
+    Returns the percentile rank.
+    """
+    try:
+        # Fetch all submission scores for this shared exam
+        response = supabase.table("shared_exam_submissions").select("percentage_score").eq("shared_exam_id", shared_exam_id).execute()
+        
+        all_percentages = [sub['percentage_score'] for sub in response.data if sub['percentage_score'] is not None]
+
+        if not all_percentages:
+            return {"success": True, "comparison_message": "No other submissions yet for comparison."}
+        
+        # Count how many scores are lower than or equal to the current score
+        better_than_count = sum(1 for p in all_percentages if current_score_percentage > p)
+        
+        if len(all_percentages) > 0:
+            percentile = (better_than_count / len(all_percentages)) * 100
+            
+            # Refine the message
+            if percentile >= 90:
+                comparison_message = f"Outstanding! You performed better than {percentile:.0f}% of test takers."
+            elif percentile >= 75:
+                comparison_message = f"Excellent! You performed better than {percentile:.0f}% of test takers."
+            elif percentile >= 50:
+                comparison_message = f"Good job! You performed better than {percentile:.0f}% of test takers."
+            else:
+                comparison_message = f"You performed better than {percentile:.0f}% of test takers. Keep studying!"
+
+            return {"success": True, "comparison_message": comparison_message, "percentile": percentile}
+        else:
+            return {"success": True, "comparison_message": "Be the first to set the bar for this exam!"}
+
+    except APIError as e:
+        logger.error(f"Supabase APIError fetching exam submissions for comparison: {e.message}")
+        return {"success": False, "message": "Could not retrieve comparison data."}
+    except Exception as e:
+        logger.error(f"Error calculating exam performance comparison: {e}", exc_info=True)
+        return {"success": False, "message": "An unexpected error occurred during performance comparison."}
 
 async def generate_exam_questions(
     supabase: Client,
@@ -93,14 +138,17 @@ async def generate_exam_questions(
     if is_sharable and user_id.startswith("guest_"):
         return {"success": False, "message": "Guest users cannot create sharable exams. Please log in to use this feature."}
 
-    client, error_message = await get_gemini_client(user_id=user_id)
+    client, error_message = get_groq_client()
     if error_message:
         return {"success": False, "message": error_message}
     
     # Construct prompt dynamically
+    system_prompt = "You are an expert university professor setting an exam."
+    user_prompt_content = ""
+
     if lecture_notes_content:
-        prompt = f"""
-You are an expert university professor. Generate {num_questions} examination-standard multiple-choice questions
+        user_prompt_content = f"""
+Generate {num_questions} examination-standard multiple-choice questions
 based on the provided lecture notes. Do not include any information that is not explicitly mentioned in the text. Focus on the key terms, dates, and logical relationships defined in the notes. Make sure the questions test the student's ability to connect different parts of the lecture.
 Ensure questions are relevant ONLY to the content within the provided notes. Employ methods to prevent hitting rate limit like first summarising the notes before setting the questions.
 
@@ -114,14 +162,13 @@ OUTPUT FORMAT:
 Return ONLY a raw JSON list of dictionaries. Do NOT use Markdown code blocks.
 For mathematical questions, Do NOT use LaTex commands.
 Each dictionary must have these keys:
-- \"question\": follow the instructions provided and introduce at least one complex scenario or problem statement question where needed and relevant to context without making the question too long
-- \"options\": A list of strings
-- \"answer\": The exact string of the correct option
-- \"explanation\": A short explanation of why it is correct, referencing the notes where applicable.
+- "question": follow the instructions provided and introduce at least one complex scenario or problem statement question where needed and relevant to context without making the question too long
+- "options": A list of strings
+- "answer": The exact string of the correct option
+- "explanation": A short explanation of why it is correct, referencing the notes where applicable.
         """
     else:  # Use topic if no lecture notes are provided
-        prompt = f"""
-You are an expert university professor setting an exam.
+        user_prompt_content = f"""
 Course: {course_name}
 Topic: {topic if topic else 'General'}
 
@@ -131,27 +178,52 @@ OUTPUT FORMAT:
 Return ONLY a raw JSON list of dictionaries. Do NOT use Markdown code blocks.
 For mathematical questions, Do NOT use LaTex commands.
 Each dictionary must have these keys:
-- \"question\": follow the instructions provided and introduce at least one complex scenario or problem statement question where needed and relevant to context without making the question too long
-- \"options\": A list of strings (e.g., [\"Option A\", \"Option B\", \"Option C\", \"Option D\"])
-- \"answer\": The exact string of the correct option
-- \"explanation\": A short explanation of why it is correct
+- "question": follow the instructions provided and introduce at least one complex scenario or problem statement question where needed and relevant to context without making the question too long
+- "options": A list of strings (e.g., ["Option A", "Option B", "Option C", "Option D"])
+- "answer": The exact string of the correct option
+- "explanation": A short explanation of why it is correct
         """
     
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_prompt_content}
+    ]
+
     generated_exam_data = None
     share_id = None
 
     try:
-        response = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=[prompt]
-        )
+        response = None
+        models = [
+            "llama-3.1-8b-instant",
+            "mixtral-8x7b-32768"
+        ]
+
+        for model in models:
+            try:
+                response = call_groq(
+                    client,
+                    messages=messages,
+                    model=model,
+                    temperature=0.4
+                )
+                break
+            except Exception as e:
+                logger.warning(f"Groq model {model} failed for Exam Simulator: {e}")
+
+        if not response:
+            return {
+                "success": False,
+                "message": "AI service is currently overloaded. Please try again."
+            }
         
         # Handle potential empty or malformed response text
-        if not response.text:
-            logger.error("Gemini API returned an empty response.")
-            return {"success": False, "message": "Gemini API returned an empty response. Please try again."}
+        response_content = response.choices[0].message.content.strip()
+        if not response_content:
+            logger.error("Groq API returned an empty response.")
+            return {"success": False, "message": "Groq API returned an empty response. Please try again."}
 
-        cleaned_text = response.text.replace("```json", "").replace("```", "").strip()
+        cleaned_text = response_content.replace("```json", "").replace("```", "").strip()
         generated_exam_data = json.loads(cleaned_text)
 
         # Save to shared_exams if sharable
@@ -185,19 +257,14 @@ Each dictionary must have these keys:
         return {"success": True, "exam_data": generated_exam_data, "share_id": share_id}
 
     except json.JSONDecodeError:
-        logger.error(f"JSON Decode Error: {response.text if response.text else 'No response text'}")
+        logger.error(f"JSON Decode Error from Groq: {response_content if response_content else 'No response content'}")
         return {"success": False, "message": "The AI generated an invalid exam format. Please try generating again or check your input."}
-    except genai.errors.APIError as e:
-        error_message = str(e)
-        if "429" in error_message or "RESOURCE_EXHAUSTED" in error_message.upper():
-            logger.warning(f"Gemini API rate limit exceeded during exam generation: {e}")
-            return {"success": False, "message": "AI is currently experiencing high traffic. Please try again shortly."}
-        elif "503" in error_message:
-            logger.warning(f"AI service unavailable during exam generation: {e}")
-            return {"success": False, "message": "AI service is currently unavailable. Please try again shortly."}
-        else:
-            logger.error(f"A Gemini API error occurred during exam generation: {e}")
-            return {"success": False, "message": f"A Gemini API error occurred: {e}"}
+    except GroqError as e:
+        msg = str(e)
+        if "429" in msg:
+            return {"success": False, "message": "Too many requests. Please wait briefly."}
+        logger.error(f"Groq API error during exam generation: {msg}", exc_info=True)
+        return {"success": False, "message": "AI service error. Please try again."}
     except Exception as e:
         logger.error(f"Error during exam generation: {e}", exc_info=True)
         return {"success": False, "message": "An unexpected error occurred while generating the exam."}
@@ -295,7 +362,6 @@ async def create_docx_from_exam_results(
         doc.add_paragraph(f"Correct Answer: {clean_correct_answer}")
         
         # Process Explanation
-        doc.add_paragraph("Explanation:")
         explanation_text = q.get('explanation', 'No explanation provided.')
         for exp_line in explanation_text.split('\n'):
             stripped_exp_line = exp_line.strip()
@@ -363,7 +429,7 @@ async def submit_shared_exam_results(
             if user_answers.get(str(idx)) == q.get('answer'):
                 score += 1
         
-        grade, remark = calculate_grade(score, total_questions)
+        grade, remark, percentage = calculate_grade(score, total_questions)
 
         # 3. Save the submission results
         submission_data = {
@@ -373,12 +439,13 @@ async def submit_shared_exam_results(
             "user_answers": user_answers,
             "score": score,
             "total_questions": total_questions,
+            "percentage_score": percentage, # Save percentage score
             "submitted_at": datetime.datetime.utcnow().isoformat() + "Z"
         }
         
         try:
             # Updated for Supabase v2: wrap in try/except
-            insert_response = supabase.table("shared_exam_submissions").insert(submission_data).execute()
+            insert_response = await supabase.table("shared_exam_submissions").insert(submission_data).execute()
             
             # If successful, return the result
             return {
@@ -386,6 +453,7 @@ async def submit_shared_exam_results(
                 "submission_id": insert_response.data[0]['id'],
                 "score": score,
                 "total_questions": total_questions,
+                "percentage_score": percentage, # Return percentage
                 "grade": grade,
                 "remark": remark
             }

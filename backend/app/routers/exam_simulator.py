@@ -193,6 +193,35 @@ async def get_shared_exam_route(
         "creator_username": response.get("creator_username")
     }
 
+@router.get("/shared-exams/{share_id}/performance")
+async def get_shared_exam_performance_route(
+    share_id: str,
+    supabase: Client = Depends(get_supabase_client)
+):
+    """
+    Fetches performance comparison data for a shared exam.
+    """
+    try:
+        # For the performance comparison endpoint, we need to calculate the percentile
+        # based on all submissions. The service function does this.
+        # We pass a dummy current_score_percentage as it's not used for fetching general stats.
+        response = await exam_simulator_service.get_exam_performance_comparison(supabase, shared_exam_id=share_id, current_score_percentage=0.0)
+        
+        if not response["success"]:
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=response.get("message"))
+            
+        return {
+            "success": True,
+            "comparison_message": response.get("comparison_message"),
+            "percentile": response.get("percentile") # Include percentile if available
+        }
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        logger.error(f"Unexpected error fetching shared exam performance {share_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Unexpected error fetching performance data.")
+
+
 @router.post("/shared-exams/{share_id}/submit")
 async def submit_shared_exam_route(
     share_id: str,
@@ -213,12 +242,18 @@ async def submit_shared_exam_route(
     if not response["success"]:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=response["message"])
     
-    # Return submission results
-    return {
-        "success": True,
-        "submission_id": response.get("submission_id"),
-        "score": response.get("score"),
-        "total_questions": response.get("total_questions"),
-        "grade": response.get("grade"),
-        "remark": response.get("remark")
-    }
+    # Fetch performance comparison data *after* submission
+    current_percentage = response.get("percentage_score", 0.0) # Get percentage from submission result
+
+    comparison_response = await exam_simulator_service.get_exam_performance_comparison(
+        supabase=supabase,
+        shared_exam_id=share_id,
+        current_score_percentage=current_percentage
+    )
+
+    # Add comparison data to the response
+    response["comparison_message"] = comparison_response.get("comparison_message")
+    response["percentile"] = comparison_response.get("percentile")
+    
+    # Return submission results and comparison data
+    return response
