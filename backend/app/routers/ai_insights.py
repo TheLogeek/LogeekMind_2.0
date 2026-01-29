@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from supabase import Client
 from sqlalchemy.orm import Session
 from typing import Dict, Any, List
 from pydantic import BaseModel
