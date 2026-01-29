@@ -192,6 +192,7 @@ const GPACalculatorPage = () => {
                 onClick={handleCalculateGpa}
                 disabled={loading || !courses.some(c => c.name.trim() && c.units > 0) || (!currentUser && guestUsageCount >= GUEST_GPA_LIMIT)}
                 className={styles.calculateButton}
+style={loading ? { color: 'black', opacity: 1 } : {}}
             >
                 {loading ? 'Calculating...' : 'Calculate GPA'}
             </button>
