@@ -165,7 +165,7 @@ the exact mathematics question after your normal explanation
 Each dictionary must have these keys:
 - "question": follow the instructions provided and introduce at least one complex scenario or problem statement question where needed and relevant to context without making the question too long
 - "options": A list of strings
-- "answer": The exact string of the correct option
+- "answer": The exact string of the correct option, MUST be the option label (A, B, C, or D). Do NOT return option text.
 - "explanation": A short explanation of why it is correct, referencing the notes where applicable.
         """
     else:  # Use topic if no lecture notes are provided
@@ -182,7 +182,7 @@ the exact mathematics question after your normal explanation
 Each dictionary must have these keys:
 - "question": follow the instructions provided and introduce at least one complex scenario or problem statement question where needed and relevant to context without making the question too long
 - "options": A list of strings (e.g., ["Option A", "Option B", "Option C", "Option D"])
-- "answer": The exact string of the correct option
+- "answer": The exact string of the correct option, MUST be the option label (A, B, C, or D). Do NOT return option text.
 - "explanation": A short explanation of why it is correct
         """
     
@@ -287,11 +287,9 @@ async def grade_exam_and_log_performance(
 
     for idx, q in enumerate(exam_data):
         user_selected_label = user_answers.get(str(idx))
-        correct_answer_value = q.get('answer') # Use .get() for consistency and safety
+        correct_answer_value = q.answer # Direct access to attribute
 
         if user_selected_label and correct_answer_value:
-            # Assuming user_selected_label is "A", "B", etc.
-            # We need to map this letter back to the options index.
             try:
                 if len(user_selected_label) == 1 and user_selected_label.isalpha():
                     option_index = ord(user_selected_label.upper()) - ord('A')
