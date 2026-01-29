@@ -416,7 +416,7 @@ Topic: {topic if topic else 'General'}
 
 CRITICAL INSTRUCTIONS:
 1. Each question must have exactly 4 options labeled A, B, C, D
-2. The "answer" field MUST contain ONLY the letter (A, B, C, or D) - NOT the full text of the option
+2. The "answer" should be the option content without the label
 3. For mathematical questions, do NOT use LaTeX commands
 4. Questions should vary in difficulty
 5. Include at least one complex scenario or problem-solving question
@@ -426,7 +426,7 @@ Return ONLY a raw JSON array. Do NOT use markdown code blocks or any other forma
 Each question must be a dictionary with these EXACT keys:
 - "question": The question text (string)
 - "options": Array of exactly 4 strings
-- "answer": Single letter ONLY: "A", "B", "C", or "D" (string)
+- "answer": string of option text without the label
 - "explanation": Why the answer is correct (string)
 
 Example format:
@@ -434,7 +434,7 @@ Example format:
   {{
     "question": "What is the capital of France?",
     "options": ["London", "Paris", "Berlin", "Madrid"],
-    "answer": "B",
+    "answer": "Paris",
     "explanation": "Paris is the capital and largest city of France."
   }}
 ]
