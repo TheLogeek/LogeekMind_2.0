@@ -282,13 +282,20 @@ async def grade_exam_and_log_performance(
     lecture_notes_source: bool = False # Flag to indicate if notes were used
 ) -> Dict[str, Any]:
     
-    score = 0
-    total_questions = len(exam_data)
-
-    for idx, q in enumerate(exam_data):
-        if user_answers.get(str(idx)) == q.answer:
-            score += 1
-
+            score = 0
+            total_questions = len(exam_data)
+    
+            for idx, q in enumerate(exam_data):
+                user_selected_label = user_answers.get(str(idx))
+                correct_answer_value = q.get('answer') # Use .get() for consistency and safety
+    
+                if user_selected_label and correct_answer_value:
+                    option_index = ord(user_selected_label.upper()) - ord('A')
+    
+                    if 0 <= option_index < len(q['options']):
+                        user_selected_option_value = q['options'][option_index]
+                        if user_selected_option_value == correct_answer_value:
+                            score += 1
     grade, remark, _ = calculate_grade(score, total_questions)
 
     await log_performance(
@@ -427,9 +434,16 @@ async def submit_shared_exam_results(
         # 2. Grade the submission
         score = 0
         for idx, q in enumerate(exam_data):
-            # Ensure consistent key access, defaulting to None if not found
-            if user_answers.get(str(idx)) == q.get('answer'):
-                score += 1
+            user_selected_label = user_answers.get(str(idx))
+            correct_answer_value = q.get('answer')
+
+            if user_selected_label and correct_answer_value:
+                option_index = ord(user_selected_label.upper()) - ord('A')
+
+                if 0 <= option_index < len(q['options']):
+                    user_selected_option_value = q['options'][option_index]
+                    if user_selected_option_value == correct_answer_value:
+                        score += 1
         
         grade, remark, percentage = calculate_grade(score, total_questions)
 
