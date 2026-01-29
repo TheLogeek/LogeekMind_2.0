@@ -192,6 +192,7 @@ const StudySchedulerPage = () => {
                 onClick={handleGenerateSchedule}
                 disabled={loading || !subjects.some(s => s.name.trim() !== '') || (!currentUser && guestUsageCount >= GUEST_SCHEDULE_LIMIT)}
                 className={styles.generateButton}
+style={loading ? { color: 'black', opacity: 1 } : {}} 
             >
                 {loading ? 'Generating Schedule...' : 'Generate Study Schedule'}
             </button>
