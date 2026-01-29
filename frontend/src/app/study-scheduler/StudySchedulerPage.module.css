@@ -260,9 +260,14 @@
     font-size: var(--font-size-md);
   }
   
-  .subjectInputGridHeader div, .subjectInputRow div, .subjectInputRow button {
-    grid-column: 1 / -1; /* Ensure all elements take full width */
-    width: 100%;
+  .subjectInputGridHeader div, .subjectInputRow div {
+    grid-column: 1 / -1;
+  }
+
+  .subjectInputRow button {
+    width: auto;
+    max-width: fit-content;
+    justify-self: end;
   }
 
   .removeSubjectButton {

@@ -237,9 +237,14 @@
     font-size: var(--font-size-md);
   }
   
-  .courseInputGridHeader div, .courseInputRow div, .courseInputRow button {
-    grid-column: 1 / -1; /* Ensure all elements take full width */
-    width: 100%;
+  .courseInputGridHeader div, .courseInputRow div {
+    grid-column: 1 / -1;
+  }
+
+  .courseInputRow button {
+    width: auto;
+    max-width: fit-content;
+    justify-self: end;
   }
 
   .removeCourseButton {
