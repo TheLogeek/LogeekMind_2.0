@@ -4,7 +4,7 @@ from typing import Dict, Any, List
 from pydantic import BaseModel
 
 from app.core.security import get_current_user_from_supabase_jwt
-from app.core.database import get_db_supabase
+from app.core.database import get_db_engine
 from app.services import ai_insights_service
 
 router = APIRouter()
