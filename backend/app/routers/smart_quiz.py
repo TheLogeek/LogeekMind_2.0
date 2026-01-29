@@ -127,6 +127,39 @@ async def generate_quiz_route(
         raise HTTPException(status_code=500, detail="Unexpected error during quiz generation.")
 
 
+@router.post("/log-performance")
+async def log_performance_route(
+    request: QuizPerformanceLogRequest,
+    supabase: Client = Depends(get_supabase_client),
+    current_user: Dict[str, Any] = Depends(get_current_user_from_supabase_jwt)
+):
+    """
+    Log quiz performance for authenticated users.
+    """
+    try:
+        await smart_quiz_service.log_usage(
+            supabase=supabase,
+            user_id=current_user["id"],
+            user_name=current_user.get("username", "User"),
+            feature_name=request.feature,
+            action="completed",
+            metadata={
+                "score": request.score,
+                "total_questions": request.total_questions,
+                "correct_answers": request.correct_answers,
+                "percentage": round((request.score / request.total_questions * 100), 2) if request.total_questions > 0 else 0,
+                **(request.extra or {})
+            }
+        )
+        return {"success": True, "message": "Performance logged successfully"}
+    except Exception as e:
+        logger.error(f"Error logging quiz performance: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
+            detail="Failed to log performance"
+        )
+
+
 @router.get("/shared-quizzes/{share_id}", response_model=SharedQuizData)
 async def get_shared_quiz_route(
     share_id: str,

@@ -10,10 +10,16 @@ from app.services import ai_insights_service
 
 router = APIRouter()
 
+# Updated model to match frontend payload
+class QuizQuestionContext(BaseModel):
+    question: str
+    correct_answer: str
+    user_answer: str
+    is_correct: bool
+
 class QuizInsightsRequest(BaseModel):
     quiz_topic: str
-    quiz_data: List[Dict[str, Any]]
-    user_answers: Dict[str, Any]
+    quiz_data: List[QuizQuestionContext]  # Changed to match frontend structure
     user_score: int
     total_questions: int
 
@@ -34,15 +40,30 @@ async def get_ai_quiz_insights_route(
         raise HTTPException(status_code=401, detail="Authentication required to get AI insights.")
 
     user_id = current_user["id"]
-    username = current_user.get("username", "Unknown User") # Get username for logging
+    username = current_user.get("username", "Unknown User")
+
+    # Convert quiz_data from frontend format to backend format
+    # Frontend sends: [{question, correct_answer, user_answer, is_correct}]
+    # Backend needs: quiz_data with full question objects + separate user_answers dict
+    
+    # Build the quiz_data and user_answers for the service
+    formatted_quiz_data = []
+    user_answers = {}
+    
+    for idx, q_context in enumerate(request.quiz_data):
+        formatted_quiz_data.append({
+            'question': q_context.question,
+            'answer': q_context.correct_answer,
+        })
+        user_answers[str(idx)] = q_context.user_answer
 
     insights_response = await ai_insights_service.get_quiz_ai_insights(
         supabase=supabase,
         user_id=user_id,
         username=username,
         quiz_topic=request.quiz_topic,
-        quiz_data=request.quiz_data,
-        user_answers=request.user_answers,
+        quiz_data=formatted_quiz_data,
+        user_answers=user_answers,
         user_score=request.user_score,
         total_questions=request.total_questions,
     )
@@ -62,7 +83,7 @@ async def get_ai_exam_insights_route(
         raise HTTPException(status_code=401, detail="Authentication required to get AI insights.")
 
     user_id = current_user["id"]
-    username = current_user.get("username", "Unknown User") # Get username for logging
+    username = current_user.get("username", "Unknown User")
 
     insights_response = await ai_insights_service.get_quiz_ai_insights( # Reusing the quiz insights service
         supabase=supabase,
