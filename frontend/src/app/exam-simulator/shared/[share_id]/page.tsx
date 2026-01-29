@@ -210,7 +210,27 @@ const SharedExamPage = () => {
         } catch (err: unknown) {
             const axiosError = err as AxiosError<any>;
             console.error('AI insights error:', axiosError.response?.data || axiosError);
-            setAiInsightsError(axiosError.response?.data?.detail || 'AI insights is currently unavailable right now. Please try again later.');
+            
+            // Better error message extraction
+            let errorMsg = 'AI insights is currently unavailable. Please try again later.';
+            
+            if (axiosError.response?.data) {
+                const data = axiosError.response.data;
+                // Handle FastAPI validation errors (422)
+                if (Array.isArray(data.detail)) {
+                    errorMsg = data.detail.map((err: any) => err.msg).join(', ');
+                } 
+                // Handle string detail
+                else if (typeof data.detail === 'string') {
+                    errorMsg = data.detail;
+                }
+                // Handle message field
+                else if (data.message) {
+                    errorMsg = data.message;
+                }
+            }
+            
+            setAiInsightsError(errorMsg);
         } finally {
             setAiInsightsLoading(false);
         }
