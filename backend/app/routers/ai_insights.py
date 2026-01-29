@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from typing import Dict, Any, List
 from pydantic import BaseModel
 
-from app.core.security import get_current_user
+from app.core.security import get_current_user_from_supabase_jwt
 from app.core.database import get_db_supabase
 from app.services import ai_insights_service
 
@@ -26,7 +26,7 @@ class ExamInsightsRequest(BaseModel):
 @router.post("/ai-insights/quiz")
 async def get_ai_quiz_insights_route(
     request: QuizInsightsRequest,
-    current_user: Dict[str, Any] = Depends(get_current_user),
+    current_user: Dict[str, Any] = Depends(get_current_user_from_supabase_jwt),
     supabase: Client = Depends(get_db_supabase)
 ):
     if not current_user:
@@ -54,7 +54,7 @@ async def get_ai_quiz_insights_route(
 @router.post("/ai-insights/exam")
 async def get_ai_exam_insights_route(
     request: ExamInsightsRequest,
-    current_user: Dict[str, Any] = Depends(get_current_user),
+    current_user: Dict[str, Any] = Depends(get_current_user_from_supabase_jwt),
     supabase: Client = Depends(get_db_supabase)
 ):
     if not current_user:

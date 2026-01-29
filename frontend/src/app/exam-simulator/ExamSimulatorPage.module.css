@@ -159,10 +159,19 @@
   border-radius: 8px;
   font-size: var(--font-size-md);
   font-weight: 600;
-  display: inline-block;
+  display: block; /* Change from inline-block to block for full width */
   margin-bottom: var(--spacing-xl);
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
   text-align: center;
+
+  /* Sticky positioning */
+  position: sticky;
+  top: 0; /* Stick to the top of the viewport */
+  z-index: 1000; /* Ensure it stays above other content */
+  width: 100%; /* Ensure it spans the full width */
+  box-sizing: border-box; /* Include padding in the width calculation */
+  padding-left: var(--spacing-xl); /* Adjust padding to match container if needed */
+  padding-right: var(--spacing-xl); /* Adjust padding to match container if needed */
 }
 
 .timerDisplay.warning {
@@ -453,7 +462,6 @@
   }
 
   .timerDisplay {
-    position: static;
     display: block;
     width: 100%;
     text-align: center;
