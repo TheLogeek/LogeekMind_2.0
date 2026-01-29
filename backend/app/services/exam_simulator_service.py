@@ -467,15 +467,8 @@ Now generate {num_questions} questions following this EXACT format:
         # Clean the response - remove markdown code blocks
         cleaned_text = response_content
         
-        # Remove markdown code blocks
-        cleaned_text = re.sub(r'```json\s*', '', cleaned_text)
-        cleaned_text = re.sub(r'```\s*', '', cleaned_text)
-        cleaned_text = cleaned_text.strip()
         
-        # Try to extract JSON if there's extra text
         json_match = re.search(r'\[\s*\{.*\}\s*\]', cleaned_text, re.DOTALL)
-        if json_match:
-            cleaned_text = json_match.group(0)
         
         # Parse JSON
         generated_exam_data = json.loads(cleaned_text)
