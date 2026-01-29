@@ -237,17 +237,15 @@ const SharedQuizPage = () => {
                 is_correct: (userAnswers[index] === q.answer)
             }));
 
-            const payload = {
-                quiz_topic: sharedQuiz.title,
-                // Remove quiz_type and difficulty as they are not expected by the backend
-                // quiz_type: "Multiple Choice",
-                // difficulty: "intermediate",
-                user_score: submissionResults.score,
-                total_questions: submissionResults.total_questions,
-                quiz_data: quizContext, // Rename quiz_context to quiz_data
-            };
+        const payload = {
+            quiz_topic: sharedQuiz.title,
+            user_score: submissionResults.score,
+            total_questions: submissionResults.total_questions,
+            quiz_data: sharedQuiz.quiz_data, // Pass the original quiz data
+            user_answers: userAnswers,      // Pass the user's answers as a separate field
+        };
 
-            const response = await axios.post(`${API_BASE_URL}/ai-insights/quiz`, payload, { headers });
+        const response = await axios.post(`${API_BASE_URL}/ai-insights/quiz`, payload, { headers });
 
             if (response.data.success) {
                 setAiInsightsContent(response.data.insights);
