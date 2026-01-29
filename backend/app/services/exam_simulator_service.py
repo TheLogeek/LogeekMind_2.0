@@ -468,7 +468,7 @@ Now generate {num_questions} questions following this EXACT format:
         cleaned_text = response_content
         
         
-        json_match = re.search(r'\[\s*\{.*\}\s*\]', cleaned_text, re.DOTALL)
+        cleaned_text = re.sub(r"^```(?:json)?|```$", "", cleaned_text, flags=re.MULTILINE).strip()
         
         # Parse JSON
         generated_exam_data = json.loads(cleaned_text)
