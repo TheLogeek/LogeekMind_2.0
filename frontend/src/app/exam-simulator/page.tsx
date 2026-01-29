@@ -491,7 +491,7 @@ const ExamSimulatorPage = () => {
                         </div>
                     ))}
                     <button onClick={handleSubmitExam} disabled={loading} className={styles.submitExamButton}
-style={loading ? { color: 'black', opacity: 1 } : {}} >
+style={loading ? { color: 'black', opacity: 1 } : {}}>
                         {loading ? 'Submitting...' : 'Submit Exam Now'}
                     </button>
                 </div>
