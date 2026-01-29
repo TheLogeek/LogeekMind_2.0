@@ -204,6 +204,7 @@ const AITeacherPage = () => {
                     type="submit"
                     disabled={loading || !inputPrompt.trim() || (!currentUser && guestUsageCount >= GUEST_AI_TEACHER_LIMIT)}
                     className={styles.sendButton}
+style={loading ? { color: 'black', opacity: 1 } : {}}
                 >
                     {loading ? 'Sending...' : 'Send'}
                 </button>
