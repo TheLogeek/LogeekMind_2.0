@@ -135,9 +135,6 @@ async def generate_quiz_service(
         # Return share_id only if it was successfully generated and saved
         return {"success": True, "quiz_data": generated_quiz_data, "share_id": share_id}
 
-    except genai.types.BlockedPromptException:
-        print("BlockedPromptException during Gemini quiz generation.")
-        return {"success": False, "message": "Your request was blocked due to content safety concerns. Please revise your input."}
     except genai.errors.APIError as e:
         error_message = str(e)
         if "429" in error_message or "RESOURCE_EXHAUSTED" in error_message.upper():
