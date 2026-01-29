@@ -427,11 +427,22 @@ async def save_shared_quiz_submission(
 
         score = 0
         for idx, q in enumerate(quiz_data):
-            user_selected_label = user_answers.get(str(idx), "").strip()
-            correct_answer = q.get('answer', '').strip()
-
-            if user_selected_label.lower() == correct_answer.lower():
-                score += 1
+            # Get the user's selected option INDEX from their answers
+            user_answer_idx = user_answers.get(str(idx))
+            
+            # Get the correct answer index from the quiz data
+            correct_idx = q.get('correct_option_index')
+            
+            # Compare indices (converting user answer to int if it's a string)
+            try:
+                if user_answer_idx is not None:
+                    user_answer_idx = int(user_answer_idx)
+                    if user_answer_idx == correct_idx:
+                        score += 1
+            except (ValueError, TypeError):
+                # Invalid answer format, count as wrong
+                logger.warning(f"Invalid answer format for question {idx}: {user_answer_idx}")
+                continue
 
         grade, remark, percentage = calculate_grade(score, total_questions)
 
@@ -446,7 +457,7 @@ async def save_shared_quiz_submission(
             "grade": grade,
             "submitted_at": datetime.datetime.utcnow().isoformat() + "Z"
         }
-        
+
         try:
             response = supabase.table("shared_quiz_submissions").insert(submission_data).execute()
 
