@@ -32,60 +32,46 @@ def _clean_markdown_text_for_docx(text_content: str) -> str:
 
 DIFFICULTY_MAP = {1: "introductory", 2: "beginner", 3: "intermediate", 4: "advanced", 5: "expert"}
 
-def validate_and_normalize_quiz(quiz_data: list) -> list:
-    """Validate and normalize quiz questions to ensure consistent format."""
-    validated = []
-    
-    for idx, q in enumerate(quiz_data):
+def validate_and_fix_quiz_questions(quiz_data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    fixed_quiz_data = []
+    for q_idx, question in enumerate(quiz_data):
         try:
-            # Required fields
-            if not all(k in q for k in ["question", "options", "explanation"]):
-                logger.warning(f"Question {idx} missing required fields")
+            if not all(key in question for key in ['question', 'options', 'answer', 'explanation']):
+                logger.warning(f"Question {q_idx + 1} missing required fields, skipping")
                 continue
             
-            options = q["options"]
-            if not isinstance(options, list) or len(options) < 2:
-                logger.warning(f"Question {idx} has invalid options")
+            if not isinstance(question['options'], list) or len(question['options']) not in [2, 4]:
+                logger.warning(f"Question {q_idx + 1} has invalid options format, skipping")
                 continue
+
+            answer = question['answer'].strip()
             
-            # Determine correct answer index
-            correct_idx = None
+            if len(answer) == 1 and answer.upper() in ['A', 'B', 'C', 'D']:
+                question['answer'] = answer.upper()
+            elif answer.lower() in ['true', 'false']:
+                question['answer'] = answer.capitalize()
+            else:
+                answer_found = False
+                for option_idx, option_text in enumerate(question['options']):
+                    if answer.lower() == option_text.lower() or answer in option_text or option_text in answer:
+                        if len(question['options']) == 4:
+                            question['answer'] = chr(65 + option_idx)
+                        else:
+                            question['answer'] = option_text.capitalize()
+                        answer_found = True
+                        logger.info(f"Fixed answer for Q{q_idx + 1}: '{answer}' -> '{question['answer']}'")
+                        break
+                
+                if not answer_found:
+                    logger.warning(f"Could not determine answer for Q{q_idx + 1}, defaulting to 'A' or 'True'")
+                    question['answer'] = 'A' if len(question['options']) == 4 else 'True'
             
-            # Check if correct_option_index exists (new format)
-            if "correct_option_index" in q:
-                correct_idx = int(q["correct_option_index"])
-            # Fall back to old "answer" format
-            elif "answer" in q:
-                answer = q["answer"]
-                # If answer is a letter (A, B, C, D)
-                if isinstance(answer, str) and len(answer) == 1 and answer.upper() in "ABCDEFGH":
-                    letter_to_idx = {"A": 0, "B": 1, "C": 2, "D": 3, "E": 4, "F": 5, "G": 6, "H": 7}
-                    correct_idx = letter_to_idx.get(answer.upper())
-                # If answer is "True" or "False"
-                elif answer in ["True", "False"]:
-                    correct_idx = 0 if answer == "True" else 1
-                # If answer is the actual text, find its index
-                elif answer in options:
-                    correct_idx = options.index(answer)
-            
-            if correct_idx is None or correct_idx >= len(options):
-                logger.warning(f"Question {idx} has invalid answer index")
-                continue
-            
-            # Normalize to consistent format
-            validated.append({
-                "question": q["question"],
-                "options": options,
-                "correct_option_index": correct_idx,
-                "correct_answer": options[correct_idx],  # Store actual text too
-                "explanation": q["explanation"]
-            })
+            fixed_quiz_data.append(question)
             
         except Exception as e:
-            logger.warning(f"Error validating question {idx}: {e}")
+            logger.error(f"Error validating question {q_idx + 1}: {e}")
             continue
-    
-    return validated
+    return fixed_quiz_data
 
 async def generate_quiz_service(
     supabase: Client,
@@ -97,25 +83,24 @@ async def generate_quiz_service(
     difficulty: int,
     is_sharable: bool = False
 ) -> Dict[str, Any]:
+
     if not quiz_topic:
         return {"success": False, "message": "Quiz topic is required."}
-    
+
     if is_sharable and user_id.startswith("guest_"):
         return {"success": False, "message": "Guest users cannot create sharable quizzes. Please log in."}
-    
+
     client, error_message = get_groq_client()
     if error_message:
         return {"success": False, "message": error_message}
-    
+
     system_prompt = "You are an expert quiz creator. You MUST follow the output format exactly."
     
     options_instructions = """
-- For "multiple-choice" questions, provide exactly 4 options labeled in an array.
-  The "correct_option_index" MUST be the zero-based index (0, 1, 2, or 3) of the correct answer.
-- For "true-false" questions, the options MUST be ["True", "False"].
-  The "correct_option_index" MUST be either 0 (True) or 1 (False).
+- For "multiple-choice" questions, provide exactly 4 options labeled A, B, C, D. The "answer" MUST be the letter (e.g., "B").
+- For "true-false" questions, the options MUST be ["True", "False"]. The "answer" MUST be "True" or "False".
 """
-    
+
     quiz_prompt = f"""
 Create a {quiz_type} quiz on the topic: "{quiz_topic}".
 Difficulty: {DIFFICULTY_MAP[difficulty]}.
@@ -123,23 +108,23 @@ Number of Questions: {num_questions}.
 
 CRITICAL INSTRUCTIONS:
 {options_instructions}
-- Each question must have a "question", "options", "correct_option_index", and "explanation".
+- Each question must have a "question", "options", "answer", and "explanation".
 - For mathematical questions, do NOT use LaTeX commands. Provide a detailed step-by-step solution in the "explanation".
 
 OUTPUT FORMAT (STRICT):
 Return ONLY a raw JSON array. Do NOT use markdown code blocks or any other formatting.
 Each question must be a dictionary with these EXACT keys:
 - "question": The question text (string)
-- "options": An array of strings (the answer choices)
-- "correct_option_index": The index of the correct answer (integer: 0, 1, 2, or 3 for multiple choice; 0 or 1 for true/false)
-- "explanation": A clear explanation of why the answer is correct (string)
+- "options": An array of strings.
+- "answer": The correct answer (string, either a letter or True/False).
+- "explanation": A clear explanation of why the answer is correct (string).
 
 Example for multiple-choice:
 [
   {{
     "question": "What is the capital of France?",
     "options": ["London", "Paris", "Berlin", "Madrid"],
-    "correct_option_index": 1,
+    "answer": "B",
     "explanation": "Paris is the capital and largest city of France."
   }}
 ]
@@ -149,18 +134,18 @@ Example for true-false:
   {{
     "question": "The Earth is flat.",
     "options": ["True", "False"],
-    "correct_option_index": 1,
-    "explanation": "The Earth is an oblate spheroid, not flat."
+    "answer": "False",
+    "explanation": "The Earth is an oblate spheroid."
   }}
 ]
 
 Now generate {num_questions} questions following this EXACT format:
 """
-    
+
     try:
         response = None
         models = ["llama-3.1-8b-instant", "mixtral-8x7b-32768"]
-        
+
         for model in models:
             try:
                 response = call_groq(
@@ -175,37 +160,34 @@ Now generate {num_questions} questions following this EXACT format:
                 break
             except Exception as e:
                 logger.warning(f"Groq model {model} failed: {e}")
-        
+
         if not response:
             return {"success": False, "message": "AI service is currently overloaded. Please try again."}
-        
+
         content = response.choices[0].message.content.strip()
         
-        # Clean markdown formatting
         cleaned_text = re.sub(r'```json\s*', '', content)
         cleaned_text = re.sub(r'```\s*', '', cleaned_text)
         cleaned_text = cleaned_text.strip()
         
-        # Extract JSON array
         json_match = re.search(r'\[\s*\{.*\}\s*\]', cleaned_text, re.DOTALL)
         if json_match:
             cleaned_text = json_match.group(0)
-        
+
         generated_quiz_data = json.loads(cleaned_text)
-        
+
         if not isinstance(generated_quiz_data, list):
             logger.error(f"Generated quiz data is not a list: {type(generated_quiz_data)}")
             return {"success": False, "message": "AI generated invalid quiz format. Please try again."}
-        
-        # Validate and normalize the quiz data
-        generated_quiz_data = validate_and_normalize_quiz(generated_quiz_data)
-        
+
+        generated_quiz_data = validate_and_fix_quiz_questions(generated_quiz_data)
+
         if not generated_quiz_data:
             logger.error("No valid questions after validation")
             return {"success": False, "message": "AI generated invalid questions. Please try again."}
-        
+
         logger.info(f"Successfully generated {len(generated_quiz_data)} valid questions")
-        
+
         share_id = None
         if is_sharable:
             share_id = str(uuid.uuid4())
@@ -222,7 +204,7 @@ Now generate {num_questions} questions following this EXACT format:
             except Exception as e:
                 logger.error(f"Exception saving shared quiz: {e}", exc_info=True)
                 share_id = None
-        
+
         await log_usage(
             supabase=supabase,
             user_id=user_id,
@@ -231,9 +213,9 @@ Now generate {num_questions} questions following this EXACT format:
             action="generated",
             metadata={"topic": quiz_topic, "num_questions": len(generated_quiz_data), "is_sharable": is_sharable}
         )
-        
+
         return {"success": True, "quiz_data": generated_quiz_data, "share_id": share_id}
-        
+
     except GroqError as e:
         msg = str(e)
         if "429" in msg:
@@ -268,7 +250,7 @@ async def create_docx_from_quiz_results(
             doc.add_paragraph(_clean_markdown_text_for_docx(option), style='List Bullet')
 
         doc.add_paragraph(f"Your Answer: {_clean_markdown_text_for_docx(user_choice) if user_choice else '(No answer)'}")
-        doc.add_paragraph(f"Correct Answer: {_clean_markdown_text_for_docx(q.get('correct_answer', q['options'][q['correct_option_index']]))}")
+        doc.add_paragraph(f"Correct Answer: {_clean_markdown_text_for_docx(q['answer'])}")
         doc.add_paragraph("Explanation:")
         explanation_text = q['explanation']
         for exp_line in explanation_text.split('\n'):
@@ -427,22 +409,11 @@ async def save_shared_quiz_submission(
 
         score = 0
         for idx, q in enumerate(quiz_data):
-            # Get the user's selected option INDEX from their answers
-            user_answer_idx = user_answers.get(str(idx))
-            
-            # Get the correct answer index from the quiz data
-            correct_idx = q.get('correct_option_index')
-            
-            # Compare indices (converting user answer to int if it's a string)
-            try:
-                if user_answer_idx is not None:
-                    user_answer_idx = int(user_answer_idx)
-                    if user_answer_idx == correct_idx:
-                        score += 1
-            except (ValueError, TypeError):
-                # Invalid answer format, count as wrong
-                logger.warning(f"Invalid answer format for question {idx}: {user_answer_idx}")
-                continue
+            user_selected_label = user_answers.get(str(idx), "").strip()
+            correct_answer = q.get('answer', '').strip()
+
+            if user_selected_label.lower() == correct_answer.lower():
+                score += 1
 
         grade, remark, percentage = calculate_grade(score, total_questions)
 
@@ -457,7 +428,7 @@ async def save_shared_quiz_submission(
             "grade": grade,
             "submitted_at": datetime.datetime.utcnow().isoformat() + "Z"
         }
-
+        
         try:
             response = supabase.table("shared_quiz_submissions").insert(submission_data).execute()
 
