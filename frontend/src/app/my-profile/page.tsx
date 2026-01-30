@@ -424,7 +424,7 @@ const MyProfilePage = () => {
                     </div>
                 </div>
 
-                <button type="submit" disabled={savingProfile} className={styles.saveButton}>
+                <button type="submit" disabled={savingProfile} className={styles.saveButton}> style={loading ? { color: 'black', opacity: 1 } : {}}
                     {savingProfile ? 'Saving...' : 'Save Profile'}
                 </button>
             </form>
