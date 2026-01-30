@@ -118,3 +118,23 @@ async def update_password(supabase: Client, access_token: str, refresh_token: st
     except Exception as e:
         logger.error(f"Error updating password: {e}", exc_info=True)
         return {"success": False, "message": f"Failed to update password: {e}"}
+
+async def get_user_profile(supabase: Client, user_id: str) -> Dict[str, Any]:
+    try:
+        response = supabase.table("profiles").select("*").eq("id", user_id).single().execute()
+        if response.data:
+            return {"success": True, "data": response.data}
+        return {"success": False, "message": "Profile not found"}
+    except Exception as e:
+        logger.error(f"Error getting user profile: {e}")
+        return {"success": False, "message": str(e)}
+
+async def update_user_profile(supabase: Client, user_id: str, profile_data: Dict[str, Any]) -> Dict[str, Any]:
+    try:
+        response = supabase.table("profiles").update(profile_data).eq("id", user_id).execute()
+        if response.data:
+            return {"success": True, "data": response.data}
+        return {"success": False, "message": "Failed to update profile"}
+    except Exception as e:
+        logger.error(f"Error updating user profile: {e}")
+        return {"success": False, "message": str(e)}

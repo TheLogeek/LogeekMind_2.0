@@ -76,15 +76,7 @@ const MyProfilePage = () => {
             setUser(currentUser);
 
             try {
-                const { data, error: fetchError } = await AuthService.supabase.from('profiles')
-                    .select('*')
-                    .eq('id', currentUser.id)
-                    .single();
-
-                if (fetchError) {
-                    throw fetchError;
-                }
-
+                const data = await AuthService.getUserProfile();
                 setProfile(data);
                 // Initialize form fields with fetched data
                 setFirstName(data.first_name || '');
@@ -168,31 +160,21 @@ const MyProfilePage = () => {
         }
 
         try {
-            const { data, error: updateError } = await AuthService.supabase.from('profiles')
-                .update({
-                    first_name: firstName || null,
-                    last_name: lastName || null,
-                    institution_name: institutionName || null,
-                    faculty: faculty || null,
-                    department: department || null,
-                    level_class: levelClass || null,
-                })
-                .eq('id', user.id);
-
-            if (updateError) {
-                throw updateError;
-            }
-
-            setSuccessMessage('Profile updated successfully!');
-            // Update local profile state
-            setProfile(prev => ({
-                ...prev!,
+            const updatedProfile = {
                 first_name: firstName || null,
                 last_name: lastName || null,
                 institution_name: institutionName || null,
                 faculty: faculty || null,
                 department: department || null,
                 level_class: levelClass || null,
+            };
+            await AuthService.updateUserProfile(updatedProfile);
+
+            setSuccessMessage('Profile updated successfully!');
+            // Update local profile state
+            setProfile(prev => ({
+                ...prev!,
+                ...updatedProfile,
             }));
 
         } catch (err: any) {

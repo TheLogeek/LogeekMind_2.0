@@ -233,12 +233,32 @@ const getAccessToken = (): string | null => {
     return activeStorage?.getItem("accessToken") || null;
 };
 
+const getUserProfile = async () => {
+    const token = getAccessToken();
+    if (!token) throw new Error("No access token found");
+    const response = await axios.get(`${API_BASE_URL}/auth/profile`, {
+        headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.data;
+};
+
+const updateUserProfile = async (profileData: any) => {
+    const token = getAccessToken();
+    if (!token) throw new Error("No access token found");
+    const response = await axios.put(`${API_BASE_URL}/auth/profile`, profileData, {
+        headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.data;
+};
+
 const AuthService = {
     register,
     login,
     logout,
     getCurrentUser,
-    getAccessToken
+    getAccessToken,
+    getUserProfile,
+    updateUserProfile,
 };
 
 export default AuthService;

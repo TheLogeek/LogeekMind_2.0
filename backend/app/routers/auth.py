@@ -32,12 +32,50 @@ class ResetPasswordRequest(BaseModel):
     access_token: str # Expect access_token from frontend in body
     refresh_token: str # Expect refresh_token from frontend in body
 
+class ProfileUpdateRequest(BaseModel):
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    institution_name: Optional[str] = None
+    faculty: Optional[str] = None
+    department: Optional[str] = None
+    level_class: Optional[str] = None
+
 class AuthResponse(BaseModel):
     success: bool
     message: str
     user: Dict[str, Any] | None = None
     profile: Dict[str, Any] | None = None
     session: Dict[str, Any] | None = None
+    
+@router.get("/profile")
+async def get_profile(current_user: Dict[str, Any] = Depends(get_current_user_from_supabase_jwt), supabase: Client = Depends(get_supabase_client)):
+    user_id = current_user.get("id")
+    if not user_id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate credentials")
+    
+    result = await auth_service.get_user_profile(supabase, user_id)
+    if not result["success"]:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=result.get("message"))
+    
+    return result["data"]
+
+@router.put("/profile")
+async def update_profile(
+    request: ProfileUpdateRequest, 
+    current_user: Dict[str, Any] = Depends(get_current_user_from_supabase_jwt), 
+    supabase: Client = Depends(get_supabase_client)
+):
+    user_id = current_user.get("id")
+    if not user_id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate credentials")
+        
+    profile_data = request.dict(exclude_unset=True)
+    
+    result = await auth_service.update_user_profile(supabase, user_id, profile_data)
+    if not result["success"]:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=result.get("message"))
+    
+    return result["data"]
 
 @router.post("/signup", response_model=AuthResponse)
 async def signup_route(request: SignUpRequest, supabase: Client = Depends(get_supabase_client)):
