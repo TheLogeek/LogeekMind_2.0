@@ -213,6 +213,8 @@
   .gpaCalculatorPageContainer {
     margin: var(--spacing-lg) auto;
     padding: var(--spacing-lg);
+    width: 95%; /* Ensure container itself fits */
+    box-sizing: border-box;
   }
 
   .gpaCalculatorPageContainer h2 {
@@ -224,34 +226,43 @@
     margin-bottom: var(--spacing-xl);
   }
 
+  /* Stack inputs vertically */
   .courseInputGridHeader,
   .courseInputRow {
-    grid-template-columns: 1fr; /* Stack elements vertically */
-    gap: var(--spacing-xs);
+    grid-template-columns: 1fr;
+    gap: var(--spacing-sm);
+    display: grid;
   }
 
+  /* Hide header labels on mobile as they don't align with stacked inputs */
+  .courseInputGridHeader {
+    display: none;
+  }
+
+  /* Make all inputs full width and safe from overflow */
   .courseInputRow input[type="text"],
   .courseInputRow select,
   .courseInputRow input[type="number"] {
-    padding: 10px 12px; /* Slightly less padding */
+    width: 100%;
+    padding: 12px;
+    box-sizing: border-box; /* Crucial for alignment */
     font-size: var(--font-size-md);
   }
-  
-  .courseInputGridHeader div, .courseInputRow div, .courseInputRow button {
-    grid-column: 1 / -1;
-    width: 100%;
-  }
 
-  .removeCourseButton {
-    padding: 10px;
-    margin-top: var(--spacing-sm);
-    justify-self: end; /* Align to the end of the grid cell */
-    width: auto; /* Allow button to size according to its content */
+  /* FIX: Target the button specifically, keep it full width, but fix the math */
+  .courseInputRow .removeCourseButton {
+    width: 100%; /* Keep it looking consistent with inputs */
+    box-sizing: border-box; /* Include padding in the 100% calculation */
+    padding: 12px;
+    margin-top: var(--spacing-xs);
+    grid-column: 1 / -1; /* Ensure it takes full space */
   }
 
   .addCourseButton, .calculateButton {
     padding: 12px 20px;
     font-size: var(--font-size-lg);
+    width: 100%;
+    box-sizing: border-box;
   }
 
   .gpaResultOutput {
@@ -262,7 +273,7 @@
     font-size: 2em;
   }
 
-  .addCourseButton, .calculateButton, .resetButton {
+  .resetButton {
     width: 100%;
     box-sizing: border-box;
   }
