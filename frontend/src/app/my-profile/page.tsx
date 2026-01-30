@@ -419,7 +419,7 @@ const MyProfilePage = () => {
                             type="text"
                             value={levelClass}
                             onChange={(e) => setLevelClass(e.target.value)}
-                            placeholder="e.g., Year 3 / Freshman"
+                            placeholder="e.g., 100 level / Year 3"
                         />
                     </div>
                 </div>
