@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import FeatureCard from '../components/FeatureCard';
 import styles from './HomePage.module.css';
-import AuthService from './../../services/AuthService'; // Import AuthService
+import AuthService from '../services/AuthService'; // Import AuthService
 
 interface Feature {
     icon: string;
