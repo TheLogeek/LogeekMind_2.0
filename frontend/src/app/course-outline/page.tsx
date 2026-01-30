@@ -27,11 +27,21 @@ const CourseOutlinePage = () => {
     });
 
     useEffect(() => {
-        const fetchUser = async () => {
+        const fetchUserAndProfile = async () => {
             const user = await AuthService.getCurrentUser();
             setCurrentUser(user);
+            if (user) {
+                try {
+                    const userProfile = await AuthService.getUserProfile();
+                    if (userProfile && userProfile.institution_name) {
+                        setUniversityName(userProfile.institution_name);
+                    }
+                } catch (error) {
+                    console.error("Error fetching user profile for course outline:", error);
+                }
+            }
         };
-        fetchUser();
+        fetchUserAndProfile();
         const savedOutline = sessionStorage.getItem('course_outline_outline');
         const savedInputs = sessionStorage.getItem('course_outline_inputs');
         if (savedOutline) {
@@ -41,7 +51,10 @@ const CourseOutlinePage = () => {
             const { courseFullName, courseCode, universityName } = JSON.parse(savedInputs);
             setCourseFullName(courseFullName || '');
             setCourseCode(courseCode || '');
-            setUniversityName(universityName || '');
+            // Only set universityName from savedInputs if it's not already set by profile
+            if (!universityName) { 
+                setUniversityName(universityName || '');
+            }
         }
     }, []);
 
