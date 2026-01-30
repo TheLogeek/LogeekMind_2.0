@@ -539,8 +539,8 @@ const ExamSimulatorPage = () => {
                         </div>
                     )}
                     <button type="submit" disabled={loading || !courseName.trim() || (selectedSource === 'topic' && !topic?.trim()) || (selectedSource === 'notes' && !lectureNotesContent.trim()) || (!currentUser && guestUsageCount >= GUEST_EXAM_LIMIT)}
-style={loading ? { color: 'black', opacity: 1 } : {}}
- className={styles.startButton}> 
+ className={styles.startButton}
+style={loading ? { color: 'black', opacity: 1 } : {}}> 
                         {loading ? 'Preparing Exam...' : 'Start Exam'}
                     {!currentUser && (
                         <div className={styles.guestMessage}><p>{`You have used ${guestUsageCount} of ${GUEST_EXAM_LIMIT} guest exams.`} Please <a href="/login">Login</a> or <a href="/signup">Sign Up</a> for unlimited access.</p></div>
