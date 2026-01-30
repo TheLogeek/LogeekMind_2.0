@@ -68,7 +68,7 @@ Ensure your response is clear, concise, and directly addresses the student's per
         response = None
         models = [
             "llama-3.1-8b-instant", # Prioritize faster models for insights
-            "mixtral-8x7b-32768"
+            "llama3-8b-8192"
         ]
 
         for model in models:
