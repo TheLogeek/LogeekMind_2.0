@@ -233,12 +233,38 @@ const getAccessToken = (): string | null => {
     return activeStorage?.getItem("accessToken") || null;
 };
 
+const updateProfile = async (profileData: Partial<UserProfile>): Promise<{ success: boolean; message?: string; profile?: UserProfile }> => {
+    try {
+        const accessToken = getAccessToken();
+        if (!accessToken) {
+            return { success: false, message: "Not authenticated" };
+        }
+        const response = await axios.patch(`${API_BASE_URL}/user-dashboard/profile`, profileData, {
+            headers: {
+                Authorization: `Bearer ${accessToken}`,
+            },
+        });
+        if (response.data.success && response.data.profile) {
+            // Update profile in storage
+            const activeStorage = getActiveStorage();
+            if (activeStorage) {
+                activeStorage.setItem("profile", JSON.stringify(response.data.profile));
+            }
+        }
+        return response.data;
+    } catch (error) {
+        console.error("Update profile API error:", error);
+        return { success: false, message: "Failed to update profile." };
+    }
+};
+
 const AuthService = {
     register,
     login,
     logout,
     getCurrentUser,
-    getAccessToken
+    getAccessToken,
+    updateProfile,
 };
 
 export default AuthService;
