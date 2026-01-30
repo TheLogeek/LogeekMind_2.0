@@ -1,10 +1,11 @@
 'use client';
 
-import React from 'react';
-import Link from 'next/link'; // Use Link from next/link
-import { useRouter } from 'next/navigation'; // Use useRouter from next/navigation
-import FeatureCard from '../components/FeatureCard'; // Adjust path for new structure
-import styles from './HomePage.module.css'; // Import the CSS Module
+import React, { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import FeatureCard from '../components/FeatureCard';
+import styles from './HomePage.module.css';
+import AuthService from '../../services/AuthService'; // Import AuthService
 
 interface Feature {
     icon: string;
@@ -15,6 +16,28 @@ interface Feature {
 
 const HomePage = () => {
     const router = useRouter();
+    const [currentUser, setCurrentUser] = useState<any>(null);
+    const featureSectionRef = useRef<HTMLElement>(null);
+
+    useEffect(() => {
+        const fetchUser = async () => {
+            const user = await AuthService.getCurrentUser();
+            setCurrentUser(user);
+        };
+        fetchUser();
+    }, []);
+
+    const handleGetStartedClick = () => {
+        if (currentUser) {
+            // User is logged in, scroll to features
+            if (featureSectionRef.current) {
+                featureSectionRef.current.scrollIntoView({ behavior: 'smooth' });
+            }
+        } else {
+            // User is a guest, redirect to signup
+            router.push('/signup');
+        }
+    };
 
     const AI_LEARNING_FEATURES: Feature[] = [
         { icon: " ", title: "AI Teacher", description: "Get interactive explanations and practice on any topic.", linkTo: "/ai-teacher" },
@@ -47,7 +70,7 @@ const HomePage = () => {
                 </p>
                 <div className={styles.heroButtons}>
                     <button
-                        onClick={() => router.push('/signup')} // Use router.push
+                        onClick={handleGetStartedClick}
                         className={styles.heroButtonPrimary}
                     >
                         Get Started - It's Free!
@@ -62,7 +85,7 @@ const HomePage = () => {
             </section>
 
             {/* Feature Sections */}
-            <section className={styles.featureSections}>
+            <section className={styles.featureSections} ref={featureSectionRef}>
                 <h2 className={styles.featureSectionTitle}> Powering Your Learning Journey</h2>
 
                 <div className={styles.featureCategory}>
@@ -112,7 +135,7 @@ const HomePage = () => {
                     </a>
                 </div>
                 <button
-                    onClick={() => router.push('/signup')} // Use router.push
+                    onClick={handleGetStartedClick}
                     className={styles.ctaButton}
                 >
                     Start Your Free Journey Now!
