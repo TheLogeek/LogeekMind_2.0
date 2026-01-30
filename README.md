@@ -1,11 +1,10 @@
 # 🧠 LogeekMind v2.0
 **Your All-in-One AI-Powered Academic Assistant**
 
-Welcome to the official repository for **LogeekMind v2.0**, a powerful, open-source learning platform designed to help students and learners study smarter, not harder.
+LogeekMind v2.0 is a powerful learning platform designed to help students and learners study smarter, not harder.
 
 ---
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Stars](https://img.shields.io/github/stars/TheLogeek/LogeekMind_2.0?style=social)](https://github.com/TheLogeek/LogeekMind_2.0/stargazers)
 
 ## 🚀 About The Project
@@ -94,24 +93,9 @@ Please refer to the README file in each directory for detailed deployment instru
 
 ---
 
-## 🤝 Contributing
-
-Contributions are what make the open source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
-
-If you have a suggestion that would make this better, please fork the repo and create a pull request. You can also simply open an issue with the tag "enhancement".
-Don't forget to give the project a star! Thanks again!
-
-1.  Fork the Project
-2.  Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3.  Commit your Changes (`git commit -m 'feat: Add some AmazingFeature'`)
-4.  Push to the Branch (`git push origin feature/AmazingFeature`)
-5.  Open a Pull Request
-
----
-
 ## 📄 License
 
-This project is licensed under the MIT License. See the `LICENSE` file for details.
+This project is proprietary. All rights are reserved by Solomon Adenuga (Logeek). Unauthorized copying, reproduction, or distribution of this code, in whole or in part, is strictly prohibited.
 
 ---
 
