@@ -109,7 +109,7 @@ Number of Questions: {num_questions}.
 CRITICAL INSTRUCTIONS:
 {options_instructions}
 - Each question must have a "question", "options", "answer", and "explanation".
-- IMPORTANT: Never included a True/False question in a multiple choice quiz and never include a multiple choice question in a True/False quiz
+- IMPORTANT: Never include a True/False question in a multiple choice quiz and never include a multiple choice question in a True/False quiz
 - For mathematical questions, do NOT use LaTeX commands. Provide a detailed step-by-step solution in the "explanation".
 
 OUTPUT FORMAT (STRICT):
@@ -140,8 +140,9 @@ Example for true-false:
   }}
 ]
 
-LAST INSTRUCTION:
-I CAN'T STRESS THIS ENOUGH,IN ALL YOU DO ENSURE MAXIMUM ACCURACY,THE CORRECT ANSWERS YOU PROVIDE MUST BE ACCURATE AND CORRECT, MAKE SURE YOU'VE PROPERLY DEDUCED THAT THE CORRECT ANSWER IS TRULY CORRECT
+LAST INSTRUCTIONS:
+THERE CAN ONLY BE ONE CORRECT ANSWER.
+I CAN'T STRESS THIS ENOUGH,IN ALL YOU DO ENSURE MAXIMUM ACCURACY,THE CORRECT ANSWERS YOU PROVIDE MUST BE ACCURATE AND CORRECT, MAKE SURE YOU'VE PROPERLY DEDUCED THAT THE CORRECT ANSWER IS TRULY CORRECT.
 
 Now generate {num_questions} questions following this EXACT format:
 """
