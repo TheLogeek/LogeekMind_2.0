@@ -75,18 +75,31 @@ const MyProfilePage = () => {
             }
             setUser(currentUser);
 
-            if (currentUser.profile) {
-                setProfile(currentUser.profile as UserProfile);
-                // Initialize form fields with fetched data
-                setFirstName((currentUser.profile as any).first_name || '');
-                setLastName((currentUser.profile as any).last_name || '');
-                setInstitutionName((currentUser.profile as any).institution_name || '');
-                setFaculty((currentUser.profile as any).faculty || '');
-                setDepartment((currentUser.profile as any).department || '');
-                setLevelClass((currentUser.profile as any).level_class || '');
-            }
-            setLoadingProfile(false);
+            try {
+                const { data, error: fetchError } = await AuthService.supabase.from('profiles')
+                    .select('*')
+                    .eq('id', currentUser.id)
+                    .single();
 
+                if (fetchError) {
+                    throw fetchError;
+                }
+
+                setProfile(data);
+                // Initialize form fields with fetched data
+                setFirstName(data.first_name || '');
+                setLastName(data.last_name || '');
+                setInstitutionName(data.institution_name || '');
+                setFaculty(data.faculty || '');
+                setDepartment(data.department || '');
+                setLevelClass(data.level_class || '');
+
+            } catch (err: any) {
+                console.error("Error fetching profile:", err.message);
+                setProfileError('Failed to load profile data.');
+            } finally {
+                setLoadingProfile(false);
+            }
         };
 
         fetchUserAndProfile();
@@ -155,27 +168,33 @@ const MyProfilePage = () => {
         }
 
         try {
-            const result = await AuthService.updateProfile({
+            const { data, error: updateError } = await AuthService.supabase.from('profiles')
+                .update({
+                    first_name: firstName || null,
+                    last_name: lastName || null,
+                    institution_name: institutionName || null,
+                    faculty: faculty || null,
+                    department: department || null,
+                    level_class: levelClass || null,
+                })
+                .eq('id', user.id);
+
+            if (updateError) {
+                throw updateError;
+            }
+
+            setSuccessMessage('Profile updated successfully!');
+            // Update local profile state
+            setProfile(prev => ({
+                ...prev!,
                 first_name: firstName || null,
                 last_name: lastName || null,
                 institution_name: institutionName || null,
                 faculty: faculty || null,
                 department: department || null,
                 level_class: levelClass || null,
-            });
+            }));
 
-            if (!result.success) {
-                throw new Error(result.message || 'Failed to update profile.');
-            }
-
-            setSuccessMessage('Profile updated successfully!');
-            if (result.profile) {
-                // Update local profile state from the response
-                 setProfile(prev => ({
-                    ...prev!,
-                    ...result.profile
-                }));
-            }
         } catch (err: any) {
             console.error("Error saving profile:", err.message);
             setProfileError('Failed to save profile changes.');
