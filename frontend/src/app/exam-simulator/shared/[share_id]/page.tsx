@@ -426,9 +426,9 @@ const SharedExamPage = () => {
                                         <input
                                             type="radio"
                                             name={`question-${qIndex}`}
-                                            value={option}
-                                            checked={userAnswers[qIndex] === option}
-                                            onChange={() => handleAnswerChange(qIndex, option)}
+                                            value={String.fromCharCode(65 + oIndex)}
+                                            checked={userAnswers[qIndex] === String.fromCharCode(65 + oIndex)}
+                                            onChange={() => handleAnswerChange(qIndex, String.fromCharCode(65 + oIndex))}
                                         />
                                         <MarkdownRenderer content={option} inline={true} />
                                     </label>

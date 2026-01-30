@@ -368,7 +368,7 @@ style={loading ? { color: 'black', opacity: 1 } : {}}>
                                 {q.options.map((option: string, oIndex: number) => (
                                     <div key={oIndex} className={styles.optionItem}>
                                         <label>
-                                            <input type="radio" name={`question-${qIndex}`} value={option} checked={userAnswers[qIndex] === option} onChange={() => handleAnswerChange(qIndex, option)} />
+                                            <input type="radio" name={`question-${qIndex}`} value={quizType === "Multiple Choice" ? String.fromCharCode(65 + oIndex) : option} checked={userAnswers[qIndex] === (quizType === "Multiple Choice" ? String.fromCharCode(65 + oIndex) : option)} onChange={() => handleAnswerChange(qIndex, quizType === "Multiple Choice" ? String.fromCharCode(65 + oIndex) : option)} />
                                             <MarkdownRenderer content={option} inline={true} />
                                         </label>
                                     </div>

@@ -315,7 +315,7 @@ def calculate_grade(score: int, total: int) -> Tuple[str, str, float]:
     if total == 0:
         return "N/A", "No questions graded.", 0.0
 
-    percentage = (score / total) * 100
+    percentage = round((score / total) * 100, 2)
     if percentage >= 70:
         return "A", "Excellent! Distinction level.", percentage
     elif percentage >= 60:

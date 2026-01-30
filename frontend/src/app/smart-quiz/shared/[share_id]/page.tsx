@@ -470,9 +470,9 @@ const SharedQuizPage = () => {
                                         <input
                                             type="radio"
                                             name={`question-${qIndex}`}
-                                            value={option}
-                                            checked={userAnswers[qIndex] === option}
-                                            onChange={() => handleAnswerChange(qIndex, option)}
+                                            value={q.options.length === 4 ? String.fromCharCode(65 + oIndex) : option}
+                                            checked={userAnswers[qIndex] === (q.options.length === 4 ? String.fromCharCode(65 + oIndex) : option)}
+                                            onChange={() => handleAnswerChange(qIndex, q.options.length === 4 ? String.fromCharCode(65 + oIndex) : option)}
                                         />
                                         <MarkdownRenderer content={option} inline={true} />
                                     </label>
