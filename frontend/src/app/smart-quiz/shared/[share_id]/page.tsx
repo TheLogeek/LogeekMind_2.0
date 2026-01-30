@@ -241,8 +241,7 @@ const SharedQuizPage = () => {
             quiz_topic: sharedQuiz.title,
             user_score: submissionResults.score,
             total_questions: submissionResults.total_questions,
-            quiz_data: sharedQuiz.quiz_data, // Pass the original quiz data
-            user_answers: userAnswers,      // Pass the user's answers as a separate field
+            quiz_data: quizContext,
         };
 
         const response = await axios.post(`${API_BASE_URL}/ai-insights/quiz`, payload, { headers });
