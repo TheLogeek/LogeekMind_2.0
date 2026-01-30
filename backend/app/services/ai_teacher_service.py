@@ -102,7 +102,7 @@ async def generate_ai_teacher_response(
         response = None
         models = [
             "llama-3.1-8b-instant",
-            "mixtral-8x7b-32768"
+            "llama3-8b-8192"
         ]
 
         for model in models:
