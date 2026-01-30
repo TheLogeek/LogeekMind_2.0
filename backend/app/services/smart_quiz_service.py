@@ -144,7 +144,7 @@ Now generate {num_questions} questions following this EXACT format:
 
     try:
         response = None
-        models = ["llama-3.1-8b-instant", "mixtral-8x7b-32768"]
+        models = ["llama-3.1-8b-instant", "llama3-8b-8192"]
 
         for model in models:
             try:
