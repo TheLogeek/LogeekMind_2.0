@@ -51,48 +51,6 @@ This project is built with a modern, decoupled architecture.
 
 ---
 
-## 🏁 Getting Started
-
-To run this project locally, you need to set up and run both the frontend and backend servers simultaneously.
-
-### Prerequisites
--   Node.js and npm
--   Python 3.10+ and pip
--   A Supabase account (for database and auth)
--   A Google Gemini API Key
--   Ffmpeg
-
-### Installation & Setup
-
-#### 1. Backend Setup
-Navigate to the backend directory and follow the instructions in its README file.
-
-```sh
-cd backend
-```
-> **[View Backend README](./backend/README.md)**
-
-#### 2. Frontend Setup
-In a separate terminal, navigate to the frontend directory and follow the setup instructions.
-
-```sh
-cd frontend
-```
-> **[View Frontend README](./frontend/README.md)**
-
----
-
-## 🚀 Deployment
-
-The two parts of this application are deployed independently:
-
--   The **frontend** is designed for a seamless deployment on **[Vercel](https://vercel.com/)**.
--   The **backend** can be deployed on any platform that supports Python web servers, such as **[Render](https://render.com/)** or Heroku.
-
-Please refer to the README file in each directory for detailed deployment instructions.
-
----
-
 ## 📄 License
 
 This project is proprietary. All rights are reserved by Solomon Adenuga (Logeek). Unauthorized copying, reproduction, or distribution of this code, in whole or in part, is strictly prohibited.
