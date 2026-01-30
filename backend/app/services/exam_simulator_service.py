@@ -337,7 +337,7 @@ async def generate_exam_questions(
         return {"success": False, "message": error_message}
     
     # Test which model is available
-    models = ["llama-3.1-8b-instant", "mixtral-8x7b-32768"]
+    models = ["llama-3.1-8b-instant", "llama3-8b-8192"]
     working_model = None
     
     for model in models:
