@@ -241,7 +241,7 @@ style={loading ? { color: 'black', opacity: 1 } : {}}
                     <button type="button" onClick={handleNewSchedule} className={styles.newScheduleButton}>Generate New Schedule</button>
                     {currentUser && (
                         <div>
-                            <button onClick={handleSaveSchedule} disabled={isSaving} className={styles.generateButton}>
+                            <button onClick={handleSaveSchedule} disabled={isSaving} className={styles.addSubjectButton}>
                                 {isSaving ? 'Saving...' : 'Save to My Profile'}
                             </button>
                             {saveSuccess && <p className={styles.successMessage}>Schedule saved successfully!</p>}
