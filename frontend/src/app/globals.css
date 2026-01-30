@@ -39,6 +39,31 @@
   --font-size-h4: 1.5em;
 
   --navbar-height: 60px; /* Define Navbar height */
+
+  /* Profile Page Specific Variables (derived from existing theme) */
+  --primary-color: #0056b3; /* A strong blue, derived from primary-gradient-start */
+  --primary-color-rgb: 0, 86, 179; /* RGB values for --primary-color */
+  --primary-color-dark: #004085; /* A darker shade for hover states */
+  
+  --background-light: var(--bg-light);
+  --background-card: var(--bg-white);
+  --input-background: var(--bg-white);
+  --input-disabled-background: #e9ecef; /* Light grey for disabled inputs */
+
+  --text-color-primary: var(--text-dark);
+  --text-color-secondary: var(--text-medium);
+  --text-color-disabled: var(--text-light);
+  --button-text-color: #ffffff; /* White text on primary buttons */
+
+  --border-color: var(--border-medium);
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
+
+  --success-background: #d4edda;
+  --success-text: #155724;
+  --error-background: #f8d7da;
+  --error-text: #721c24;
 }
 
 @theme inline {

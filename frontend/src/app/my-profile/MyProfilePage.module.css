@@ -1,0 +1,280 @@
+.myProfilePageContainer {
+    max-width: 900px;
+    margin: 40px auto;
+    padding: 30px;
+    background-color: var(--background-light); /* Assuming a light background from global styles */
+    border-radius: 12px;
+    box-shadow: var(--shadow-md); /* Assuming shadow variable from global styles */
+    color: var(--text-color-primary); /* Assuming primary text color */
+}
+
+.pageTitle {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--primary-color); /* Assuming a primary brand color */
+    text-align: center;
+    margin-bottom: 10px;
+}
+
+.subtitle {
+    font-size: 1.1rem;
+    color: var(--text-color-secondary); /* Assuming a secondary text color */
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.formSection {
+    background-color: var(--background-card); /* Lighter background for sections */
+    border-radius: 8px;
+    padding: 25px;
+    margin-bottom: 30px;
+    box-shadow: var(--shadow-sm); /* Subtle shadow for sections */
+}
+
+.sectionTitle {
+    font-size: 1.8rem;
+    font-weight: 600;
+    color: var(--text-color-primary);
+    margin-bottom: 20px;
+    border-bottom: 1px solid var(--border-color); /* Subtle separator */
+    padding-bottom: 10px;
+}
+
+.formGroup {
+    margin-bottom: 20px;
+}
+
+.formGroup label {
+    display: block;
+    font-size: 0.95rem;
+    color: var(--text-color-secondary);
+    margin-bottom: 8px;
+    font-weight: 500;
+}
+
+.formGroup input[type="text"],
+.formGroup input[type="email"] {
+    width: 100%;
+    padding: 12px 15px;
+    border: 1px solid var(--border-color); /* Assuming a border color */
+    border-radius: 8px;
+    background-color: var(--input-background); /* Input specific background */
+    color: var(--text-color-primary);
+    font-size: 1rem;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.formGroup input[type="text"]:focus,
+.formGroup input[type="email"]:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(var(--primary-color-rgb), 0.2); /* Soft focus ring */
+    outline: none;
+}
+
+.disabledInput {
+    background-color: var(--input-disabled-background); /* Grey out disabled inputs */
+    color: var(--text-color-disabled);
+    cursor: not-allowed;
+}
+
+.saveButton {
+    display: block;
+    width: 100%;
+    padding: 14px 20px;
+    background-color: var(--primary-color);
+    color: var(--button-text-color); /* Assuming a button text color */
+    border: none;
+    border-radius: 8px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    margin-top: 30px;
+}
+
+.saveButton:hover:not(:disabled) {
+    background-color: var(--primary-color-dark); /* Darker shade on hover */
+    transform: translateY(-2px);
+}
+
+.saveButton:disabled {
+    background-color: var(--button-disabled-background); /* Greyed out disabled button */
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+.successMessage {
+    background-color: var(--success-background); /* Greenish background for success */
+    color: var(--success-text);
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    text-align: center;
+    font-weight: 500;
+}
+
+.errorText {
+    background-color: var(--error-background); /* Reddish background for error */
+    color: var(--error-text);
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    text-align: center;
+    font-weight: 500;
+}
+
+.loadingState, .errorState {
+    text-align: center;
+    padding: 50px;
+    font-size: 1.2rem;
+    color: var(--text-color-secondary);
+}
+
+.dashboardSection {
+    margin-top: 40px;
+    padding: 25px;
+    background-color: var(--background-card);
+    border-radius: 8px;
+    box-shadow: var(--shadow-sm);
+    text-align: center;
+}
+
+.dashboardSection p {
+    color: var(--text-color-secondary);
+    margin-bottom: 15px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .myProfilePageContainer {
+        margin: 20px auto;
+        padding: 20px;
+    }
+
+    .pageTitle {
+        font-size: 2rem;
+    }
+
+    .sectionTitle {
+        font-size: 1.5rem;
+    }
+
+    .saveButton {
+        font-size: 1rem;
+        padding: 12px 15px;
+    }
+}
+
+
+/* DashboardPage.module.css styles integrated */
+.dashboardContent { /* Renamed from .dashboardPageContainer */
+    max-width: 1200px;
+    margin: var(--spacing-lg) auto;
+    padding: var(--spacing-md);
+    text-align: left; /* Override text-align: center from .dashboardSection */
+}
+
+.dashboardContent h2 {
+    text-align: center;
+    margin-bottom: var(--spacing-xl);
+}
+
+.loadingMessage, .errorMessage {
+    text-align: center;
+    font-size: var(--font-size-lg);
+    padding: var(--spacing-xl);
+}
+
+.errorMessage {
+    color: var(--error-text); /* Using mapped error variable */
+}
+
+.metricsGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-xxl);
+}
+
+.metricCard {
+    background: var(--background-light); /* Using mapped background variable */
+    padding: var(--spacing-lg);
+    border-radius: 10px;
+    text-align: center;
+    box-shadow: var(--shadow-sm); /* Using mapped shadow variable */
+}
+
+.metricCard h4 {
+    margin: 0 0 10px 0;
+    color: var(--text-color-secondary); /* Using mapped text variable */
+}
+
+.metricCard p {
+    font-size: 2.5em;
+    font-weight: bold;
+    color: var(--primary-color); /* Using mapped primary color */
+    margin: 0;
+}
+
+.chartGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: var(--spacing-xl);
+    margin-bottom: var(--spacing-xxl);
+}
+
+.chartContainer {
+    background: var(--background-card); /* Using mapped background variable */
+    padding: var(--spacing-md);
+    border-radius: 10px;
+    box-shadow: var(--shadow-sm); /* Using mapped shadow variable */
+}
+
+.chartContainer h3 {
+    text-align: center;
+    margin-bottom: var(--spacing-md);
+}
+
+.tableContainer {
+    margin-top: var(--spacing-xxl);
+}
+
+.tableContainer h3 {
+    text-align: center;
+    margin-bottom: var(--spacing-md);
+}
+
+.attemptsTable {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.attemptsTable th, .attemptsTable td {
+    border: 1px solid var(--border-color); /* Using mapped border variable */
+    padding: 12px;
+    text-align: left;
+}
+
+.attemptsTable th {
+    background-color: var(--background-light); /* Using mapped background variable */
+    font-weight: bold;
+}
+
+.viewDashboardButton {
+    display: inline-block;
+    padding: 10px 20px;
+    background-color: var(--primary-color);
+    color: var(--button-text-color);
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    margin-top: 15px; /* Add some space above the button */
+}
+
+.viewDashboardButton:hover {
+    background-color: var(--primary-color-dark);
+    transform: translateY(-1px);
+}

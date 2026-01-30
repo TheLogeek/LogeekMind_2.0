@@ -79,7 +79,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                 )}
             </h2>
             <nav>
-                <Link href="/dashboard" className={getNavLinkClass('/dashboard')} onClick={onClose}>Dashboard</Link>
+                <Link href="/my-profile" className={getNavLinkClass('/my-profile')} onClick={onClose}>My Profile</Link>
                 <hr className={styles.linkSeparator}/>
                 <h4 className={styles.categoryTitle}>AI Tools</h4>
                 <Link href="/ai-teacher" className={getNavLinkClass('/ai-teacher')} onClick={onClose}>AI Teacher</Link>

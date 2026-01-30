@@ -58,7 +58,7 @@ const Navbar: React.FC<NavbarProps> = ({ toggleSidebar, isSidebarOpen }) => {
             {/* Desktop Navigation Links */}
             <div className={styles.navbarNavDesktop}>
                 <Link href="/" className={styles.navLink}>Home</Link>
-                <Link href="/dashboard" className={styles.navLink}>Dashboard</Link>
+                <Link href="/my-profile" className={styles.navLink}>My Profile</Link>
                 <Link href="/contact" className={styles.navLink}>Contact</Link>
                 
             </div>
@@ -101,7 +101,7 @@ const Navbar: React.FC<NavbarProps> = ({ toggleSidebar, isSidebarOpen }) => {
                 <div className={styles.mobileNavContent}>
                     {/* Main Nav Links for Mobile */}
                     <Link href="/" className={styles.navLink} onClick={handleNavLinkClick}>Home</Link>
-                    <Link href="/dashboard" className={styles.navLink} onClick={handleNavLinkClick}>Dashboard</Link>
+                    <Link href="/my-profile" className={styles.navLink} onClick={handleNavLinkClick}>My Profile</Link>
                     <Link href="/contact" className={styles.navLink} onClick={handleNavLinkClick}>Contact</Link>
                     
                     {/* Feature Links for Mobile */}
