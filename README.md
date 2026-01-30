@@ -14,12 +14,13 @@ LogeekMind provides a comprehensive suite of AI-driven tools to help users under
 
 ### ✨ Key Features
 
--   **🧠 AI Teacher**: Get interactive, conversational explanations on any subject at any level.
--   **📝 Content Mastery Suite**: Includes a document summarizer, course outline generator, and lecture-to-text/text-to-audio converters.
--   **📸 Problem-Solving Tools**: Get step-by-step solutions for homework problems with an image-based assistant.
+-   **🧠 AI Teacher (powered by Groq Cloud)**: Get interactive, conversational explanations on any subject at any level.
+-   **📝 Content Mastery Suite (powered by Groq Cloud)**: Includes a document summarizer, course outline generator, and lecture-to-text/text-to-audio converters.
+-   **📸 Homework Assistant (powered by Google Gemini)**: Get step-by-step solutions for homework problems with an image-based assistant.
+-   **💻 Exam Simulator (powered by Groq Cloud)**: Prepare for exams with customizable mock tests.
+-   **💡 Smart Quiz Generator (powered by Groq Cloud)**: Generate interactive quizzes with instant grading and explanations.
 -   **🧮 Academic Utilities**: Plan your study schedule and calculate your GPA with ease.
 -   **💬 Community Chat**: Engage with other learners in a collaborative, real-time chat environment.
--   **💻 Exam Simulator**: Prepare for exams with customizable mock tests.
 
 ---
 
@@ -39,7 +40,7 @@ This project is built with a modern, decoupled architecture.
 -   **Language**: [Python](https://www.python.org/)
 -   **Database**: [PostgreSQL](https://www.postgresql.org/) (managed via [Supabase](https://supabase.com/))
 -   **Authentication**: Supabase Auth
--   **AI**: Google Gemini API
+-   **AI**: [Groq Cloud](https://groq.com/) (Llama-3, Mixtral) for AI Teacher, Course Outline Generator, Summarizer, Exam Simulator, Smart Quiz. [Google Gemini API](https://ai.google.dev/) for Homework Assistant.
 -   **Deployment**: Render
 
 ---

@@ -39,6 +39,14 @@ const TERMS_OF_SERVICE_HTML = `
 <p>You agree that you are responsible for verifying the accuracy and suitability of any generated output.</p>
 <h3>4.4. Indemnification</h3>
 <p>You agree to indemnify and hold LogeekMind harmless for any claims arising from misuse or reliance on AI-generated content.</p>
+<h3>4.5. Third-Party AI Models</h3>
+<p>LogeekMind utilizes advanced artificial intelligence models provided by third parties, specifically Groq Cloud (for features like AI Teacher, Course Outline Generator, Summarizer, Exam Simulator, and Smart Quiz Generator) and Google Gemini API (for the Homework Assistant). While these models are designed to provide accurate and helpful information, their responses are generated probabilistically and are subject to the limitations inherent in current AI technology. By using these features, you acknowledge and agree that:</p>
+<ul>
+    <li>Your input to these features (e.g., prompts, questions, uploaded content) may be processed by these third-party AI providers to generate the requested output.</li>
+    <li>The privacy policies and terms of service of Groq Cloud and Google Gemini may apply to the data processed by their respective models. We encourage you to review their policies for more information on how they handle data.</li>
+    <li>LogeekMind does not control the internal workings or algorithms of these third-party AI models and cannot guarantee the privacy or security of data once it is transmitted to them for processing. We transmit only the data necessary to fulfill your request.</li>
+    <li>You are solely responsible for ensuring that any input content you provide does not violate any third-party rights or applicable laws when processed by these AI models.</li>
+</ul>
 <hr>
 <h2>5. Termination</h2>
 <p>We may suspend or terminate access to the Service, without notice, for:</p>

@@ -44,11 +44,11 @@ const PRIVACY_POLICY_CONTENT_HTML = `
 <p>To deliver core features, your Submitted Content may be shared <em>only</em> with trusted third-party providers:</p>
 <h3>4.1. AI Processing</h3>
 <ul>
-<li><strong>Gemini API (Google)</strong> &rarr; for text generation (quizzes, summaries, explanations)</li>
-<li><strong>Whisper API (OpenAI)</strong> &rarr; for audio-to-text transcription</li>
-<li><strong>gTTS</strong> &rarr; for generating voice output</li>
-</ul>
-<h3>4.2. Storage & Authentication</h3>
+    <li><strong>Groq Cloud</strong> &rarr; for text generation (quizzes, exam questions, summaries, explanations) for AI Teacher, Course Outline Generator, Summarizer, Exam Simulator, and Smart Quiz Generator.</li>
+    <li><strong>Gemini API (Google)</strong> &rarr; for text and image-based interactions for the Homework Assistant.</li>
+    <li><strong>Whisper API (OpenAI)</strong> &rarr; for audio-to-text transcription.</li>
+    <li><strong>gTTS</strong> &rarr; for generating voice output.</li>
+</ul><h3>4.2. Storage & Authentication</h3>
 <ul>
 <li><strong>Supabase</strong> &rarr; stores your account data and optional saved content</li>
 </ul>
