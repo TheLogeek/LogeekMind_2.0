@@ -238,7 +238,7 @@ async def summarize_text_content(text_content: str, user_id: str) -> Tuple[str, 
         # Available models in priority order
         models = [
             "llama-3.1-8b-instant",
-            "mixtral-8x7b-32768"
+            "llama3-8b-8192"
         ]
         
         working_model = None
