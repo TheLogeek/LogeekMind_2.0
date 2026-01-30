@@ -230,21 +230,25 @@ const SharedQuizPage = () => {
 
             const headers = { Authorization: `Bearer ${accessToken}` };
 
+            // FIX: Ensure all required fields are present and properly named
             const quizContext = sharedQuiz.quiz_data.map((q, index) => ({
                 question: q.question,
                 correct_answer: q.answer,
-                user_answer: userAnswers[index] || 'N/A',
+                user_answer: userAnswers[index] || '', // Use empty string instead of 'N/A' to ensure it's always a string
                 is_correct: (userAnswers[index] === q.answer)
             }));
 
-        const payload = {
-            quiz_topic: sharedQuiz.title,
-            user_score: submissionResults.score,
-            total_questions: submissionResults.total_questions,
-            quiz_data: quizContext,
-        };
+            // FIX: Ensure payload matches backend expectation exactly
+            const payload = {
+                quiz_topic: sharedQuiz.title,
+                quiz_data: quizContext, // This must be an array of QuizQuestionContext objects
+                user_score: submissionResults.score || 0, // Ensure it's a number
+                total_questions: submissionResults.total_questions || 0, // Ensure it's a number
+            };
 
-        const response = await axios.post(`${API_BASE_URL}/ai-insights/quiz`, payload, { headers });
+            console.log('AI Insights Payload:', JSON.stringify(payload, null, 2)); // Debug log
+
+            const response = await axios.post(`${API_BASE_URL}/ai-insights/quiz`, payload, { headers });
 
             if (response.data.success) {
                 setAiInsightsContent(response.data.insights);
@@ -263,7 +267,7 @@ const SharedQuizPage = () => {
                 const data = axiosError.response.data;
                 // Handle FastAPI validation errors (422)
                 if (Array.isArray(data.detail)) {
-                    errorMsg = data.detail.map((err: any) => err.msg).join(', ');
+                    errorMsg = data.detail.map((err: any) => `${err.loc?.join('.')}: ${err.msg}`).join(', ');
                 } 
                 // Handle string detail
                 else if (typeof data.detail === 'string') {
