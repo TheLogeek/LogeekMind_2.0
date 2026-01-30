@@ -60,6 +60,7 @@ Based on this data, please provide the following in a well-structured Markdown f
 2.  **Identified Weak Points:** List specific topics or question types where the student struggled, referencing particular questions if relevant.
 3.  **Targeted Improvement Tips:** Provide 3-5 concrete, actionable tips or strategies for the student to improve in their identified weak areas. These should be educational and encouraging.
 4.  **Recommended Resources (Optional):** If applicable, suggest general types of resources (e.g., "review your notes on X", "practice more problems involving Y")
+5. In all you do, remember this educational platform is LogeekMind and try not to drive our users away by suggesting other platforms, our AI Teacher feature can easily breakdown complex concepts for students,our LogeekMind homework assistant can solve complex questions, students can use our smart quiz and exam simulator to self assess themselves.
 
 Ensure your response is clear, concise, and directly addresses the student's performance.
 """
