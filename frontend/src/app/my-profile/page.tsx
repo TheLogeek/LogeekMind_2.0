@@ -20,7 +20,13 @@ interface UserProfile {
     faculty: string | null;
     department: string | null;
     level_class: string | null;
+    study_schedule?: StudySchedule;
     // Add other profile fields if they exist and are relevant to display
+}
+
+interface StudySchedule {
+    schedule: { day: string; study_plan: string }[];
+    totalTimeAllocated: number;
 }
 
 // Interfaces for Performance Dashboard (copied from DashboardPage.tsx)
@@ -65,6 +71,9 @@ const MyProfilePage = () => {
     const [loadingDashboard, setLoadingDashboard] = useState(false); // Only loads when button clicked
     const [dashboardError, setDashboardError] = useState('');
 
+    const [studySchedule, setStudySchedule] = useState<StudySchedule | null>(null);
+    const [showStudySchedule, setShowStudySchedule] = useState(false);
+
     // --- Profile Fetching Effect ---
     useEffect(() => {
         const fetchUserAndProfile = async () => {
@@ -85,6 +94,9 @@ const MyProfilePage = () => {
                 setFaculty(data.faculty || '');
                 setDepartment(data.department || '');
                 setLevelClass(data.level_class || '');
+                if (data.study_schedule) {
+                    setStudySchedule(data.study_schedule);
+                }
 
             } catch (err: any) {
                 console.error("Error fetching profile:", err.message);
@@ -198,6 +210,30 @@ const MyProfilePage = () => {
         return (
             <div className={`${styles.myProfilePageContainer} ${styles.errorState}`}>
                 <p className={styles.errorText}>{profileError}</p>
+            </div>
+        );
+    }
+
+    const renderStudySchedule = () => {
+        if (!studySchedule) {
+            return <p>No study schedule found.</p>;
+        }
+
+        return (
+            <div className={styles.scheduleOutput}>
+                <h3>Your Weekly Study Plan</h3>
+                <p>Total Weekly Study Time Allocated: {studySchedule.totalTimeAllocated} Hours</p>
+                
+                <div className={styles.scheduleGridHeader}>
+                    <div>Day</div>
+                    <div>Study Plan</div>
+                </div>
+                {studySchedule.schedule.map((item, index) => (
+                    <div key={index} className={styles.scheduleItem}>
+                        <div className={styles.scheduleItemDay}>{item.day}</div>
+                        <div>{item.study_plan}</div>
+                    </div>
+                ))}
             </div>
         );
     }
@@ -392,6 +428,17 @@ const MyProfilePage = () => {
                     {savingProfile ? 'Saving...' : 'Save Profile'}
                 </button>
             </form>
+
+            <div className={styles.dashboardSection}>
+                <h2 className={styles.sectionTitle}>My Study Schedule</h2>
+                <button 
+                    onClick={() => setShowStudySchedule(!showStudySchedule)} 
+                    className={styles.viewDashboardButton}
+                >
+                    {showStudySchedule ? 'Hide Study Schedule' : 'View Study Schedule'}
+                </button>
+                {showStudySchedule && renderStudySchedule()}
+            </div>
 
             <div className={styles.dashboardSection}>
                 <h2 className={styles.sectionTitle}>Performance Overview</h2>

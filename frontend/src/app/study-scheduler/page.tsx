@@ -77,6 +77,10 @@ const StudySchedulerPage = () => {
         setSubjects(prevSubjects => prevSubjects.filter(subject => subject.id !== id));
     };
 
+    const [isSaving, setIsSaving] = useState(false);
+    const [saveSuccess, setSaveSuccess] = useState(false);
+    const [saveError, setSaveError] = useState('');
+
     const handleGenerateSchedule = async () => {
         setError('');
         setSchedule(null);
@@ -131,6 +135,24 @@ const StudySchedulerPage = () => {
         }
     };
 
+    const handleSaveSchedule = async () => {
+        if (!currentUser || !schedule) return;
+
+        setIsSaving(true);
+        setSaveSuccess(false);
+        setSaveError('');
+
+        try {
+            await AuthService.updateUserProfile({ study_schedule: { schedule, totalTimeAllocated } });
+            setSaveSuccess(true);
+        } catch (error) {
+            setSaveError('Failed to save schedule. Please try again.');
+            console.error("Failed to save schedule", error);
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
     const handleNewSchedule = () => {
         setSubjects([
             { id: 1, name: 'Math', priority: 3, time_hr: 2.0 },
@@ -139,6 +161,8 @@ const StudySchedulerPage = () => {
         setSchedule(null);
         setTotalTimeAllocated(0);
         setError('');
+        setSaveSuccess(false);
+        setSaveError('');
     };
 
     return (
@@ -215,6 +239,15 @@ style={loading ? { color: 'black', opacity: 1 } : {}}
                         </div>
                     ))}
                     <button type="button" onClick={handleNewSchedule} className={styles.newScheduleButton}>Generate New Schedule</button>
+                    {currentUser && (
+                        <div>
+                            <button onClick={handleSaveSchedule} disabled={isSaving} className={styles.saveButton}>
+                                {isSaving ? 'Saving...' : 'Save to My Profile'}
+                            </button>
+                            {saveSuccess && <p className={styles.successMessage}>Schedule saved successfully!</p>}
+                            {saveError && <p className={styles.errorText}>{saveError}</p>}
+                        </div>
+                    )}
                 </div>
             )}
 

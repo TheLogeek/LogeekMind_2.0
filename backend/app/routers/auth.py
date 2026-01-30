@@ -39,6 +39,7 @@ class ProfileUpdateRequest(BaseModel):
     faculty: Optional[str] = None
     department: Optional[str] = None
     level_class: Optional[str] = None
+    study_schedule: Optional[Dict[str, Any]] = None
 
 class AuthResponse(BaseModel):
     success: bool
