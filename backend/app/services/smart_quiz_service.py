@@ -109,6 +109,7 @@ Number of Questions: {num_questions}.
 CRITICAL INSTRUCTIONS:
 {options_instructions}
 - Each question must have a "question", "options", "answer", and "explanation".
+- IMPORTANT: Never included a True/False question in a multiple choice quiz and never include a multiple choice question in a True/False quiz
 - For mathematical questions, do NOT use LaTeX commands. Provide a detailed step-by-step solution in the "explanation".
 
 OUTPUT FORMAT (STRICT):
