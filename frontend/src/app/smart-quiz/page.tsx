@@ -192,17 +192,10 @@ const SmartQuizPage = () => {
 
             const headers = { Authorization: `Bearer ${accessToken}` };
 
-            // Prepare quiz context for AI analysis
-            const quizContext = quizData.map((q, index) => ({
-                question: q.question,
-                correct_answer: q.answer,
-                user_answer: userAnswers[index] || 'N/A', // User's answer for this question
-                is_correct: (userAnswers[index] === q.answer)
-            }));
-
             const payload = {
                 quiz_topic: quizTopic,
-                quiz_data: quizContext,
+                quiz_data: quizData, // Pass the full quizData array
+                user_answers: userAnswers, // Pass the userAnswers directly
                 user_score: quizScore,
                 total_questions: quizData.length
             };

@@ -202,25 +202,12 @@ const SharedExamPage = () => {
 
             const headers = { Authorization: `Bearer ${accessToken}` };
 
-            // Convert userAnswers to use option labels for AI insights
-            const processedUserAnswers: { [key: string]: string } = {};
-            Object.entries(userAnswers).forEach(([key, value]) => {
-                processedUserAnswers[key] = extractOptionLabel(value);
-            });
-
-            // Prepare quiz_data format that backend expects
-            // Backend expects: [{question: str, answer: str}]
-            const quizData = sharedExam.exam_data.map((q) => ({
-                question: q.question,
-                answer: extractOptionLabel(q.answer), // Extract label from correct answer too
-            }));
-
             const examTopic = sharedExam.creator_username ? `${sharedExam.creator_username}'s Exam` : 'General Exam';
 
             const payload = {
                 quiz_topic: examTopic,
-                quiz_data: quizData, // Array of {question, answer}
-                user_answers: processedUserAnswers, // Dict with string keys
+                quiz_data: sharedExam.exam_data, // Pass the full sharedExam.exam_data array
+                user_answers: userAnswers, // Pass the userAnswers directly
                 user_score: submissionResults.score,
                 total_questions: submissionResults.total_questions,
             };

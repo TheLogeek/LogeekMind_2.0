@@ -375,20 +375,13 @@ const ExamSimulatorPage = () => {
 
             const headers = { Authorization: `Bearer ${accessToken}` };
 
-            // Prepare exam context for AI analysis
-            const examContext = examData.map((q, index) => ({
-                question: q.question,
-                correct_answer: q.answer,
-                user_answer: userAnswers[index] || 'N/A', // User's answer for this question
-                is_correct: (userAnswers[index] === q.answer)
-            }));
-
             // Determine exam topic for AI request (use fileName if notes were uploaded, otherwise use topic input)
             const insightTopic = selectedSource === 'notes' && fileName ? `Notes from ${fileName}` : courseName + (topic ? ` - ${topic}` : '');
 
             const payload = {
-                quiz_topic: insightTopic, // Using quiz_topic for generic topic field in backend
-                quiz_data: examContext, // Using quiz_data for generic exam questions/answers in backend
+                quiz_topic: insightTopic,
+                quiz_data: examData, // Pass the full examData array
+                user_answers: userAnswers, // Pass the userAnswers directly
                 user_score: examScore,
                 total_questions: examData.length,
             };
