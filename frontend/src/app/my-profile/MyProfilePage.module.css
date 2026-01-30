@@ -278,3 +278,68 @@
     background-color: var(--primary-color-dark);
     transform: translateY(-1px);
 }
+
+/* Study Schedule Display Styles */
+.scheduleOutput {
+  margin-top: var(--spacing-xxl);
+  padding: var(--spacing-xl);
+  background-color: var(--bg-white);
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.07);
+  border: 1px solid var(--border-light);
+}
+
+.scheduleOutput h3 {
+  color: var(--primary-gradient-start);
+  margin-bottom: var(--spacing-lg);
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+  text-align: center;
+}
+
+.scheduleOutput p {
+  text-align: center;
+  margin-bottom: var(--spacing-md);
+  font-weight: 600;
+  color: var(--text-dark);
+}
+
+.scheduleGridHeader {
+  display: grid;
+  grid-template-columns: 1fr 3fr;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-sm);
+  font-weight: 600;
+  color: var(--text-dark);
+  font-size: var(--font-size-md);
+  padding-bottom: var(--spacing-sm);
+  border-bottom: 1px solid var(--border-light);
+}
+
+.scheduleItem {
+  display: grid;
+  grid-template-columns: 1fr 3fr;
+  gap: var(--spacing-md);
+  padding: var(--spacing-sm) 0;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.scheduleItem:last-child {
+  border-bottom: none;
+}
+
+.scheduleItemDay {
+  font-weight: 600;
+  color: var(--text-dark);
+}
+
+@media (max-width: 768px) {
+  .scheduleGridHeader,
+  .scheduleItem {
+    grid-template-columns: 1fr;
+  }
+  
+  .scheduleGridHeader {
+    display: none;
+  }
+}
