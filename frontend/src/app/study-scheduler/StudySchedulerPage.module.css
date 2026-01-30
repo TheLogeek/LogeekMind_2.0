@@ -232,6 +232,7 @@
 }
 
 /* Mobile Responsiveness */
+/* Mobile Responsiveness */
 @media (max-width: 768px) {
   .studySchedulerPageContainer {
     margin: var(--spacing-lg) auto;
@@ -256,25 +257,34 @@
   .subjectInputRow input[type="text"],
   .subjectInputRow select,
   .subjectInputRow input[type="number"] {
-    padding: 10px 12px; /* Slightly less padding */
+    padding: 10px 12px;
     font-size: var(--font-size-md);
   }
-  
-  .subjectInputGridHeader div, .subjectInputRow div, .subjectInputRow button {
+
+  /* FIX 1: Added box-sizing: border-box to prevent overflow when width is 100% */
+  .subjectInputGridHeader div, 
+  .subjectInputRow div, 
+  .subjectInputRow button {
     grid-column: 1 / -1;
     width: 100%;
+    box-sizing: border-box; 
   }
 
-  .removeSubjectButton {
-    padding: 10px;
+  /* FIX 2: Increased specificity (.subjectInputRow .removeSubjectButton) 
+     so 'width: auto' actually works */
+  .subjectInputRow .removeSubjectButton {
+    padding: 10px 20px;
     margin-top: var(--spacing-sm);
-    justify-self: end; /* Align to the end of the grid cell */
-    width: auto; /* Allow button to size according to its content */
+    justify-self: end; 
+    width: auto; /* Now this will be respected */
+    min-width: 120px; /* Optional: ensures it's not too small to tap */
   }
 
   .addSubjectButton, .generateButton {
     padding: 12px 20px;
     font-size: var(--font-size-lg);
+    width: 100%;
+    box-sizing: border-box; /* Safety for these buttons too */
   }
 
   .scheduleOutput {
@@ -283,15 +293,10 @@
 
   .scheduleGridHeader,
   .scheduleItem {
-    grid-template-columns: 1fr; /* Stack day and plan vertically */
+    grid-template-columns: 1fr;
   }
 
   .newScheduleButton {
-    width: 100%;
-    box-sizing: border-box; /* Add box-sizing */
-  }
-
-  .addSubjectButton, .generateButton {
     width: 100%;
     box-sizing: border-box;
   }
