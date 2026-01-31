@@ -176,8 +176,9 @@ const getAccessToken = async (): Promise<string | null> => {
     return session?.access_token || null;
 };
 
+// ✅ FIXED: Added await to getAccessToken() call
 const getUserProfile = async () => {
-    const token = getAccessToken();
+    const token = await getAccessToken(); // ✅ FIXED: Was missing await
     if (!token) throw new Error("No access token found");
     const response = await axios.get(`${API_BASE_URL}/auth/profile`, {
         headers: { Authorization: `Bearer ${token}` }
@@ -185,8 +186,9 @@ const getUserProfile = async () => {
     return response.data;
 };
 
+// added await to fix bug
 const updateUserProfile = async (profileData: any) => {
-    const token = getAccessToken();
+    const token = await getAccessToken(); // ✅ FIXED: Was missing await
     if (!token) throw new Error("No access token found");
     const response = await axios.put(`${API_BASE_URL}/auth/profile`, profileData, {
         headers: { Authorization: `Bearer ${token}` }
