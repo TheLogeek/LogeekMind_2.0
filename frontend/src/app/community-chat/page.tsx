@@ -29,7 +29,7 @@ const CommunityChatPage = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     
-    const username = currentUser?.profile?.username;
+    const username = currentUser?.username;
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const justSentMessage = useRef(false);

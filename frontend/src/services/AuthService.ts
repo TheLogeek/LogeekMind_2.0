@@ -11,18 +11,30 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
     console.error("Supabase environment variables are not set. Please check NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.");
 }
 
-const supabase: SupabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    auth: {
-        persistSession: true, // This is key for "remember me" functionality
-        storage: localStorage, // Use localStorage for session persistence
-        autoRefreshToken: true,
-        detectSessionInUrl: true,
-    },
-});
+let supabaseClient: SupabaseClient | undefined;
+
+const getSupabaseClient = (): SupabaseClient => {
+    if (typeof window === 'undefined') {
+        throw new Error("Supabase client accessed server-side without window object. Ensure this code runs client-side.");
+    }
+    
+    if (!supabaseClient) {
+        supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+            auth: {
+                persistSession: true,
+                storage: localStorage,
+                autoRefreshToken: true,
+                detectSessionInUrl: true,
+            },
+        });
+    }
+    return supabaseClient;
+};
 
 // Using Supabase's User type for clarity, augmenting with our profile data
 export interface User extends SupabaseAuthUser {
-    // Add any additional fields you might expect directly on the user object beyond Supabase's default
+    username?: string;
+    profile?: UserProfile;
 }
 
 export interface UserProfile {
@@ -66,7 +78,7 @@ const login = async (email: string, password: string): Promise<AuthResponse> => 
         // Supabase client handles session persistence based on its configuration
         // The rememberMe flag here is implicitly handled by `persistSession: true` in createClient opts
         // If you needed to control session persistence dynamically, you'd need custom storage or a different approach.
-        const { data, error } = await supabase.auth.signInWithPassword({
+        const { data, error } = await getSupabaseClient().auth.signInWithPassword({
             email,
             password,
         });
@@ -102,7 +114,7 @@ const login = async (email: string, password: string): Promise<AuthResponse> => 
 
 const logout = async () => {
     if (typeof window !== 'undefined') {
-        const { error } = await supabase.auth.signOut();
+        const { error } = await getSupabaseClient().auth.signOut();
         if (error) {
             console.error("Supabase logout error:", error.message);
         }
@@ -126,10 +138,10 @@ const getCurrentUser = async (): Promise<(User & { username?: string, profile?: 
 
     try {
         // Supabase getSession implicitly checks and refreshes tokens if necessary
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        const { data: { session }, error: sessionError } = await getSupabaseClient().auth.getSession();
         if (sessionError) {
             console.error("Supabase getSession error:", sessionError.message);
-            await supabase.auth.signOut(); // Attempt to clear potentially corrupted session
+                        await getSupabaseClient().auth.signOut(); // Attempt to clear potentially corrupted session
             return null;
         }
 
@@ -149,7 +161,7 @@ const getCurrentUser = async (): Promise<(User & { username?: string, profile?: 
     } catch (error: any) {
         console.error("Error during getCurrentUser retrieval (profile fetch or network issue):", error.response?.data || error);
         // Clear session if there's an error retrieving current user (e.g., profile not found or token invalid with backend)
-        await supabase.auth.signOut();
+                    await getSupabaseClient().auth.signOut();
         return null;
     }
     
@@ -160,7 +172,7 @@ const getAccessToken = async (): Promise<string | null> => {
     if (typeof window === 'undefined') {
         return null;
     }
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { session } } = await getSupabaseClient().auth.getSession();
     return session?.access_token || null;
 };
 
