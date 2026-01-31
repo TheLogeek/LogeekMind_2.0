@@ -19,6 +19,12 @@ const GPACalculatorPage = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     
+    // State declarations for user and guest usage
+    const [currentUser, setCurrentUser] = useState<any>(null);
+    const GUEST_GPA_LIMIT = 5; // Example limit for guest users
+    const GUEST_USAGE_KEY = 'gpa_guest_usage';
+    const [guestUsageCount, setGuestUsageCount] = useState(0); // Initialize with 0, will be set in useEffect
+
     useEffect(() => {
         const fetchUser = async () => {
             const user = await AuthService.getCurrentUser();
