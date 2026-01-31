@@ -36,26 +36,28 @@ async def get_current_user_from_supabase_jwt(token: str = Depends(oauth2_scheme)
         headers={"WWW-Authenticate": "Bearer"},
     )
     if token is None:
-        raise credentials_exception # Token is required for strict auth
+        logger.warning("Authentication token is None. Raising credentials_exception.")
+        raise credentials_exception
 
-    logger.info(f"DEBUG: get_current_user_from_supabase_jwt called. Token received: {token is not None}")
-    logger.info(f"DEBUG: Token starts with: {token[:10]}... (length: {len(token)})") # Log first few chars, not full token
-
+    logger.info(f"DEBUG: get_current_user_from_supabase_jwt called. Token received (first 20 chars): '{token[:20]}...' (length: {len(token)})")
+    
     try:
-        # Use Supabase client's auth.get_user to validate the token
-        # This sends the token to Supabase for validation
         user_response = supabase.auth.get_user(token)
         user = user_response.user
 
         if not user:
-            logger.warning(f"DEBUG: get_user() failed for token. Response: {user_response.json()}")
+            logger.warning(f"DEBUG: get_user() failed for token. Supabase response: {user_response.json()}")
             raise credentials_exception
+        
+        logger.info(f"DEBUG: Successfully validated user ID: {user.id} with Supabase.")
         
         # Load profile
         profile_response = supabase.table("profiles").select("*").eq("id", user.id).single().execute()
         if not profile_response.data:
             logger.warning(f"DEBUG: Profile not found for user ID: {user.id}")
             raise credentials_exception
+        
+        logger.info(f"DEBUG: Successfully fetched profile for user ID: {user.id}")
 
         return {
             "id": user.id,
@@ -63,8 +65,8 @@ async def get_current_user_from_supabase_jwt(token: str = Depends(oauth2_scheme)
             "username": profile_response.data.get("username"),
             "profile": profile_response.data
         }
-    except Exception as e: # Catch any exception from Supabase API call
-        logger.error(f"DEBUG: Error validating token with Supabase auth.get_user: {e}")
+    except Exception as e:
+        logger.error(f"DEBUG: Error validating token with Supabase auth.get_user: {e}", exc_info=True)
         raise credentials_exception
 
 
