@@ -24,7 +24,7 @@ const LoginPage = () => {
         e.preventDefault();
         setMessage('');
         try {
-            const response = await AuthService.login(email, password, rememberMe);
+            const response = await AuthService.login(email, password);
             if (response.success && response.user) {
                 setCurrentUser(response.user);
                 router.push('/');

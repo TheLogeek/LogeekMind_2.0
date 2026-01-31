@@ -24,8 +24,8 @@ const Navbar: React.FC<NavbarProps> = ({ toggleSidebar, isSidebarOpen }) => {
     // Access username more robustly with explicit check for currentUser and fallback
     const username = currentUser ? (currentUser.username ?? "Guest") : "Guest";
 
-    const handleLogout = () => {
-        AuthService.logout();
+    const handleLogout = async () => {
+        await AuthService.logout();
         setCurrentUser(null); // Update the global state to log out the user
         router.push('/login'); // Redirect to login page
     };
@@ -145,7 +145,7 @@ const AdminLink: React.FC<{ onNavLinkClick: () => void }> = ({ onNavLinkClick })
         const checkAdminStatus = async () => {
             if (currentUser) {
                 try {
-                    const accessToken = AuthService.getAccessToken();
+                    const accessToken = await AuthService.getAccessToken();
                     if (accessToken) {
                         const response = await axios.get(`${API_BASE_URL}/auth/check-admin`, {
                             headers: {

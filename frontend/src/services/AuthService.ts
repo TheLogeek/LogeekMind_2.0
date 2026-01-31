@@ -1,61 +1,53 @@
 'use client';
 
 import axios from 'axios';
+import { createClient, SupabaseClient, User as SupabaseAuthUser, Session } from '@supabase/supabase-js';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000"; // Base URL of your backend
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
-interface User {
-    id: string;
-    email: string;
-    // Add other user properties if available
+if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    console.error("Supabase environment variables are not set. Please check NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.");
+}
+
+const supabase: SupabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: {
+        persistSession: true, // This is key for "remember me" functionality
+        storage: localStorage, // Use localStorage for session persistence
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+    },
+});
+
+// Using Supabase's User type for clarity, augmenting with our profile data
+interface User extends SupabaseAuthUser {
+    // Add any additional fields you might expect directly on the user object beyond Supabase's default
 }
 
 interface UserProfile {
+    id: string; // The ID of the user (same as User.id)
     username: string;
-    // Add other profile properties if available
+    first_name: string | null;
+    last_name: string | null;
+    institution_name: string | null;
+    faculty: string | null;
+    department: string | null;
+    level_class: string | null;
+    study_schedule?: any; // Assuming study_schedule can be any JSON structure
+    // Add other profile fields as they exist in your backend's profiles table
 }
 
 interface AuthResponse {
     success: boolean;
     message?: string;
-    session?: {
-        access_token: string;
-    };
+    session?: Session; // Use Supabase's Session type
     user?: User;
     profile?: UserProfile;
 }
 
-// Helper function to get storage based on rememberMe flag
-// This helper is primarily used by login and logout to determine where to save/clear
-const getTargetStorage = (rememberMe: boolean): Storage | null => {
-    if (typeof window === 'undefined') {
-        return null;
-    }
-    return rememberMe ? localStorage : sessionStorage;
-};
-
-// Helper to get actual active storage based on whether 'rememberMe' is currently set in localStorage
-const getActiveStorage = (): Storage | null => {
-    if (typeof window === 'undefined') {
-        return null;
-    }
-    return localStorage.getItem("rememberMe") === "true" ? localStorage : sessionStorage;
-};
-
-// Helper to get stored credentials for re-login attempt
-const getStoredCredentials = (): { email: string | null; password: string | null; rememberMe: boolean } => {
-    if (typeof window === 'undefined') {
-        return { email: null, password: null, rememberMe: false };
-    }
-    const email = localStorage.getItem("rememberedEmail");
-    const password = localStorage.getItem("rememberedPassword");
-    const rememberMe = localStorage.getItem("rememberMe") === "true";
-    return { email, password, rememberMe };
-};
-
-
 const register = async (email: string, password: string, username: string, terms_accepted: boolean): Promise<AuthResponse> => {
-    try { // Added try-catch for register
+    try {
         const response = await axios.post<AuthResponse>(`${API_BASE_URL}/auth/signup`, {
             email,
             password,
@@ -63,75 +55,65 @@ const register = async (email: string, password: string, username: string, terms
             terms_accepted,
         });
         return response.data;
-    } catch (error) {
-        console.error("Registration API error:", error);
-        return { success: false, message: "Registration failed." };
+    } catch (error: any) {
+        console.error("Registration API error:", error.response?.data || error);
+        return { success: false, message: error.response?.data?.message || "Registration failed." };
     }
 };
 
-const login = async (email: string, password: string, rememberMe: boolean = false): Promise<AuthResponse> => {
-    try { // Added try-catch for login
-        const response = await axios.post<AuthResponse>(`${API_BASE_URL}/auth/signin`, {
-            email,
-            password,
-        });
-        if (response.data.success && response.data.session && response.data.session.access_token) {
-            const storage = getTargetStorage(rememberMe); // Use helper to determine storage
-
-            if (storage) {
-                storage.setItem("user", JSON.stringify(response.data.user));
-                storage.setItem("profile", JSON.stringify(response.data.profile)); 
-                storage.setItem("accessToken", response.data.session.access_token);
-                // Store rememberMe preference in localStorage (always), and credentials if rememberMe is true
-                localStorage.setItem("rememberMe", String(rememberMe)); 
-                if (rememberMe) {
-                    localStorage.setItem("rememberedEmail", email);
-                    localStorage.setItem("rememberedPassword", password);
-                } else {
-                    localStorage.removeItem("rememberedEmail");
-                    localStorage.removeItem("rememberedPassword");
-                }
-            }
-        }
-        return response.data;
-    } catch (error) {
-        console.error("Login API error:", error);
-        return { success: false, message: "Login failed due to invalid credentials"};
-    }
-};
-
-// New silentLogin function for re-authentication
-const silentLogin = async (email: string, password: string): Promise<AuthResponse> => {
+const login = async (email: string, password: string): Promise<AuthResponse> => {
     try {
-        const response = await axios.post<AuthResponse>(`${API_BASE_URL}/auth/signin`, {
+        // Supabase client handles session persistence based on its configuration
+        // The rememberMe flag here is implicitly handled by `persistSession: true` in createClient opts
+        // If you needed to control session persistence dynamically, you'd need custom storage or a different approach.
+        const { data, error } = await supabase.auth.signInWithPassword({
             email,
             password,
         });
-        if (response.data.success && response.data.session && response.data.session.access_token) {
-            // If silent login is successful, update localStorage with fresh tokens/user data
-            localStorage.setItem("user", JSON.stringify(response.data.user));
-            localStorage.setItem("profile", JSON.stringify(response.data.profile)); 
-            localStorage.setItem("accessToken", response.data.session.access_token);
-            return { success: true, user: response.data.user, profile: response.data.profile };
-        } else {
-            return { success: false, message: response.data.message || "Silent login failed." };
+
+        if (error) {
+            console.error("Supabase login error:", error.message);
+            return { success: false, message: error.message || "Login failed." };
         }
-    } catch (error) {
-        console.error("Silent login API error:", error);
-        // Return a structured error response
-        return { success: false, message: "Silent login failed due to an API error." };
+
+        if (data.session && data.user) {
+            // Fetch profile data from your backend after successful Supabase login
+            // This ensures we get the full profile including any custom fields from your 'profiles' table
+            const profileResponse = await axios.get(`${API_BASE_URL}/auth/profile`, {
+                headers: { Authorization: `Bearer ${data.session.access_token}` }
+            });
+            const profile = profileResponse.data as UserProfile; // Cast to our UserProfile interface
+
+            return {
+                success: true,
+                message: "Login successful!",
+                session: data.session,
+                user: data.user as User,
+                profile: profile,
+            };
+        }
+        return { success: false, message: "Login failed: No user or session data returned from Supabase." };
+
+    } catch (error: any) {
+        console.error("Login API error or Profile fetch error:", error.response?.data || error);
+        return { success: false, message: error.response?.data?.detail || error.response?.data?.message || "Login failed due to invalid credentials or server error." };
     }
 };
 
-const logout = () => {
+const logout = async () => {
     if (typeof window !== 'undefined') {
+        const { error } = await supabase.auth.signOut();
+        if (error) {
+            console.error("Supabase logout error:", error.message);
+        }
+        // Explicitly remove old localStorage keys from previous authentication implementation
         localStorage.removeItem("user");
         localStorage.removeItem("profile");
         localStorage.removeItem("accessToken");
         localStorage.removeItem("rememberMe");
         localStorage.removeItem("rememberedEmail");
         localStorage.removeItem("rememberedPassword");
-        sessionStorage.removeItem("user");
+        sessionStorage.removeItem("user"); // Clear sessionStorage for good measure too
         sessionStorage.removeItem("profile");
         sessionStorage.removeItem("accessToken");
     }
@@ -142,95 +124,44 @@ const getCurrentUser = async (): Promise<(User & { username?: string, profile?: 
         return null;
     }
 
-    const { email, password, rememberMe } = getStoredCredentials();
-    const activeStorage = getActiveStorage();
-
-    let user: (User & { username?: string, profile?: UserProfile }) | null = null;
-    let storedUserRaw: string | null = null;
-    let storedProfileRaw: string | null = null;
-
-    try { // Added try-catch for potential JSON.parse errors or storage access issues
-        if (rememberMe && email && password) {
-            // Attempt silent re-login if remembered credentials exist
-            const silentLoginResponse = await silentLogin(email, password); // silentLogin now has its own try-catch
-            if (silentLoginResponse.success && silentLoginResponse.user && silentLoginResponse.profile) {
-                user = { ...silentLoginResponse.user, username: silentLoginResponse.profile.username, profile: silentLoginResponse.profile };
-            } else {
-                // Silent login failed, clear remembered credentials
-                logout(); // This clears all, including remembered info
-            }
-        } else {
-            // For non-remembered sessions, or if silent login failed
-            // Explicitly ensure the result is string | null by using '|| null'
-            storedUserRaw = activeStorage?.getItem("user") || null;
-            storedProfileRaw = activeStorage?.getItem("profile") || null;
-
-            // Check if data exists and is not an empty string before parsing
-            if (storedUserRaw && storedUserRaw.trim() !== "" && storedProfileRaw && storedProfileRaw.trim() !== "") {
-                let parsedUser: User | null = null;
-                let parsedProfile: UserProfile | null = null;
-
-                try {
-                    parsedUser = JSON.parse(storedUserRaw);
-                } catch (e) {
-                    console.error("Failed to parse user data from storage:", e);
-                    // Clear potentially corrupted user data
-                    if (activeStorage) activeStorage.removeItem("user");
-                    return null; // Indicate failure
-                }
-
-                try {
-                    parsedProfile = JSON.parse(storedProfileRaw);
-                } catch (e) {
-                    console.error("Failed to parse profile data from storage:", e);
-                    // Clear potentially corrupted profile data
-                    if (activeStorage) activeStorage.removeItem("profile");
-                    return null; // Indicate failure
-                }
-
-                // Ensure essential properties exist and provide defaults
-                if (parsedUser && parsedUser.id && parsedUser.email && parsedProfile) {
-                    user = {
-                        id: parsedUser.id,
-                        email: parsedUser.email,
-                        profile: {
-                            username: parsedProfile.username || 'Anonymous User', // Provide default username
-                            // Add other profile properties if they exist in the interface, with defaults
-                        },
-                        username: parsedProfile.username || 'Anonymous User', // Direct access for convenience
-                    };
-                } else {
-                    console.error("User or profile data incomplete or invalid after parsing.");
-                    logout(); // Clean up storage as data is inconsistent
-                    return null;
-                }
-            } else {
-                // If data is missing or empty, clear potentially stale tokens/preferences
-                if (rememberMe) { // Only clear if rememberMe was true
-                   localStorage.removeItem("rememberedEmail");
-                   localStorage.removeItem("rememberedPassword");
-                   localStorage.removeItem("rememberMe");
-                }
-                // Also clear session storage if it was the active one
-                if (activeStorage === sessionStorage) {
-                    sessionStorage.removeItem("user");
-                    sessionStorage.removeItem("profile");
-                    sessionStorage.removeItem("accessToken");
-                }
-            }
+    try {
+        // Supabase getSession implicitly checks and refreshes tokens if necessary
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError) {
+            console.error("Supabase getSession error:", sessionError.message);
+            await supabase.auth.signOut(); // Attempt to clear potentially corrupted session
+            return null;
         }
-    } catch (error) {
-        console.error("Error during getCurrentUser session retrieval:", error);
-        logout(); // Ensure cleanup on any error
-        return null; // Indicate failure
+
+        if (session && session.user) {
+            // Fetch profile from your backend using the session's access token
+            const profileResponse = await axios.get(`${API_BASE_URL}/auth/profile`, {
+                headers: { Authorization: `Bearer ${session.access_token}` }
+            });
+            const profile = profileResponse.data as UserProfile;
+
+            return {
+                ...session.user, // Spread Supabase user properties
+                username: profile.username, // Add username from profile
+                profile: profile, // Add full profile object
+            } as (User & { username?: string, profile?: UserProfile });
+        }
+    } catch (error: any) {
+        console.error("Error during getCurrentUser retrieval (profile fetch or network issue):", error.response?.data || error);
+        // Clear session if there's an error retrieving current user (e.g., profile not found or token invalid with backend)
+        await supabase.auth.signOut();
+        return null;
     }
     
-    return user;
+    return null;
 };
 
-const getAccessToken = (): string | null => {
-    const activeStorage = getActiveStorage();
-    return activeStorage?.getItem("accessToken") || null;
+const getAccessToken = async (): Promise<string | null> => {
+    if (typeof window === 'undefined') {
+        return null;
+    }
+    const { data: { session } } = await supabase.auth.getSession();
+    return session?.access_token || null;
 };
 
 const getUserProfile = async () => {

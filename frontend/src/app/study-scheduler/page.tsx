@@ -31,15 +31,22 @@ const StudySchedulerPage = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     
-    const [currentUser, setCurrentUser] = useState(
-        () => typeof window !== 'undefined' ? AuthService.getCurrentUser() : null
-    );
-
+    const [currentUser, setCurrentUser] = useState<any>(null); // Initialize as null
     const GUEST_SCHEDULE_LIMIT = 2;
     const GUEST_USAGE_KEY = 'study_scheduler_guest_usage';
     const [guestUsageCount, setGuestUsageCount] = useState(() => {
-        return typeof window !== 'undefined' ? parseInt(localStorage.getItem(GUEST_USAGE_KEY) || '0', 10) : 0;
+        if (typeof window !== 'undefined') {
+            return parseInt(localStorage.getItem(GUEST_USAGE_KEY) || '0', 10);
+        }
+        return 0;
     });
+
+    useEffect(() => {
+        const fetchUser = async () => {
+            const user = await AuthService.getCurrentUser();
+            setCurrentUser(user);
+        };
+        fetchUser();
 
     useEffect(() => {
         localStorage.setItem(GUEST_USAGE_KEY, guestUsageCount.toString());
@@ -109,7 +116,7 @@ const StudySchedulerPage = () => {
 
         setLoading(true);
         try {
-            const accessToken = AuthService.getAccessToken();
+            const accessToken = await AuthService.getAccessToken();
             const headers = accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
 
             const requestData = {

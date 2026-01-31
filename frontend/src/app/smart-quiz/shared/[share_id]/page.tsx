@@ -149,7 +149,7 @@ const SharedQuizPage = () => {
         }
 
         try {
-            const accessToken = AuthService.getAccessToken();
+            const accessToken = await AuthService.getAccessToken();
             const headers = accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
 
             const payload: { user_answers: { [key: number]: string }; student_identifier?: string } = {
@@ -221,7 +221,7 @@ const SharedQuizPage = () => {
         }
 
         try {
-            const accessToken = AuthService.getAccessToken();
+            const accessToken = await AuthService.getAccessToken();
             if (!accessToken) {
                 setAiInsightsError('You must be logged in to get AI insights.');
                 setAiInsightsLoading(false);
@@ -292,7 +292,7 @@ const SharedQuizPage = () => {
         }
 
         try {
-            const accessToken = AuthService.getAccessToken();
+            const accessToken = await AuthService.getAccessToken();
             const headers = accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
 
             const downloadUrl = `${API_BASE_URL}/smart-quiz/shared-quizzes/${share_id}/submissions/${submissionResults.submission_id}/download`;

@@ -116,7 +116,7 @@ const MyProfilePage = () => {
                 setDashboardError('');
                 setLoadingDashboard(true);
                 try {
-                    const accessToken = AuthService.getAccessToken();
+                    const accessToken = await AuthService.getAccessToken();
                     if (!accessToken) {
                         setDashboardError('Authentication required. Please log in.');
                         AuthService.logout();
@@ -141,7 +141,7 @@ const MyProfilePage = () => {
                         console.error('Error fetching performance data:', axiosError.response?.data || axiosError);
                         if (axiosError.response?.status === 401 || axiosError.response?.status === 403) {
                             setDashboardError('Unauthorized access. Please log in with appropriate credentials.');
-                            AuthService.logout();
+                            await AuthService.logout();
                             router.push('/login');
                         } else {
                             setDashboardError(axiosError.response?.data?.detail || axiosError.response?.data?.message || 'An error occurred while fetching performance data.');

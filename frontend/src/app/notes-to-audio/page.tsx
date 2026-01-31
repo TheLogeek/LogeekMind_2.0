@@ -23,7 +23,11 @@ const NotesToAudioPage = () => {
     const [guestUsageCount, setGuestUsageCount] = useState(0);
 
     useEffect(() => {
-        setCurrentUser(AuthService.getCurrentUser());
+        const fetchUser = async () => {
+            const user = await AuthService.getCurrentUser();
+            setCurrentUser(user);
+        };
+        fetchUser();
         setGuestUsageCount(typeof window !== 'undefined' ? parseInt(localStorage.getItem(GUEST_USAGE_KEY) || '0', 10) : 0);
 
         // Restore state from sessionStorage
@@ -96,7 +100,7 @@ const NotesToAudioPage = () => {
 
         setLoading(true);
         try {
-            const accessToken = AuthService.getAccessToken();
+            const accessToken = await AuthService.getAccessToken();
             const headers = accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
 
             let response;

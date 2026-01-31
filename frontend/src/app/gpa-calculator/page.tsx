@@ -19,17 +19,14 @@ const GPACalculatorPage = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     
-    // Guard localStorage access for client-side only
-    const [currentUser, setCurrentUser] = useState(
-        typeof window !== 'undefined' ? AuthService.getCurrentUser() : null
-    );
-
-    // Guest usage tracking
-    const GUEST_GPA_LIMIT = 5; // Example limit for guest users
-    const GUEST_USAGE_KEY = 'gpa_guest_usage';
-    const [guestUsageCount, setGuestUsageCount] = useState(() => {
-        return typeof window !== 'undefined' ? parseInt(localStorage.getItem(GUEST_USAGE_KEY) || '0', 10) : 0;
-    });
+    useEffect(() => {
+        const fetchUser = async () => {
+            const user = await AuthService.getCurrentUser();
+            setCurrentUser(user);
+            setGuestUsageCount(typeof window !== 'undefined' ? parseInt(localStorage.getItem(GUEST_USAGE_KEY) || '0', 10) : 0);
+        };
+        fetchUser();
+    }, []);
 
     useEffect(() => {
         if (typeof window !== 'undefined') {
@@ -97,7 +94,7 @@ const GPACalculatorPage = () => {
 
         setLoading(true);
         try {
-            const accessToken = AuthService.getAccessToken();
+            const accessToken = await AuthService.getAccessToken();
             const headers = accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
 
             const requestData = {
@@ -117,7 +114,7 @@ const GPACalculatorPage = () => {
                 console.error('GPA calculation error:', err.response?.data || err);
                 if (err.response && err.response.status === 401) {
                     setError('Unauthorized. Please log in.');
-                    AuthService.logout();
+                    await AuthService.logout();
                     router.push('/login');
                 } else {
                     setError(err.response?.data?.detail || 'An error occurred during GPA calculation.');

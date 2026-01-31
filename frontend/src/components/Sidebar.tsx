@@ -26,8 +26,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         const checkAdminStatus = async () => {
             if (currentUser) {
                 try {
-                    const accessToken = AuthService.getAccessToken();
-                    if (accessToken) {
+                                            const accessToken = await AuthService.getAccessToken();                    if (accessToken) {
                         const response = await axios.get(`${API_BASE_URL}/auth/check-admin`, {
                             headers: {
                                 Authorization: `Bearer ${accessToken}`,

@@ -104,7 +104,7 @@ const SmartQuizPage = () => {
         setLoading(true);
 
         try {
-            const accessToken = AuthService.getAccessToken();
+            const accessToken = await AuthService.getAccessToken();
             const headers = accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
 
             const response = await axios.post(`${API_BASE_URL}/smart-quiz/generate`, {
@@ -158,7 +158,7 @@ const SmartQuizPage = () => {
 
         if (currentUser && quizData) {
             try {
-                const accessToken = AuthService.getAccessToken();
+                const accessToken = await AuthService.getAccessToken();
                 await axios.post(`${API_BASE_URL}/smart-quiz/log-performance`, {
                     score,
                     total_questions: quizData.length,
@@ -183,7 +183,7 @@ const SmartQuizPage = () => {
         }
 
         try {
-            const accessToken = AuthService.getAccessToken();
+            const accessToken = await AuthService.getAccessToken();
             if (!accessToken) {
                 setAiInsightsError('You must be logged in to get AI insights.');
                 setAiInsightsLoading(false);
@@ -251,7 +251,7 @@ const SmartQuizPage = () => {
         };
 
         try {
-            const accessToken = AuthService.getAccessToken();
+            const accessToken = await AuthService.getAccessToken();
             const headers = accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
 
             const formData = new FormData();

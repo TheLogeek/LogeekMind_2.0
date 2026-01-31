@@ -89,7 +89,7 @@ const SummarizerPage = () => {
         setLoading(true);
         
         try {
-            const accessToken = AuthService.getAccessToken();
+            const accessToken = await AuthService.getAccessToken();
             const headers = accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
 
             let response;

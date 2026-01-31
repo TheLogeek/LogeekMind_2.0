@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, createContext, useContext } from 'react';
-import AuthService from '../services/AuthService'; // Import AuthService
+import AuthService, { User, UserProfile } from '../services/AuthService'; // Import AuthService
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -9,12 +9,7 @@ import "./globals.css";
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 
-interface User {
-    id: string;
-    email: string;
-    username?: string; // profile contains username, so it might be on the user object too
-    // Add other user properties if availables
-}
+
 
 // --- User Context for Global State ---
 // This context will provide the currentUser and a way to set it to all components.
@@ -47,7 +42,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true); // Re-add isSidebarOpen state
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [currentUser, setCurrentUser] = useState<(User & { username?: string, profile?: UserProfile }) | null>(null);
 
   // --- Auto-login Effect ---
   // On initial app load, check if a user session is stored in localStorage/sessionStorage.
