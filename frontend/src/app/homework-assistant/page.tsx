@@ -81,6 +81,9 @@ const HomeworkAssistantPage = () => {
 
         setError('');
         setSolution('');
+        setLoading(true); // Set loading before the try-catch block
+
+        try {
             const accessToken = await AuthService.getAccessToken();
             const headers = accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
 

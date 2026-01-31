@@ -47,6 +47,7 @@ const StudySchedulerPage = () => {
             setCurrentUser(user);
         };
         fetchUser();
+    }, []); // <-- Added missing closing brace and dependency array for useEffect
 
     useEffect(() => {
         localStorage.setItem(GUEST_USAGE_KEY, guestUsageCount.toString());
