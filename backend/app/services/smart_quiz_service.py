@@ -97,17 +97,17 @@ async def generate_quiz_service(
     system_prompt = f"You are an expert quiz creator. You MUST create ONLY {quiz_type} questions. You MUST follow the output format exactly."
 
 # Add this conditional logic before options_instructions
-	if quiz_type.lower() == "true/false":
-    	format_rules = '''
+    if quiz_type.lower() == "true/false":
+        format_rules = '''
 - EVERY question MUST be True/False format
 - EVERY question MUST have EXACTLY 2 options: ["True", "False"]
 - The "answer" MUST be either "True" or "False"
 - DO NOT create multiple-choice questions (A, B, C, D)
 - DO NOT use 4 options
 '''
-		options_description = 'MUST be ["True", "False"]'
-		answer_description = 'either "True" or "False"'
-		example_json = '''[
+        options_description = 'MUST be ["True", "False"]'
+        answer_description = 'either "True" or "False"'
+        example_json = '''[
   {
     "question": "The Earth is flat.",
     "options": ["True", "False"],
@@ -115,17 +115,17 @@ async def generate_quiz_service(
     "explanation": "The Earth is an oblate spheroid."
   }
 ]'''
-	else:  # multiple-choice
-		format_rules = '''
+    else:  # multiple-choice
+        format_rules = '''
 - EVERY question MUST be multiple-choice format
 - EVERY question MUST have EXACTLY 4 options (A, B, C, D)
 - The "answer" MUST be a letter: "A", "B", "C", or "D"
 - DO NOT create True/False questions
 - DO NOT use only 2 options
 '''
-		options_description = 'MUST be 4 options [A, B, C, D]'
-		answer_description = 'either "A", "B", "C", or "D"'
-		example_json = '''[
+        options_description = 'MUST be 4 options [A, B, C, D]'
+        answer_description = 'either "A", "B", "C", or "D"'
+        example_json = '''[
   {
     "question": "What is the capital of France?",
     "options": ["London", "Paris", "Berlin", "Madrid"],
@@ -134,7 +134,7 @@ async def generate_quiz_service(
   }
 ]'''
 
-	options_instructions = f"""
+    options_instructions = f"""
 QUIZ TYPE: {quiz_type.upper()}
 
 {"=" * 50}
@@ -144,7 +144,7 @@ CRITICAL FORMAT RULES FOR {quiz_type.upper()} QUIZ:
 REMINDER: You are creating a {quiz_type.upper()} quiz. All {num_questions} questions must follow the {quiz_type} format above.
 """
 
-	quiz_prompt = f"""
+    quiz_prompt = f"""
 Create a {quiz_type.upper()} quiz on the topic: "{quiz_topic}".
 Difficulty: {DIFFICULTY_MAP[difficulty]}.
 Number of Questions: {num_questions}.
