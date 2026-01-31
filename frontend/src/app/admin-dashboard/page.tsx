@@ -55,7 +55,7 @@ const AdminDashboardPage = () => {
     const fetchAdminData = async () => {
         setError('');
         try {
-            const accessToken = AuthService.getAccessToken();
+            const accessToken = await AuthService.getAccessToken();
             if (!accessToken) {
                 setError('Authentication required.');
                 AuthService.logout();

@@ -92,7 +92,7 @@ const AITeacherPage = () => {
         setInputPrompt('');
 
         try {
-            const accessToken = AuthService.getAccessToken();
+            const accessToken = await AuthService.getAccessToken();
             const headers = accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
             const response = await axios.post(`${API_BASE_URL}/ai-teacher/chat`, {
                 current_prompt: userMessage.text,

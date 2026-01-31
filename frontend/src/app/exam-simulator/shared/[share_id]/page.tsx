@@ -109,7 +109,7 @@ const SharedExamPage = () => {
         }
 
         try {
-            const accessToken = AuthService.getAccessToken(); // Check if a user is logged in
+            const accessToken = await AuthService.getAccessToken(); // Check if a user is logged in
             const headers = accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
 
             // Convert userAnswers to use option labels instead of full option text
@@ -193,7 +193,7 @@ const SharedExamPage = () => {
         }
 
         try {
-            const accessToken = AuthService.getAccessToken();
+            const accessToken = await AuthService.getAccessToken();
             if (!accessToken) {
                 setAiInsightsError('You must be logged in to get AI insights.');
                 setAiInsightsLoading(false);
@@ -258,7 +258,7 @@ const SharedExamPage = () => {
         }
 
         try {
-            const accessToken = AuthService.getAccessToken();
+            const accessToken = await AuthService.getAccessToken();
             const headers = accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
 
             const downloadUrl = `${API_BASE_URL}/exam-simulator/shared-exams/${share_id}/submissions/${submissionResults.submission_id}/download`;
