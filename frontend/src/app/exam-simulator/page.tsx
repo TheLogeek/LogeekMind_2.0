@@ -232,7 +232,7 @@ const ExamSimulatorPage = () => {
 
         setLoading(true);
         try {
-            const accessToken = AuthService.getAccessToken();
+            const accessToken = await AuthService.getAccessToken();
             // No Authorization header needed for guest generation.
             // For logged-in users, it might be useful for backend logging/rate limiting, but not essential for generation itself.
             const headers = accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
@@ -301,7 +301,7 @@ const ExamSimulatorPage = () => {
 
         setLoading(true);
         try {
-            const accessToken = AuthService.getAccessToken();
+            const accessToken = await AuthService.getAccessToken();
             // Auth header is needed for download if it's tied to user's premium/account status, but not strictly for downloading generated results. Let's keep it for now if current_user check passes.
             const headers = accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
 
@@ -366,7 +366,7 @@ const ExamSimulatorPage = () => {
         }
 
         try {
-            const accessToken = AuthService.getAccessToken();
+            const accessToken = await AuthService.getAccessToken();
             if (!accessToken) {
                 setAiInsightsError('You must be logged in to get AI insights.');
                 setAiInsightsLoading(false);
