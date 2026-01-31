@@ -94,7 +94,7 @@ const ExamSimulatorPage = () => {
         setError('');
         setLoading(true);
         try {
-            const accessToken = AuthService.getAccessToken();
+            const accessToken = await AuthService.getAccessToken();
             // Guest users don't submit results to backend for grading.
             // Their score is calculated client-side for immediate feedback.
             if (!currentUser || !accessToken) {
