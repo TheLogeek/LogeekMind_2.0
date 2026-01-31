@@ -29,7 +29,7 @@ const CommunityChatPage = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     
-    const username = currentUser?.username;
+    const username = currentUser?.profile?.username;
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const justSentMessage = useRef(false);
@@ -42,7 +42,7 @@ const CommunityChatPage = () => {
         if (!username) return;
         
         try {
-            const accessToken = AuthService.getAccessToken();
+            const accessToken = await AuthService.getAccessToken();
             const headers = { Authorization: `Bearer ${accessToken}` };
             
             const [msgRes, onlineRes, typingRes] = await Promise.all([
@@ -95,7 +95,7 @@ const CommunityChatPage = () => {
 
         try {
             setLoading(true);
-            const accessToken = AuthService.getAccessToken();
+            const accessToken = await AuthService.getAccessToken();
             await axios.post(
                 `${API_BASE_URL}/community-chat/send-message`,
                 { group_name: selectedRoom, message: newMessage },
