@@ -39,13 +39,13 @@ def validate_and_fix_quiz_questions(quiz_data: List[Dict[str, Any]]) -> List[Dic
             if not all(key in question for key in ['question', 'options', 'answer', 'explanation']):
                 logger.warning(f"Question {q_idx + 1} missing required fields, skipping")
                 continue
-            
+
             if not isinstance(question['options'], list) or len(question['options']) not in [2, 4]:
                 logger.warning(f"Question {q_idx + 1} has invalid options format, skipping")
                 continue
 
             answer = question['answer'].strip()
-            
+
             if len(answer) == 1 and answer.upper() in ['A', 'B', 'C', 'D']:
                 question['answer'] = answer.upper()
             elif answer.lower() in ['true', 'false']:
@@ -61,13 +61,13 @@ def validate_and_fix_quiz_questions(quiz_data: List[Dict[str, Any]]) -> List[Dic
                         answer_found = True
                         logger.info(f"Fixed answer for Q{q_idx + 1}: '{answer}' -> '{question['answer']}'")
                         break
-                
+
                 if not answer_found:
                     logger.warning(f"Could not determine answer for Q{q_idx + 1}, defaulting to 'A' or 'True'")
                     question['answer'] = 'A' if len(question['options']) == 4 else 'True'
-            
+
             fixed_quiz_data.append(question)
-            
+
         except Exception as e:
             logger.error(f"Error validating question {q_idx + 1}: {e}")
             continue
@@ -94,57 +94,87 @@ async def generate_quiz_service(
     if error_message:
         return {"success": False, "message": error_message}
 
-    system_prompt = "You are an expert quiz creator. You MUST follow the output format exactly."
-    
-    options_instructions = """
-- For "multiple-choice" questions, provide exactly 4 options labeled A, B, C, D. The "answer" MUST be the letter (e.g., "B").
-- For "true-false" questions, the options MUST be ["True", "False"]. The "answer" MUST be "True" or "False".
+    system_prompt = f"You are an expert quiz creator. You MUST create ONLY {quiz_type} questions. You MUST follow the output format exactly."
+
+# Add this conditional logic before options_instructions
+	if quiz_type.lower() == "true/false":
+    	format_rules = '''
+- EVERY question MUST be True/False format
+- EVERY question MUST have EXACTLY 2 options: ["True", "False"]
+- The "answer" MUST be either "True" or "False"
+- DO NOT create multiple-choice questions (A, B, C, D)
+- DO NOT use 4 options
+'''
+		options_description = 'MUST be ["True", "False"]'
+		answer_description = 'either "True" or "False"'
+		example_json = '''[
+  {
+    "question": "The Earth is flat.",
+    "options": ["True", "False"],
+    "answer": "False",
+    "explanation": "The Earth is an oblate spheroid."
+  }
+]'''
+	else:  # multiple-choice
+		format_rules = '''
+- EVERY question MUST be multiple-choice format
+- EVERY question MUST have EXACTLY 4 options (A, B, C, D)
+- The "answer" MUST be a letter: "A", "B", "C", or "D"
+- DO NOT create True/False questions
+- DO NOT use only 2 options
+'''
+		options_description = 'MUST be 4 options [A, B, C, D]'
+		answer_description = 'either "A", "B", "C", or "D"'
+		example_json = '''[
+  {
+    "question": "What is the capital of France?",
+    "options": ["London", "Paris", "Berlin", "Madrid"],
+    "answer": "B",
+    "explanation": "Paris is the capital and largest city of France."
+  }
+]'''
+
+	options_instructions = f"""
+QUIZ TYPE: {quiz_type.upper()}
+
+{"=" * 50}
+CRITICAL FORMAT RULES FOR {quiz_type.upper()} QUIZ:
+{"=" * 50}
+{format_rules}
+REMINDER: You are creating a {quiz_type.upper()} quiz. All {num_questions} questions must follow the {quiz_type} format above.
 """
 
-    quiz_prompt = f"""
-Create a {quiz_type} quiz on the topic: "{quiz_topic}".
+	quiz_prompt = f"""
+Create a {quiz_type.upper()} quiz on the topic: "{quiz_topic}".
 Difficulty: {DIFFICULTY_MAP[difficulty]}.
 Number of Questions: {num_questions}.
 
+QUIZ TYPE CONFIRMATION: {quiz_type.upper()}
+
 CRITICAL INSTRUCTIONS:
 {options_instructions}
+
 - Each question must have a "question", "options", "answer", and "explanation".
-- IMPORTANT: Never include a True/False question in a multiple choice quiz and never include a multiple choice question in a True/False quiz
 - For mathematical questions, do NOT use LaTeX commands. Provide a detailed step-by-step solution in the "explanation".
 
 OUTPUT FORMAT (STRICT):
 Return ONLY a raw JSON array. Do NOT use markdown code blocks or any other formatting.
 Each question must be a dictionary with these EXACT keys:
 - "question": The question text (string)
-- "options": An array of strings.
-- "answer": The correct answer (string, either a letter or True/False).
+- "options": An array of strings. {options_description}
+- "answer": The correct answer (string, {answer_description}).
 - "explanation": A clear explanation of why the answer is correct (string).
 
-Example for multiple-choice:
-[
-  {{
-    "question": "What is the capital of France?",
-    "options": ["London", "Paris", "Berlin", "Madrid"],
-    "answer": "B",
-    "explanation": "Paris is the capital and largest city of France."
-  }}
-]
+Example for {quiz_type}:
+{example_json}
 
-Example for true-false:
-[
-  {{
-    "question": "The Earth is flat.",
-    "options": ["True", "False"],
-    "answer": "False",
-    "explanation": "The Earth is an oblate spheroid."
-  }}
-]
+FINAL REMINDER: 
+- This is a {quiz_type.upper()} quiz
+- ALL {num_questions} questions MUST be {quiz_type} format
+- THERE CAN ONLY BE ONE CORRECT ANSWER
+- ENSURE MAXIMUM ACCURACY - the correct answers MUST be truly correct
 
-LAST INSTRUCTIONS:
-THERE CAN ONLY BE ONE CORRECT ANSWER.
-I CAN'T STRESS THIS ENOUGH,IN ALL YOU DO ENSURE MAXIMUM ACCURACY,THE CORRECT ANSWERS YOU PROVIDE MUST BE ACCURATE AND CORRECT, MAKE SURE YOU'VE PROPERLY DEDUCED THAT THE CORRECT ANSWER IS TRULY CORRECT.
-
-Now generate {num_questions} questions following this EXACT format:
+Now generate {num_questions} {quiz_type.upper()} questions following this EXACT format:
 """
 
     try:
@@ -170,11 +200,11 @@ Now generate {num_questions} questions following this EXACT format:
             return {"success": False, "message": "AI service is currently overloaded. Please try again."}
 
         content = response.choices[0].message.content.strip()
-        
+
         cleaned_text = re.sub(r'```json\s*', '', content)
         cleaned_text = re.sub(r'```\s*', '', cleaned_text)
         cleaned_text = cleaned_text.strip()
-        
+
         json_match = re.search(r'\[\s*\{.*\}\s*\]', cleaned_text, re.DOTALL)
         if json_match:
             cleaned_text = json_match.group(0)
@@ -277,11 +307,11 @@ async def get_shared_quiz_submission_for_download(
 ) -> Dict[str, Any]:
     try:
         submission_response = await supabase.table("shared_quiz_submissions").select("*").eq("id", submission_id).single().execute()
-        
+
         if not submission_response.data:
             logger.warning(f"Submission {submission_id} not found.")
             return {"success": False, "message": "Submission not found."}
-        
+
         submission = submission_response.data
 
         if submission.get("student_id") != user_id:
@@ -291,7 +321,7 @@ async def get_shared_quiz_submission_for_download(
         quiz_fetch_response = await get_shared_quiz(supabase, shared_quiz_id)
         if not quiz_fetch_response["success"]:
             return {"success": False, "message": quiz_fetch_response.get("message", "Shared quiz not found.")}
-        
+
         shared_quiz_title_response = await supabase.table("shared_quizzes").select("title").eq("id", shared_quiz_id).single().execute()
         if not shared_quiz_title_response.data:
             logger.warning(f"Shared quiz {shared_quiz_id} title not found.")
@@ -341,17 +371,17 @@ async def get_quiz_performance_comparison(
 ) -> Dict[str, Any]:
     try:
         response = supabase.table("shared_quiz_submissions").select("percentage_score").eq("shared_quiz_id", shared_quiz_id).execute()
-        
+
         all_percentages = [sub['percentage_score'] for sub in response.data if sub['percentage_score'] is not None]
 
         if not all_percentages:
             return {"success": True, "comparison_message": "No other submissions yet for comparison."}
-        
+
         better_than_count = sum(1 for p in all_percentages if current_score_percentage > p)
-        
+
         if len(all_percentages) > 0:
             percentile = (better_than_count / len(all_percentages)) * 100
-            
+
             if percentile >= 90:
                 comparison_message = f"Outstanding! You performed better than {percentile:.0f}% of test takers."
             elif percentile >= 75:
@@ -376,7 +406,7 @@ async def get_shared_quiz(supabase: Client, share_id: str) -> Dict[str, Any]:
     """Fetches a shared quiz and its creator's username."""
     try:
         response = supabase.table("shared_quizzes").select("*").eq("id", share_id).single().execute()
-        
+
         quiz_data = response.data
         creator_username = "A user"
         if quiz_data.get("creator_id"):
@@ -386,10 +416,10 @@ async def get_shared_quiz(supabase: Client, share_id: str) -> Dict[str, Any]:
                     creator_username = profile_response.data.get("username", "A user")
             except APIError:
                 pass
-        
+
         quiz_data["creator_username"] = creator_username
         return {"success": True, **quiz_data}
-            
+
     except APIError as e:
         logger.error(f"Supabase APIError fetching shared quiz {share_id}: {e.message}")
         return {"success": False, "message": "Quiz not found or unavailable."}
@@ -433,7 +463,7 @@ async def save_shared_quiz_submission(
             "grade": grade,
             "submitted_at": datetime.datetime.utcnow().isoformat() + "Z"
         }
-        
+
         try:
             response = supabase.table("shared_quiz_submissions").insert(submission_data).execute()
 
