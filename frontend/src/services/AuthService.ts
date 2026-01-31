@@ -21,11 +21,11 @@ const supabase: SupabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 });
 
 // Using Supabase's User type for clarity, augmenting with our profile data
-interface User extends SupabaseAuthUser {
+export interface User extends SupabaseAuthUser {
     // Add any additional fields you might expect directly on the user object beyond Supabase's default
 }
 
-interface UserProfile {
+export interface UserProfile {
     id: string; // The ID of the user (same as User.id)
     username: string;
     first_name: string | null;
